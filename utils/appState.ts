@@ -1,25 +1,29 @@
 // utils/appState.ts
-import { ASYNC_STORAGE_KEYS, fontScaleSize } from '@/constants/misc';
-import { ZustandStore } from '@/constants/zustandState';
-import { create } from 'zustand';
-import { getItem, setItem } from './asyncStorage';
-
+import { CurrencyCode } from "@/constants/currency";
+import { ASYNC_STORAGE_KEYS, fontScaleSize } from "@/constants/misc";
+import { ZustandStore } from "@/constants/zustandState";
+import { create } from "zustand";
+import { getItem, setItem } from "./asyncStorage";
 
 export const useAppState = create<ZustandStore>((set) => ({
-  // State 
-  fontScale: 'default',
+  // State
+  fontScale: "default",
+  currency: "usd",
   isHydrated: false,
 
   // Actions
   updatefontScale: (size) => set({ fontScale: size }),
+  updateCurrency: (newVal) => set({ currency: newVal }),
   setHydrated: (hydrated: boolean) => set({ isHydrated: hydrated }),
 }));
 
-export const initializeAppStateFromStorage = async() => {
+export const initializeAppStateFromStorage = async () => {
   const {
     updatefontScale,
+    updateCurrency,
     setHydrated,
     fontScale: defaultFontScale,
+    currency: defaultCurrency,
   } = useAppState.getState();
 
   try {
@@ -34,33 +38,45 @@ export const initializeAppStateFromStorage = async() => {
       storedState[key] = values[index];
     });
 
-
     // 3. Process each key to check for existence, initialize if needed, and update Zustand
 
-    // So far the only state we have is the fontscale
     let fontScaleValue = storedState["fontScale"];
     // const defaultFontScale is now retrieved from useAppSettings.getState()
 
     if (fontScaleValue === null) {
-      fontScaleValue = defaultFontScale;    // Key is missing: set to default value retrieved from the store
+      fontScaleValue = defaultFontScale; // Key is missing: set to default value retrieved from the store
 
       // Persist the default value back to AsyncStorage
       await setItem("fontScale", defaultFontScale);
       console.log(
-        `🗃️ AsyncStorage: Initialized missing key 'fontScale' with default value: ${defaultFontScale}`
+        `🗃️ AsyncStorage: Set new key 'fontScale' with default value: ${defaultFontScale}`
       );
     }
 
     if (fontScaleValue) {
       updatefontScale(fontScaleValue as fontScaleSize);
-      console.log(`🗃️ Initialized Font Scaling: ${fontScaleValue}`);
+      console.log(`🗃️ Loaded fontScale: ${fontScaleValue}`);
+    }
+
+    let currencyValue = storedState["currency"];
+    if (!currencyValue) {
+      await setItem("currency", defaultCurrency);
+      console.log(
+        `🗃️ AsyncStorage: Set new key 'currency' with default value: ${defaultCurrency}`
+      );
+    }
+    if (currencyValue) {
+      updateCurrency(currencyValue as CurrencyCode);
+      console.log(`🗃️ Loaded currency: ${currencyValue}`);
     }
 
     setHydrated(true);
   } catch (error) {
-    console.error("🗃️🚨 Failed to initialize app state from AsyncStorage:", error);
+    console.error(
+      "🗃️🚨 Failed to initialize app state from AsyncStorage:",
+      error
+    );
     // Ensure hydration completes even on error
     setHydrated(true);
   }
-
-}
+};
