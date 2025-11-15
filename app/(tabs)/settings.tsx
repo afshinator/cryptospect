@@ -1,5 +1,3 @@
-// settings.tsx
-
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import Slider from '@react-native-community/slider';
@@ -7,9 +5,9 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BorderRadius, Spacing } from '@/constants/theme';
-
+import { CURRENCY_DISPLAY_NAMES, SupportedCurrency } from '@/constants/currency';
 import { LightDarkMode } from '@/constants/misc';
+import { BorderRadius, Spacing } from '@/constants/theme';
 import { usePreferences, useUpdatePreferences } from '@/hooks/use-preference';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
@@ -24,7 +22,7 @@ const BUTTON_BORDER_WIDTH = 2;
 export default function SettingsScreen() {
   const { data: preferences, isLoading } = usePreferences();
   const updatePreferences = useUpdatePreferences();
-  const borderSelectedColor = useThemeColor({}, 'border');
+  const borderSelectedColor = useThemeColor({}, 'tint'); // Use 'tint' for selected border for better visibility
   const sliderThumbColor = useThemeColor({}, 'tint');
   const sliderMinColor = useThemeColor({}, 'tint');
   const sliderMaxColor = useThemeColor({}, 'border');
@@ -41,12 +39,10 @@ export default function SettingsScreen() {
   }
 
   const themeOptions: LightDarkMode[] = ['system', 'light', 'dark'] as const;
+  const supportedCurrencies = Object.keys(CURRENCY_DISPLAY_NAMES) as SupportedCurrency[];
   
-  // This is the font scale currently being displayed (live or saved)
+  // Font scale logic
   const displayFontScale = tempFontScale ?? preferences.fontScale;
-  
-  // Calculate the relative factor needed for ThemedText.
-  // Factor = (Desired Scale) / (Internal Base Scale)
   const previewScaleFactor = displayFontScale / preferences.fontScale;
 
   return (
@@ -83,6 +79,48 @@ export default function SettingsScreen() {
                   variant={preferences.lightDarkMode === option ? 'default' : 'secondary'}
                 >
                   {option.charAt(0).toUpperCase() + option.slice(1)}
+                </ThemedText>
+              </ThemedView>
+            </Pressable>
+          ))}
+        </View>
+      </ThemedView>
+      
+      {/* Currency Selection */}
+      <ThemedView style={styles.section}>
+        <ThemedText type="subtitle">Preferred Currency</ThemedText>
+        <ThemedText variant="secondary" type="small" style={styles.sectionDescription}>
+          Used for displaying monetary values.
+        </ThemedText>
+
+        <View style={styles.currencyRow}>
+          {supportedCurrencies.map((currencyCode) => (
+            <Pressable
+              key={currencyCode}
+              onPress={() => updatePreferences.mutate({ currency: currencyCode })}
+              style={styles.currencyPressable}
+            >
+              <ThemedView
+                shadow="sm"
+                style={[
+                  styles.button,
+                  styles.currencyButton,
+                  preferences.currency === currencyCode && {
+                    borderColor: borderSelectedColor,
+                  },
+                ]}
+              >
+                <ThemedText
+                  type="bodySemibold"
+                  variant={preferences.currency === currencyCode ? 'default' : 'secondary'}
+                >
+                  {currencyCode.toUpperCase()}
+                </ThemedText>
+                <ThemedText
+                  type="caption"
+                  variant='secondary'
+                >
+                  {CURRENCY_DISPLAY_NAMES[currencyCode]}
                 </ThemedText>
               </ThemedView>
             </Pressable>
@@ -157,8 +195,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
   },
+  currencyRow: { // NEW STYLE
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    justifyContent: 'flex-start',
+  },
   buttonPressable: {
     flex: 1,
+  },
+  currencyPressable: { // NEW STYLE
+    width: '30%', // Roughly 3 buttons per row on wider screens
+    minWidth: 90, 
   },
   button: {
     padding: Spacing.md,
@@ -167,6 +215,10 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  currencyButton: { // NEW STYLE
+    paddingVertical: Spacing.sm,
+    height: 60,
   },
   sliderContainer: {
     flexDirection: 'row',
