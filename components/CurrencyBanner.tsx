@@ -11,7 +11,6 @@ import {
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import {
-  CRYPTO_DECIMAL_PLACES,
   CURRENCY_DISPLAY_NAMES,
   CURRENCY_FLAG_URLS,
   CURRENCY_SYMBOLS,
@@ -25,25 +24,160 @@ import { useExchangeRates } from "@/hooks/use-exchange-rates";
 import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
 
-// --- BANNER CONSTANTS ---
-// The height of the scrolling banner container
+// --- GLOBAL BANNER CONSTANTS ---
 const BANNER_HEIGHT = 70;
-// The fixed width for each currency flag item
-const FLAG_ITEM_WIDTH = 140;
-// The duration for one full scroll cycle (lower number = faster speed)
 const SCROLL_SPEED_MS = 30000;
 
-// Local map for display names not present in CURRENCY_DISPLAY_NAMES (e.g., crypto)
-const ADDITIONAL_DISPLAY_NAMES: Partial<Record<SupportedCurrency | 'btc' | 'eth', string>> = {
-  btc: "Bitcoin",
-  eth: "Ethereum",
+// =========================================================================
+// 1. GENERIC TICKER DATA STRUCTURE
+// =========================================================================
+
+interface TickerItem {
+  id: string; 
+  label1: string; // Main identifier (e.g., USD)
+  label2: string; // Friendly name (e.g., United States Dollar)
+  value: string; 
+  flagUrl?: string; 
+}
+
+interface GenericTickerItemProps {
+  item: TickerItem;
+  lessText: boolean; // RENAMED: Controls whether to display only label1 (less text)
+  itemWidth: number; 
+}
+
+// =========================================================================
+// 2. GENERIC TICKER ITEM COMPONENT
+// =========================================================================
+
+const GenericTickerItem = React.memo(({ item, lessText, itemWidth }: GenericTickerItemProps) => {
+  const itemBackgroundColor = useThemeColor({}, "backgroundSecondary");
+  const itemBorderColor = useThemeColor({}, "border");
+  const textColor = useThemeColor({}, "text");
+
+  return (
+    <ThemedView 
+        style={[
+            styles.itemContainer, 
+            { 
+                width: itemWidth, 
+                backgroundColor: itemBackgroundColor,
+                borderRightColor: itemBorderColor,
+            }
+        ]} 
+        shadow="sm"
+    >
+      {/* BACKGROUND IMAGE (Optional) */}
+      {item.flagUrl && (
+        <Image 
+          source={{ uri: item.flagUrl }}
+          style={styles.flagBackgroundImage}
+          resizeMode={'cover'}
+        />
+      )}
+      
+      {/* TEXT CONTAINER - CENTERED */}
+      <View style={styles.textContainer}>
+        {/* Main Code/Label - bodySemibold */}
+        <ThemedText 
+          type="bodySemibold" 
+          style={{ 
+            color: textColor, 
+            maxWidth: '100%', 
+            textAlign: 'center' 
+          }} 
+          numberOfLines={1}
+        >
+            {/* UPDATED LOGIC: If lessText is true, show only label1 (USD). Otherwise, show label2 + label1 (US Dollar USD) */}
+            {lessText ? item.label1 : `${item.label2} ${item.label1}`}
+        </ThemedText>
+
+        {/* Converted Value/Rate - bodySemibold */}
+        <ThemedText type="bodySemibold" style={styles.rateText}>
+          {item.value}
+        </ThemedText>
+      </View>
+    </ThemedView>
+  );
+});
+
+// =========================================================================
+// 3. HORIZONTAL TICKER COMPONENT (REUSABLE)
+// =========================================================================
+
+interface HorizontalTickerProps {
+  data: TickerItem[];
+  lessText?: boolean; // RENAMED: New prop definition
+  itemWidth: number; 
+}
+
+const HorizontalTicker = ({ data, lessText = false, itemWidth }: HorizontalTickerProps) => {
+  const scrollAnim = useRef(new Animated.Value(0)).current;
+  
+  const fullDataWidth = data.length * itemWidth; 
+  
+  const infiniteData = React.useMemo(() => {
+    return data.length > 0
+      ? [...data, ...data, ...data]
+      : [];
+  }, [data]);
+
+  const startAnimation = useCallback(() => {
+    if (data.length <= 1) return;
+
+    scrollAnim.stopAnimation();
+    
+    Animated.loop(
+      Animated.timing(scrollAnim, {
+        toValue: 1, 
+        duration: SCROLL_SPEED_MS,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      })
+    ).start();
+  }, [scrollAnim, data.length]);
+
+  useEffect(() => {
+    startAnimation();
+    return () => scrollAnim.stopAnimation();
+  }, [startAnimation, scrollAnim]);
+
+
+  const translateX = scrollAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -fullDataWidth], 
+  });
+  
+  return (
+    <Animated.View 
+      style={[
+        styles.scrollContent, 
+        { 
+          width: infiniteData.length * itemWidth, 
+          transform: [{ translateX }] 
+        }
+      ]}
+    >
+      {infiniteData.map((item, index) => (
+        <GenericTickerItem 
+          key={item.id + index} 
+          item={item} 
+          lessText={lessText} // Pass the renamed prop
+          itemWidth={itemWidth} 
+        />
+      ))}
+    </Animated.View>
+  );
 };
 
-// --- UTILITIES (Unchanged) ---
+
+// =========================================================================
+// 4. CURRENCY UTILITIES
+// =========================================================================
 
 function calculateRelativeRate(
   selectedCurrency: SupportedCurrency,
-  targetCurrency: SupportedCurrency | 'btc' | 'eth',
+  targetCurrency: SupportedCurrency,
   rates: ExchangeRateCache["rates"]
 ): number {
   const selectedCode = selectedCurrency.toUpperCase();
@@ -55,84 +189,17 @@ function calculateRelativeRate(
   return targetRate / baseRate;
 }
 
-// --- SUB COMPONENT (A single flag item) ---
+// =========================================================================
+// 5. CURRENCY BANNER (WRAPPER COMPONENT)
+// =========================================================================
 
-interface BannerItemProps {
-  code: SupportedCurrency | 'btc' | 'eth';
-  rate: number;
-  showLabels: boolean;
-}
-
-const BannerItem = React.memo(({ code, rate, showLabels }: BannerItemProps) => {
-  const isCrypto = code === "btc" || code === "eth";
-  const displayCode = code.toUpperCase();
-  
-  const label = 
-    (CURRENCY_DISPLAY_NAMES as Record<string, string>)[code] ||
-    ADDITIONAL_DISPLAY_NAMES[code] ||
-    displayCode;
-
-  const symbol = CURRENCY_SYMBOLS[code] || "$";
-  const decimalPlaces = isCrypto ? CRYPTO_DECIMAL_PLACES : FIAT_DECIMAL_PLACES;
-  const formattedRate = rate.toFixed(decimalPlaces);
-  
-  const flagUrl = CURRENCY_FLAG_URLS[code];
-  const itemBackgroundColor = useThemeColor({}, "backgroundSecondary");
-  const itemBorderColor = useThemeColor({}, "border");
-  const textColor = useThemeColor({}, "text");
-
-  return (
-    <ThemedView 
-        style={[
-            styles.itemContainer, 
-            { 
-                width: FLAG_ITEM_WIDTH, 
-                backgroundColor: itemBackgroundColor,
-                borderRightColor: itemBorderColor,
-            }
-        ]} 
-        shadow="sm"
-    >
-      {/* BACKGROUND FLAG IMAGE */}
-      {flagUrl && (
-        <Image 
-          source={{ uri: flagUrl }}
-          style={styles.flagBackgroundImage}
-          resizeMode={'cover'}
-        />
-      )}
-      
-      {/* TEXT CONTAINER - NOW CENTERED */}
-      <View style={styles.textContainer}>
-        {/* Currency Code (Always shown) and Label (Conditional) - NOW bodySemibold */}
-        <ThemedText 
-          type="bodySemibold" 
-          style={{ 
-            color: textColor, 
-            maxWidth: '100%', 
-            textAlign: 'center' // Ensures text alignment is centered
-          }} 
-          numberOfLines={1}
-        >
-            {showLabels ? `${label} ${displayCode}` : displayCode}
-        </ThemedText>
-
-        {/* Converted Rate (Price is large) */}
-        <ThemedText type="largeSemibold" style={styles.rateText}>
-          {symbol} {formattedRate}
-        </ThemedText>
-      </View>
-    </ThemedView>
-  );
-});
-
-// --- MAIN COMPONENT ---
+const CURRENCY_ITEM_WIDTH = 140;
 
 interface CurrencyBannerProps {
-  showLabels?: boolean; // Optional prop for the friendly name
+  lessText?: boolean; // RENAMED: New prop definition
 }
 
-export function CurrencyBanner({ showLabels = true }: CurrencyBannerProps) {
+export function CurrencyBanner({ lessText = false }: CurrencyBannerProps) {
   const { data: prefs, isPending: isPrefsPending } = usePreferences();
   const {
     data: ratesData,
@@ -140,65 +207,51 @@ export function CurrencyBanner({ showLabels = true }: CurrencyBannerProps) {
     error,
   } = useExchangeRates();
 
-  const scrollAnim = useRef(new Animated.Value(0)).current;
-  
   // Dynamic Theme Colors
   const bannerBackgroundColor = useThemeColor({}, "background");
   const bannerBorderColor = useThemeColor({}, "border");
 
-  const dataForList = React.useMemo(() => {
+  // Filter out non-fiat currencies (like btc, eth) and map to TickerItem
+  const fiatTickerData: TickerItem[] = React.useMemo(() => {
     if (!prefs || !ratesData || !ratesData.rates) return [];
     
     const selectedCurrency = prefs.currency;
 
-    return DISPLAY_CURRENCIES.map((code) => {
+    // Filter to ensure only SupportedCurrency (fiat) codes are processed
+    const fiatCurrencies = DISPLAY_CURRENCIES.filter(
+      (code): code is SupportedCurrency => code !== 'btc' && code !== 'eth'
+    ) as SupportedCurrency[];
+
+
+    return fiatCurrencies.map((code) => {
       const relativeRate = calculateRelativeRate(
         selectedCurrency,
         code,
         ratesData.rates
       );
-      return { code, rate: relativeRate };
+      
+      const symbol = CURRENCY_SYMBOLS[code] || ""; 
+      const displayCode = code.toUpperCase();
+      
+      const label = 
+        (CURRENCY_DISPLAY_NAMES as Record<string, string>)[code] || displayCode;
+
+      const formattedRate = `${symbol}${relativeRate.toFixed(FIAT_DECIMAL_PLACES)}`;
+      
+      return { 
+        id: code, 
+        label1: displayCode,
+        label2: label,
+        value: formattedRate, 
+        flagUrl: CURRENCY_FLAG_URLS[code]
+      };
     });
   }, [prefs, ratesData]);
-
-  const infiniteData = React.useMemo(() => {
-    return dataForList.length > 0
-      ? [...dataForList, ...dataForList, ...dataForList]
-      : [];
-  }, [dataForList]);
-  
-  const fullDataWidth = dataForList.length * FLAG_ITEM_WIDTH;
-
-  const startAnimation = useCallback(() => {
-    scrollAnim.stopAnimation();
-    
-    Animated.loop(
-      Animated.timing(scrollAnim, {
-        toValue: 1, 
-        duration: SCROLL_SPEED_MS,
-        easing: Easing.linear,
-        useNativeDriver: false,
-      })
-    ).start();
-  }, [scrollAnim]);
-
-  useEffect(() => {
-    if (infiniteData.length > 0) {
-      startAnimation();
-    }
-    return () => scrollAnim.stopAnimation();
-  }, [infiniteData, startAnimation, scrollAnim]);
-
-
-  const translateX = scrollAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -fullDataWidth], 
-  });
 
 
   // --- Render ---
 
-  if (isPrefsPending || isRatesLoading || infiniteData.length === 0 || error) {
+  if (isPrefsPending || isRatesLoading || fiatTickerData.length === 0 || error) {
     return (
       <View 
         style={[
@@ -227,24 +280,11 @@ export function CurrencyBanner({ showLabels = true }: CurrencyBannerProps) {
         }
       ]}
     >
-      <Animated.View 
-        style={[
-          styles.scrollContent, 
-          { 
-            width: infiniteData.length * FLAG_ITEM_WIDTH, 
-            transform: [{ translateX }] 
-          }
-        ]}
-      >
-        {infiniteData.map((item, index) => (
-          <BannerItem 
-            key={index} 
-            code={item.code} 
-            rate={item.rate} 
-            showLabels={showLabels} // Pass the prop for friendly name control
-          />
-        ))}
-      </Animated.View>
+      <HorizontalTicker 
+        data={fiatTickerData} 
+        lessText={lessText} // Pass the renamed prop
+        itemWidth={CURRENCY_ITEM_WIDTH}
+      />
     </View>
   );
 }
@@ -272,7 +312,7 @@ const styles = StyleSheet.create({
     height: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.xs,
+    paddingHorizontal: Spacing.md,
     justifyContent: 'space-between',
     borderRightWidth: StyleSheet.hairlineWidth,
     gap: Spacing.xs,
@@ -291,13 +331,12 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
-    // CHANGED: Centered alignment
-    alignItems: 'center', 
+    alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
   },
-  // Price text style
   rateText: {
     fontSize: 18, 
+    marginTop: 2,
   }
 });
