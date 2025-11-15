@@ -34,6 +34,17 @@ export type SupportedCurrency =
 
 export const DEFAULT_CURRENCY: SupportedCurrency = 'usd';
 
+/**
+ * The array of currency codes to display in the exchange rates list.
+ * Includes all fiat SupportedCurrency plus major crypto assets.
+ */
+export const DISPLAY_CURRENCIES: (SupportedCurrency | 'btc' | 'eth')[] = [
+  'usd', 'eur', 'gbp', 'jpy', 'cny', 'inr', 'aud', 'cad', 'ngn', 'try',
+  'btc', // Bitcoin (Crypto)
+  'eth', // Ethereum (Crypto)
+];
+
+
 export const CURRENCY_DISPLAY_NAMES: Record<SupportedCurrency, string> = {
   usd: 'US Dollar',
   eur: 'Euro',
@@ -45,6 +56,26 @@ export const CURRENCY_DISPLAY_NAMES: Record<SupportedCurrency, string> = {
   cad: 'Canadian Dollar',
   ngn: 'Nigerian Naira',
   try: 'Turkish Lira',
+};
+
+/**
+ * Map of flag/icon URLs for displayed currencies.
+ * Uses a placeholder service for fiat flags and a simple graphic for crypto.
+ */
+export const CURRENCY_FLAG_URLS: Partial<Record<CurrencyCode, string>> = {
+  usd: 'https://flagcdn.com/w320/us.png',
+  eur: 'https://flagcdn.com/w320/eu.png',
+  gbp: 'https://flagcdn.com/w320/gb.png',
+  jpy: 'https://flagcdn.com/w320/jp.png',
+  cny: 'https://flagcdn.com/w320/cn.png',
+  inr: 'https://flagcdn.com/w320/in.png',
+  aud: 'https://flagcdn.com/w320/au.png',
+  cad: 'https://flagcdn.com/w320/ca.png',
+  ngn: 'https://flagcdn.com/w320/ng.png',
+  try: 'https://flagcdn.com/w320/tr.png',
+  // Placeholders for Crypto
+  btc: 'https://placehold.co/60x60/FF9900/ffffff/png?text=B', 
+  eth: 'https://placehold.co/60x60/627EEA/ffffff/png?text=E',
 };
 
 const TRILLION = 1e12;

@@ -7,8 +7,16 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-export function Collapsible({ children, title }: PropsWithChildren & { title: string }) {
-  const [isOpen, setIsOpen] = useState(false);
+type CollapsibleComponentProps = PropsWithChildren & {
+  title: string;
+  // The new optional prop to set the initial open/closed state.
+  isOpen?: boolean; 
+};
+
+// The prop 'isOpen' is destructured, aliased as 'initialOpen', and given a default value of 'false'.
+export function Collapsible({ children, title, isOpen: initialOpen = false }: CollapsibleComponentProps) {
+  // The internal state now initializes based on the 'initialOpen' value.
+  const [isOpen, setIsOpen] = useState(initialOpen);
   const theme = useColorScheme() ?? 'light';
 
   return (
