@@ -1,10 +1,14 @@
-// constants/currency.ts
-
 export const EXCHANGE_RATE_API_BASE_URL = 'https://open.er-api.com/v6/latest/USD'
+export const EXCHANGE_RATE_CACHE_KEY = 'ExchangeRates';
+export const EXCHANGE_RATES_QUERY_KEY = ['exchangeRates']; // TanStack Query Key
+export const DAILY_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
-/**
- * Supported currency codes for CoinGecko API
- */
+export interface ExchangeRateCache {
+  timestamp: number;
+  rates: { [key: string]: number };
+  base: string;
+}
+
 export type CurrencyCode = 
   | 'usd' | 'aed' | 'ars' | 'aud' | 'bdt' | 'bhd' | 'bmd' | 'brl' | 'cad' 
   | 'chf' | 'clp' | 'cny' | 'czk' | 'dkk' | 'eur' | 'gbp' | 'gel' | 'hkd' 
@@ -43,24 +47,14 @@ export const CURRENCY_DISPLAY_NAMES: Record<SupportedCurrency, string> = {
   try: 'Turkish Lira',
 };
 
-/**
- * Number formatting thresholds
- */
 const TRILLION = 1e12;
 const BILLION = 1e9;
 const MILLION = 1e6;
 
-/**
- * Formatting precision constants
- */
 export const FIAT_DECIMAL_PLACES = 2;
 export const CRYPTO_DECIMAL_PLACES = 8;
 
-/**
- * Maps currency codes to their display symbols
- */
 export const CURRENCY_SYMBOLS: { [key: string]: string } = {
-  // Fiat currencies
   usd: '$',
   eur: '€',
   gbp: '£',
@@ -77,7 +71,6 @@ export const CURRENCY_SYMBOLS: { [key: string]: string } = {
   zar: 'R',
   ngn: '₦',
   try: '₺',
-  // Crypto currencies
   btc: '₿',
   eth: 'Ξ',
   ltc: 'Ł',
