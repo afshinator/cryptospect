@@ -3,7 +3,7 @@ import {
   FlatList,
   Image,
   StyleSheet,
-  View
+  View,
 } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -11,6 +11,7 @@ import { ThemedView } from "@/components/themed-view";
 import { Colors, Spacing } from "@/constants/theme";
 
 import { ScreenContainer } from "@/components/ScreenContainer";
+import { Collapsible } from "@/components/ui/collapsible";
 import {
   CRYPTO_DECIMAL_PLACES,
   CURRENCY_DISPLAY_NAMES,
@@ -25,6 +26,9 @@ import { useExchangeRates } from "@/hooks/use-exchange-rates";
 import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+// New constant for the maximum width of the rate rows and list container
+const MAX_ROW_WIDTH = 270;
 
 // Local map for display names not present in CURRENCY_DISPLAY_NAMES (e.g., crypto)
 const ADDITIONAL_DISPLAY_NAMES: Partial<
@@ -121,14 +125,28 @@ function RateRow({
           source={{ uri: flagUrl }}
           style={styles.backgroundFlag}
           // Use 'contain' for flags and 'center' for crypto icons for a better subtle effect
-          resizeMode={isCrypto ? 'center' : 'contain'}
-          // resizeMode="stretch"
+          resizeMode={isCrypto ? "center" : "contain"}
         />
       )}
 
       {/* Column 1: Currency Code and Name (z-index for foreground visibility) */}
       <View style={styles.codeColumn}>
-        <ThemedText
+        <Collapsible
+          title={displayCode}
+          hideChevron
+          style={{ backgroundColor: "transparent" }}
+        >
+          <ThemedText
+            type="small"
+            variant={isSelected ? "default" : "secondary"} // Use default (light) or secondary text based on selection
+           
+            {...textProps} // Apply forced light text if selected
+             style={{ backgroundColor: "transparent" }}
+          >
+            {displayName}
+          </ThemedText>
+        </Collapsible>
+        {/* <ThemedText
           type="bodySemibold"
           {...textProps} // Apply forced light text if selected
         >
@@ -140,13 +158,14 @@ function RateRow({
           {...textProps} // Apply forced light text if selected
         >
           {displayName}
-        </ThemedText>
+        </ThemedText> */}
       </View>
 
       {/* Column 2: Rate (z-index for foreground visibility) */}
       <View style={styles.rateColumn}>
         <ThemedText
           type="body"
+          propFontScale={1.3}
           {...textProps} // Apply forced light text if selected
         >
           {symbol} {formattedRate}
@@ -231,31 +250,38 @@ export default function RatesScreen() {
           {selectedCurrency.toUpperCase()} equals :
         </ThemedText>
 
-        {/* List Header */}
-        <ThemedView
-          style={[
-            styles.rateRow,
-            styles.listHeader,
-            { borderRadius: 0, paddingTop: 0 },
-          ]}
-        >
-          <ThemedText
-            type="bodySemibold"
-            variant="secondary"
-            style={styles.codeColumn}
+        {/* List Header - Constrained and centered to match the list below */}
+        <ThemedView style={styles.headerRowWrapper}>
+          <ThemedView
+            style={[
+              styles.rateRow,
+              styles.listHeader,
+              {
+                borderRadius: 0,
+                paddingTop: 0,
+                borderWidth: 0,
+                marginVertical: 0,
+              },
+            ]}
           >
-            Currency
-          </ThemedText>
-          <ThemedText
-            type="bodySemibold"
-            variant="secondary"
-            style={styles.rateColumn}
-          >
-            Rate
-          </ThemedText>
+            <ThemedText
+              type="bodySemibold"
+              variant="secondary"
+              style={styles.codeColumn}
+            >
+              Currency
+            </ThemedText>
+            <ThemedText
+              type="bodySemibold"
+              variant="secondary"
+              style={styles.rateColumn}
+            >
+              Rate
+            </ThemedText>
+          </ThemedView>
         </ThemedView>
 
-        {/* Rates List */}
+        {/* Rates List Container - Constrained and centered */}
         <ThemedView style={styles.listContainer}>
           <FlatList
             data={dataForList}
@@ -307,8 +333,18 @@ const styles = StyleSheet.create({
   description: {
     // marginBottom: Spacing.lg,
   },
+  // Wrapper for the header row to apply max width and centering
+  headerRowWrapper: {
+    width: "100%", // Crucial for mobile layout to ensure full width use
+    maxWidth: MAX_ROW_WIDTH,
+    alignSelf: "center",
+    marginBottom: Spacing.sm, // Add space before the list starts
+  },
   listContainer: {
     // Container for the list
+    width: "100%", // Crucial for mobile layout to ensure full width use
+    maxWidth: MAX_ROW_WIDTH, // Constrain width
+    alignSelf: "center", // Center the list on wider screens
   },
   listHeader: {
     paddingVertical: Spacing.sm,
@@ -316,6 +352,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     backgroundColor: "transparent",
     borderBottomColor: Colors.light.border, // Explicitly use light border for separator visibility
+    // No explicit maxWidth needed here, as it's wrapped in headerRowWrapper
   },
   rateRow: {
     flexDirection: "row",
@@ -344,11 +381,11 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   codeColumn: {
-    flex: 1,
+    // flex: 1,
     zIndex: 1,
   },
   rateColumn: {
-    flex: 1,
+    // flex: 1,
     alignItems: "flex-end",
     zIndex: 1,
   },

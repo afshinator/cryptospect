@@ -50,6 +50,7 @@ const styles = StyleSheet.create<ScreenStyles>({
     }
 });
 
+// TODO:  ⚠️ scrolling still broken on WEB!!!!!!!!!!!❌
 // Example Usage (for your RatesScreen or SettingsScreen):
 /*
 import { ScreenContainer } from './ScreenContainer';

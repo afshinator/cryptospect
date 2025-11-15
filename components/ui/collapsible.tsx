@@ -1,5 +1,5 @@
 import { PropsWithChildren, useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleProp, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native'; // Import StyleProp and ViewStyle
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -11,16 +11,19 @@ type CollapsibleComponentProps = PropsWithChildren & {
   title: string;
   // The new optional prop to set the initial open/closed state.
   isOpen?: boolean; 
-  // NEW: Optional prop to hide the chevron icon and its spacing.
+  // Optional prop to hide the chevron icon and its spacing.
   hideChevron?: boolean;
+  // NEW: Optional style prop for the main container (ThemedView).
+  style?: StyleProp<ViewStyle>;
 };
 
-// The prop 'hideChevron' is destructured and given a default value of 'false'.
+// The prop 'style' is destructured and applied to the outer ThemedView.
 export function Collapsible({ 
     children, 
     title, 
     isOpen: initialOpen = false,
-    hideChevron = false 
+    hideChevron = false,
+    style // Destructure the new style prop
 }: CollapsibleComponentProps) {
   // The internal state now initializes based on the 'initialOpen' value.
   const [isOpen, setIsOpen] = useState(initialOpen);
@@ -30,7 +33,8 @@ export function Collapsible({
   const contentMarginLeft = hideChevron ? 0 : 24;
 
   return (
-    <ThemedView>
+    // Apply the optional style prop here
+    <ThemedView style={style}>
       <TouchableOpacity
         style={styles.heading}
         onPress={() => setIsOpen((value) => !value)}
@@ -52,9 +56,9 @@ export function Collapsible({
       
       {/* Conditional content rendering with dynamic margin */}
       {isOpen && (
-        <ThemedView style={[styles.content, { marginLeft: contentMarginLeft }]}>
+        <View style={[styles.content, { marginLeft: contentMarginLeft }]}>
           {children}
-        </ThemedView>
+        </View>
       )}
     </ThemedView>
   );
@@ -68,6 +72,6 @@ const styles = StyleSheet.create({
   },
   content: {
     marginTop: 6,
-    // marginLeft is now calculated dynamically in the component function
+    // marginLeft is calculated dynamically in the component function
   },
 });
