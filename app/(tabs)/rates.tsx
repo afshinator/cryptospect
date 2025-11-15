@@ -121,8 +121,8 @@ function RateRow({
           source={{ uri: flagUrl }}
           style={styles.backgroundFlag}
           // Use 'contain' for flags and 'center' for crypto icons for a better subtle effect
-          // resizeMode={isCrypto ? 'center' : 'contain'}
-          resizeMode="stretch"
+          resizeMode={isCrypto ? 'center' : 'contain'}
+          // resizeMode="stretch"
         />
       )}
 
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     bottom: -90,
     left: -35,
     position: "absolute",
-    opacity: 0.8,
+    opacity: 0.15,
   },
   titleContainer: {
     flexDirection: "row",
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    opacity: 0.1, // Low opacity for subtle effect
+    opacity: 0.15, // Low opacity for subtle effect
     width: "100%",
     height: "100%",
   },
