@@ -139,26 +139,12 @@ function RateRow({
           <ThemedText
             type="small"
             variant={isSelected ? "default" : "secondary"} // Use default (light) or secondary text based on selection
-           
             {...textProps} // Apply forced light text if selected
-             style={{ backgroundColor: "transparent" }}
+            style={{ backgroundColor: "transparent" }}
           >
             {displayName}
           </ThemedText>
         </Collapsible>
-        {/* <ThemedText
-          type="bodySemibold"
-          {...textProps} // Apply forced light text if selected
-        >
-          {displayCode}
-        </ThemedText>
-        <ThemedText
-          type="small"
-          variant={isSelected ? "default" : "secondary"} // Use default (light) or secondary text based on selection
-          {...textProps} // Apply forced light text if selected
-        >
-          {displayName}
-        </ThemedText> */}
       </View>
 
       {/* Column 2: Rate (z-index for foreground visibility) */}
@@ -218,8 +204,9 @@ export default function RatesScreen() {
     );
   }
 
-  // Prepare data for FlatList
-  const dataForList = DISPLAY_CURRENCIES.map((code) => {
+  // --- Prepare and Sort Data for FlatList ---
+  // 1. Map all currencies to data objects
+  const allMappedData = DISPLAY_CURRENCIES.map((code) => {
     const isCrypto = code === "btc" || code === "eth";
 
     // Calculate the rate relative to the user's selected currency
@@ -233,10 +220,25 @@ export default function RatesScreen() {
       id: code,
       code: code,
       rate: relativeRate,
+      // isSelected flag is no longer strictly necessary since the selected currency is filtered out, but we keep it here just in case.
       isSelected: code === selectedCurrency,
       isCrypto: isCrypto,
     };
   });
+
+  // 2. Filter out the selected base currency (the one that equals 1)
+  const filteredData = allMappedData.filter(item => item.code !== selectedCurrency);
+
+  // 3. Separate Fiat and Crypto from the filtered list
+  const fiatCurrencies = filteredData.filter(item => !item.isCrypto);
+  const cryptoCurrencies = filteredData.filter(item => item.isCrypto);
+
+  // 4. Sort Fiat currencies alphabetically by code
+  fiatCurrencies.sort((a, b) => a.code.localeCompare(b.code));
+
+  // 5. Combine: sorted fiat + cryptos at the bottom
+  const dataForList = [...fiatCurrencies, ...cryptoCurrencies];
+  // --- End Data Prep ---
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -250,37 +252,6 @@ export default function RatesScreen() {
           {selectedCurrency.toUpperCase()} equals :
         </ThemedText>
 
-        {/* List Header - Constrained and centered to match the list below */}
-        <ThemedView style={styles.headerRowWrapper}>
-          <ThemedView
-            style={[
-              styles.rateRow,
-              styles.listHeader,
-              {
-                borderRadius: 0,
-                paddingTop: 0,
-                borderWidth: 0,
-                marginVertical: 0,
-              },
-            ]}
-          >
-            <ThemedText
-              type="bodySemibold"
-              variant="secondary"
-              style={styles.codeColumn}
-            >
-              Currency
-            </ThemedText>
-            <ThemedText
-              type="bodySemibold"
-              variant="secondary"
-              style={styles.rateColumn}
-            >
-              Rate
-            </ThemedText>
-          </ThemedView>
-        </ThemedView>
-
         {/* Rates List Container - Constrained and centered */}
         <ThemedView style={styles.listContainer}>
           <FlatList
@@ -290,7 +261,8 @@ export default function RatesScreen() {
               <RateRow
                 code={item.code}
                 rate={item.rate}
-                isSelected={item.isSelected}
+                // isSelected will always be false for items in this filtered list
+                isSelected={item.isSelected} 
                 isCrypto={item.isCrypto}
               />
             )}
