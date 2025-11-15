@@ -1,7 +1,7 @@
 // Fallback for using MaterialIcons on Android and web.
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
+import { SymbolViewProps, SymbolWeight } from 'expo-symbols';
 import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
@@ -18,6 +18,19 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+    // Exchange Rates: SF Symbol 'dollarsign.arrow.circlepath' mapped to Material Icon 'currency-exchange'
+  'dollarsign.arrow.circlepath': 'currency-exchange', 
+  
+  // Settings: SF Symbol 'gearshape.fill' mapped to Material Icon 'settings'
+  'gearshape.fill': 'settings',
+  
+  // More: SF Symbol 'ellipsis.circle.fill' mapped to Material Icon 'more-horiz' or 'menu'
+  'ellipsis.circle.fill': 'more-horiz', 
+    // Lists/Transactions Screen: SF Symbol 'list.bullet.rectangle.fill' mapped to Material Icon 'list-alt'
+  'list.bullet.rectangle.fill': 'list-alt',
+  
+  // Crypto/Blockchain Screen: SF Symbol 'bitcoinsign.circle.fill' mapped to Material Icon 'monetization-on'
+  'bitcoinsign.circle.fill': 'monetization-on', // A general currency/coin icon
 } as IconMapping;
 
 /**

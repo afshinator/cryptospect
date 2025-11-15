@@ -35,12 +35,25 @@ export default function TabLayout() {
           ),
         }}
       />
-            <Tabs.Screen
+      <Tabs.Screen
         name="rates"
         options={{
           title: "rates",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="paperplane.fill" color={color} />
+            <IconSymbol
+              size={28}
+              name="dollarsign.arrow.circlepath"
+              color={color}
+            />
+          ),
+        }}
+      />{" "}
+      <Tabs.Screen
+        name="example"
+        options={{
+          title: "example",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="ellipsis.circle.fill" color={color} />
           ),
         }}
       />
@@ -49,16 +62,7 @@ export default function TabLayout() {
         options={{
           title: "settings",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="paperplane.fill" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="example"
-        options={{
-          title: "example",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="paperplane.fill" color={color} />
+            <IconSymbol size={28} name="gearshape.fill" color={color} />
           ),
         }}
       />
