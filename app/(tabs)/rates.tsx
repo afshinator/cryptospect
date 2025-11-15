@@ -2,15 +2,15 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
-  ScrollView,
   StyleSheet,
-  View,
+  View
 } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Spacing } from "@/constants/theme";
 
+import { ScreenContainer } from "@/components/ScreenContainer";
 import {
   CRYPTO_DECIMAL_PLACES,
   CURRENCY_DISPLAY_NAMES,
@@ -221,7 +221,7 @@ export default function RatesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView>
+      <ScreenContainer>
         <ThemedView style={styles.titleContainer}>
           <ThemedText type="large">Exchange Rates</ThemedText>
         </ThemedView>
@@ -276,7 +276,7 @@ export default function RatesScreen() {
           Base currency is {ratesData.base}, cached locally for 24 hours. Last
           updated: {new Date(ratesData.timestamp).toLocaleTimeString()}
         </ThemedText>
-      </ScrollView>
+      </ScreenContainer>
     </SafeAreaView>
   );
 }

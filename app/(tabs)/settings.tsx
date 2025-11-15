@@ -2,9 +2,10 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import Slider from "@react-native-community/slider";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { ScreenContainer } from "@/components/ScreenContainer";
 import {
   CURRENCY_DISPLAY_NAMES,
   SupportedCurrency,
@@ -52,7 +53,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScreenContainer>
         <ThemedText type="large" style={styles.title}>
           Settings
         </ThemedText>
@@ -216,7 +217,7 @@ export default function SettingsScreen() {
             Small secondary text
           </ThemedText>
         </ThemedView>
-      </ScrollView>
+      </ScreenContainer>
     </SafeAreaView>
   );
 }
