@@ -54,7 +54,7 @@ export function calculateDominance(
  * @returns Formatted string (e.g., "54.32%")
  */
 export function formatDominance(value: number): string {
-  return `${value.toFixed(2)}%`;
+  return `${value.toFixed(1)}%`;
 }
 
 /**
