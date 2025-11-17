@@ -15,6 +15,9 @@ import { BorderRadius, Spacing } from "@/constants/theme";
 import { usePreferences, useUpdatePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
 
+// 💡 🔨 TODO: for Font Size section, add a snap-to-1.0 button
+// -- Replace heading like Appearance and Preferred Currency with icons
+
 // Configuration constants
 const FONT_SCALE_MIN = 0.5;
 const FONT_SCALE_MAX = 1.4;
