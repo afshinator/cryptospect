@@ -16,6 +16,12 @@ export const COINGECKO_GLOBAL_DATA_ENDPOINT = `${COINGECKO_BASE_URL}${COINGECKO_
 // Endpoint for market data, used for getting icon URLs and current prices
 export const COINGECKO_COINS_MARKETS_ENDPOINT = `${COINGECKO_BASE_URL}${COINGECKO_COINS_MARKETS_PATH}`;
 
+// API Parameters for /coins/markets
+export const MARKET_DATA_PER_PAGE = 250; // Free tier max
+export const MARKET_DATA_ORDER = 'market_cap_desc';
+export const MARKET_DATA_SPARKLINE = false;
+
+
 // CoinGecko API response type for coins/markets endpoint
 export type CoinGeckoMarketData = {
   id: string;

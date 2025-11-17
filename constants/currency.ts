@@ -1,3 +1,5 @@
+// constants/currency.ts
+
 export const EXCHANGE_RATE_API_BASE_URL = 'https://open.er-api.com/v6/latest/USD'
 export const EXCHANGE_RATE_CACHE_KEY = 'ExchangeRates';
 export const EXCHANGE_RATES_QUERY_KEY = ['exchangeRates']; // TanStack Query Key

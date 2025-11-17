@@ -1,3 +1,5 @@
+// utils/currencyApi.ts
+
 import {
   DAILY_REFRESH_INTERVAL_MS,
   DEFAULT_CURRENCY,
@@ -36,19 +38,19 @@ export async function loadCachedRates(): Promise<ExchangeRateCache | null> {
  * @throws {Error} if the API call fails or returns an error.
  */
 export async function fetchAndPersistRates(): Promise<ExchangeRateCache> {
-  console.log('Fetching new exchange rates from API...');
+  console.log('⚡ Fetching new exchange rates from API...');
   
   try {
     const response = await fetch(EXCHANGE_RATE_API_BASE_URL);
 
     if (!response.ok) {
-      throw new Error(`API returned status ${response.status}`);
+      throw new Error(`❌ API returned status ${response.status}`);
     }
 
     const data: ExchangeRateApiResponse = await response.json();
 
     if (data.result !== 'success' || !data.rates) {
-        throw new Error('Exchange rate API response failed or was malformed.');
+        throw new Error('❌ Exchange rate API response failed or was malformed.');
     }
 
     const newCache: ExchangeRateCache = {
@@ -59,12 +61,12 @@ export async function fetchAndPersistRates(): Promise<ExchangeRateCache> {
 
     // 💡 Using setJSONObject to handle JSON stringification and storage
     await setJSONObject(EXCHANGE_RATE_CACHE_KEY, newCache);
-    console.log('Successfully fetched and persisted new rates.');
+    console.log('✅ Successfully fetched and persisted new rates.');
 
     return newCache;
 
   } catch (e) {
-    console.error('Error fetching/persisting fresh exchange rates:', e);
+    console.error('❌ Error fetching/persisting fresh exchange rates:', e);
     throw e; 
   }
 }
@@ -78,7 +80,7 @@ export async function getExchangeRates(): Promise<ExchangeRateCache> {
 
     // Condition Check: Cache exists AND is NOT STALE
     if (cachedRates && (now - cachedRates.timestamp < DAILY_REFRESH_INTERVAL_MS)) {
-        console.log('Using fresh exchange rates from cache.');
+        console.log('💾 Using cached exchange rates (still fresh, no refetch needed).');
         return cachedRates;
     }
     
@@ -87,7 +89,7 @@ export async function getExchangeRates(): Promise<ExchangeRateCache> {
         const freshRates = await fetchAndPersistRates();
         return freshRates;
     } catch (error) {
-        console.warn('Failed to fetch fresh rates. Falling back to stale cache if available.');
+        console.warn('❌ Failed to fetch fresh rates. Falling back to stale cache if available.');
         if (cachedRates) {
             // Return stale cache if fetching failed (graceful degradation)
             return cachedRates;

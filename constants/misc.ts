@@ -20,3 +20,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
 
 export const PREFERENCES_STORAGE_KEY = 'Settings';
 export const PREFERENCES_QUERY_KEY = ['prefs'];  //  tanstack query
+
+// Market Data (CoinGecko)
+export const MARKET_DATA_CACHE_KEY = 'MarketDataSnapshot';
+export const MARKET_DATA_QUERY_KEY = ['marketData'];
+export const MARKET_DATA_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
