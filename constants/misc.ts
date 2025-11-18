@@ -31,7 +31,5 @@ export const CRYPTO_OVERVIEW_CACHE_KEY = 'CryptoOverviewSnapshot';
 export const CRYPTO_OVERVIEW_QUERY_KEY = ['cryptoOverview'];
 export const CRYPTO_OVERVIEW_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
-// Crypto historical dominance constants
-export const CRYPTO_DOMINANCE_HISTORY_CACHE_KEY = 'DominanceHistorySnapshot';
-export const CRYPTO_DOMINANCE_HISTORY_QUERY_KEY = ["dominanceHistory"];
-export const CRYPTO_DOMINANCE_HISTORY_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
+// Backend Historical Dominance (180 days from Vercel backend)
+export const BACKEND_DOMINANCE_QUERY_KEY = ['backendDominance'];

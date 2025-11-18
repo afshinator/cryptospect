@@ -1,3 +1,5 @@
+// hooks/use-app-initialization.ts
+
 import {
   DEFAULT_CURRENCY,
   EXCHANGE_RATES_QUERY_KEY,
