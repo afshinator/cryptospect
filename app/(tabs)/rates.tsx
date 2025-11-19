@@ -2,7 +2,11 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Modal,
+  Pressable,
+  ScrollView,
   StyleSheet,
+  Switch,
   View,
 } from "react-native";
 
@@ -25,6 +29,7 @@ import { useAppInitialization } from "@/hooks/use-app-initializations";
 import { useExchangeRates } from "@/hooks/use-exchange-rates";
 import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // =========================================================================
@@ -84,12 +89,13 @@ function calculateRelativeRate(
 /**
  * Formats a rate value with appropriate decimal places.
  * For crypto: Shows full precision (no rounding) - up to 15 significant digits
- * For fiat: Rounds to 2 decimal places (smallest denomination) and marks as approximate
+ * For fiat: Rounds based on fullPrecision flag (2 decimal places if false, full precision if true)
  * @param rate The rate value to format
  * @param isCrypto Whether this is a cryptocurrency
+ * @param fullPrecision Whether to show full precision for fiat currencies
  * @returns Object with formatted string and whether it's approximate
  */
-function formatRate(rate: number, isCrypto: boolean): { formatted: string; isApproximate: boolean } {
+function formatRate(rate: number, isCrypto: boolean, fullPrecision: boolean = false): { formatted: string; isApproximate: boolean } {
   if (isCrypto) {
     // For crypto, show full precision without rounding
     if (rate === 0) {
@@ -123,12 +129,31 @@ function formatRate(rate: number, isCrypto: boolean): { formatted: string; isApp
     return { formatted, isApproximate: false };
   }
 
-  // For fiat currencies, round to 2 decimal places (smallest denomination)
-  const rounded = Math.round(rate * 100) / 100;
-  const formatted = rounded.toFixed(2);
-  const isApproximate = Math.abs(rate - rounded) > 0.0001; // Mark as approximate if rounding changed value
-  
-  return { formatted, isApproximate };
+  // For fiat currencies
+  if (fullPrecision) {
+    // Show full precision for fiat currencies
+    // Use enough decimal places to show significant digits
+    const absRate = Math.abs(rate);
+    let decimalPlaces = 4; // Default precision
+    
+    if (absRate < 1) {
+      const log10 = Math.log10(absRate);
+      if (log10 < 0) {
+        decimalPlaces = Math.ceil(-log10) + 4;
+      }
+    }
+    
+    decimalPlaces = Math.min(decimalPlaces, MAX_DECIMAL_PLACES);
+    let formatted = rate.toFixed(decimalPlaces);
+    formatted = formatted.replace(/\.?0+$/, '');
+    return { formatted, isApproximate: false };
+  } else {
+    // Round to 2 decimal places (smallest denomination)
+    const rounded = Math.round(rate * 100) / 100;
+    const formatted = rounded.toFixed(2);
+    const isApproximate = Math.abs(rate - rounded) > 0.0001;
+    return { formatted, isApproximate };
+  }
 }
 
 /**
@@ -163,11 +188,13 @@ function RateRow({
   rate,
   isSelected,
   isCrypto,
+  fullPrecision,
 }: {
   code: SupportedCurrency | "btc" | "eth";
   rate: number;
   isSelected: boolean;
   isCrypto: boolean;
+  fullPrecision: boolean;
 }) {
   const highlightColor = useThemeColor({}, "tint");
   const backgroundColor = useThemeColor({}, "backgroundSecondary");
@@ -180,7 +207,7 @@ function RateRow({
     ADDITIONAL_DISPLAY_NAMES[code] ||
     displayCode;
   const symbol = CURRENCY_SYMBOLS[code] || "$";
-  const { formatted: formattedRate } = formatRate(rate, isCrypto);
+  const { formatted: formattedRate } = formatRate(rate, isCrypto, fullPrecision);
 
   // Get flag URL from the imported constant
   const flagUrl = CURRENCY_FLAG_URLS[code];
@@ -253,6 +280,24 @@ export default function RatesScreen() {
   } = useExchangeRates();
   const { cryptoMarket } = useAppInitialization();
   const loadingTintColor = useThemeColor({}, "tint");
+  const borderColor = useThemeColor({}, "border");
+  const tintColor = useThemeColor({}, "tint");
+  const backgroundColor = useThemeColor({}, "background");
+  const backgroundSecondaryColor = useThemeColor({}, "backgroundSecondary");
+  
+  // Local state for currency selection (defaults to app preference, only fiat currencies)
+  const [selectedCurrency, setSelectedCurrency] = React.useState<SupportedCurrency>(
+    prefs?.currency || "usd"
+  );
+  const [showCurrencyModal, setShowCurrencyModal] = React.useState(false);
+  const [fullPrecision, setFullPrecision] = React.useState(false);
+
+  // Update selectedCurrency when prefs load
+  React.useEffect(() => {
+    if (prefs?.currency) {
+      setSelectedCurrency(prefs.currency);
+    }
+  }, [prefs?.currency]);
 
   // Guard Clauses for Loading/Error
   if (isPrefsPending || isRatesLoading || !prefs) {
@@ -265,8 +310,6 @@ export default function RatesScreen() {
       </ThemedView>
     );
   }
-
-  const selectedCurrency = prefs.currency;
 
   if (error || !ratesData || !ratesData.rates) {
     return (
@@ -341,10 +384,114 @@ export default function RatesScreen() {
           <ThemedText type="large">Exchange Rates</ThemedText>
         </ThemedView>
 
-        <ThemedText style={styles.description} type="bodySemibold">
-          1 {CURRENCY_SYMBOLS[selectedCurrency]}
-          {selectedCurrency.toUpperCase()} equals :
-        </ThemedText>
+        {/* Currency Selector and Precision Toggle */}
+        <ThemedView style={styles.controlsContainer}>
+          {/* Currency Dropdown */}
+          <Pressable
+            onPress={() => setShowCurrencyModal(true)}
+            style={({ pressed }) => [
+              styles.currencySelector,
+              { 
+                borderColor: borderColor,
+                backgroundColor: backgroundSecondaryColor,
+              },
+              pressed && styles.currencySelectorPressed,
+            ]}
+          >
+            <ThemedView style={styles.currencySelectorContent}>
+              <ThemedText type="bodySemibold" style={styles.currencySelectorText}>
+                1 {CURRENCY_SYMBOLS[selectedCurrency]} {selectedCurrency.toUpperCase()}
+              </ThemedText>
+              <ThemedText type="small" variant="secondary">
+                {CURRENCY_DISPLAY_NAMES[selectedCurrency]}
+              </ThemedText>
+            </ThemedView>
+            <ThemedText type="body" variant="secondary">▼</ThemedText>
+          </Pressable>
+
+          {/* Precision Toggle */}
+          <ThemedView style={[
+            styles.precisionToggle,
+            {
+              borderColor: borderColor,
+              backgroundColor: backgroundSecondaryColor,
+            }
+          ]}>
+            <ThemedText type="small" variant="secondary" style={styles.precisionLabel}>
+              Full Precision
+            </ThemedText>
+            <Switch
+              value={fullPrecision}
+              onValueChange={setFullPrecision}
+              trackColor={{ false: borderColor, true: tintColor }}
+              thumbColor={backgroundColor}
+            />
+          </ThemedView>
+        </ThemedView>
+
+        {/* Currency Selection Modal */}
+        <Modal
+          visible={showCurrencyModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowCurrencyModal(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowCurrencyModal(false)}
+          >
+            <ThemedView style={[
+              styles.modalContent,
+              { backgroundColor: backgroundColor }
+            ]}>
+              <ThemedText type="subtitle" style={styles.modalTitle}>
+                Select Currency
+              </ThemedText>
+              <ScrollView style={styles.modalScrollView}>
+                {Object.keys(CURRENCY_DISPLAY_NAMES).map((code) => {
+                  const currencyCode = code as SupportedCurrency;
+                  const displayName = CURRENCY_DISPLAY_NAMES[currencyCode];
+                  const isSelected = currencyCode === selectedCurrency;
+
+                  return (
+                    <Pressable
+                      key={currencyCode}
+                      onPress={() => {
+                        setSelectedCurrency(currencyCode);
+                        setShowCurrencyModal(false);
+                      }}
+                      style={({ pressed }) => [
+                        styles.modalItem,
+                        isSelected && {
+                          ...styles.modalItemSelected,
+                          backgroundColor: backgroundSecondaryColor,
+                        },
+                        pressed && styles.modalItemPressed,
+                      ]}
+                    >
+                      <ThemedView style={styles.modalItemContent}>
+                        <ThemedText
+                          type="bodySemibold"
+                          variant={isSelected ? "default" : "secondary"}
+                        >
+                          {currencyCode.toUpperCase()}
+                        </ThemedText>
+                        <ThemedText type="small" variant="secondary">
+                          {displayName}
+                        </ThemedText>
+                      </ThemedView>
+                      {isSelected && (
+                        <ThemedText type="body" style={{ color: tintColor }}>
+                          ✓
+                        </ThemedText>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </ThemedView>
+          </Pressable>
+        </Modal>
 
         {/* Rates List Container - Constrained and centered */}
         <ThemedView style={styles.listContainer}>
@@ -358,6 +505,7 @@ export default function RatesScreen() {
                 // isSelected will always be false for items in this filtered list
                 isSelected={item.isSelected} 
                 isCrypto={item.isCrypto}
+                fullPrecision={fullPrecision}
               />
             )}
             scrollEnabled={false}
@@ -369,8 +517,9 @@ export default function RatesScreen() {
           updated: {new Date(ratesData.timestamp).toLocaleTimeString()}
         </ThemedText>
         <ThemedText type="small" variant="secondary" style={styles.footerNote}>
-          Fiat currency rates are rounded to the smallest currency denomination. 
-          Cryptocurrency rates (BTC, ETH) show full precision without rounding.
+          {fullPrecision 
+            ? "Fiat currency rates show full precision. Cryptocurrency rates (BTC, ETH) always show full precision."
+            : "Fiat currency rates are rounded to the smallest currency denomination. Cryptocurrency rates (BTC, ETH) show full precision without rounding."}
         </ThemedText>
       </ScreenContainer>
     </SafeAreaView>
@@ -464,5 +613,72 @@ const styles = StyleSheet.create({
   footerNote: {
     marginTop: Spacing.lg,
     textAlign: "center",
+  },
+  controlsContainer: {
+    marginBottom: Spacing.md,
+    gap: Spacing.md,
+  },
+  currencySelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: Spacing.md,
+    borderRadius: Spacing.md,
+    borderWidth: 1,
+  },
+  currencySelectorPressed: {
+    opacity: 0.7,
+  },
+  currencySelectorContent: {
+    flex: 1,
+  },
+  currencySelectorText: {
+    marginBottom: Spacing.xs,
+  },
+  precisionToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: Spacing.md,
+    borderRadius: Spacing.md,
+    borderWidth: 1,
+  },
+  precisionLabel: {
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    borderTopLeftRadius: Spacing.lg,
+    borderTopRightRadius: Spacing.lg,
+    padding: Spacing.lg,
+    maxHeight: "80%",
+  },
+  modalTitle: {
+    marginBottom: Spacing.md,
+    textAlign: "center",
+  },
+  modalScrollView: {
+    maxHeight: 400,
+  },
+  modalItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: Spacing.md,
+    borderRadius: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  modalItemSelected: {
+    // backgroundColor set dynamically in component
+  },
+  modalItemPressed: {
+    opacity: 0.7,
+  },
+  modalItemContent: {
+    flex: 1,
   },
 });
