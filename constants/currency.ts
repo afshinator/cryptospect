@@ -62,22 +62,23 @@ export const CURRENCY_DISPLAY_NAMES: Record<SupportedCurrency, string> = {
 
 /**
  * Map of flag/icon URLs for displayed currencies.
- * Uses a placeholder service for fiat flags and a simple graphic for crypto.
+ * Uses flagcdn.com for fiat flags (consistent w160 size) and CoinGecko for crypto icons.
  */
 export const CURRENCY_FLAG_URLS: Partial<Record<CurrencyCode, string>> = {
-  usd: 'https://flagcdn.com/w320/us.png',
-  eur: 'https://flagcdn.com/w320/eu.png',
-  gbp: 'https://flagcdn.com/w320/gb.png',
-  jpy: 'https://flagcdn.com/w320/jp.png',
-  cny: 'https://flagcdn.com/w320/cn.png',
-  inr: 'https://flagcdn.com/w320/in.png',
-  aud: 'https://flagcdn.com/w320/au.png',
-  cad: 'https://flagcdn.com/w320/ca.png',
-  ngn: 'https://flagcdn.com/w320/ng.png',
-  try: 'https://flagcdn.com/w320/tr.png',
-  // Placeholders for Crypto
-  btc: 'https://placehold.co/60x60/FF9900/ffffff/png?text=B', 
-  eth: 'https://placehold.co/60x60/627EEA/ffffff/png?text=E',
+  // Fiat currencies - using w160 for consistent sizing
+  usd: 'https://flagcdn.com/w160/us.png',
+  eur: 'https://flagcdn.com/w160/eu.png',
+  gbp: 'https://flagcdn.com/w160/gb.png',
+  jpy: 'https://flagcdn.com/w160/jp.png',
+  cny: 'https://flagcdn.com/w160/cn.png',
+  inr: 'https://flagcdn.com/w160/in.png',
+  aud: 'https://flagcdn.com/w160/au.png',
+  cad: 'https://flagcdn.com/w160/ca.png',
+  ngn: 'https://flagcdn.com/w160/ng.png',
+  try: 'https://flagcdn.com/w160/tr.png',
+  // Crypto icons from CoinGecko
+  btc: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+  eth: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
 };
 
 const TRILLION = 1e12;

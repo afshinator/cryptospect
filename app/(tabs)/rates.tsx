@@ -35,11 +35,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const MAX_ROW_WIDTH = 270;
 const SELECTED_TEXT_COLOR = Colors.dark.text;
 
-// Decimal Places Configuration
-const MIN_DECIMAL_PLACES = 2;
-const MAX_DECIMAL_PLACES = 8;
-const SMALL_RATE_THRESHOLD = 0.01; // If rate is smaller than this, use more decimals
-const VERY_SMALL_RATE_THRESHOLD = 0.0001; // If rate is smaller than this, use even more decimals
+// Decimal Places Configuration (for crypto precision calculation)
+const MAX_DECIMAL_PLACES = 20; // Maximum decimal places for very small crypto values
 
 // Crypto Coin IDs from CoinGecko API
 const COINGECKO_BTC_ID = "bitcoin";
@@ -114,8 +111,8 @@ function formatRate(rate: number, isCrypto: boolean): { formatted: string; isApp
       }
     }
     
-    // Cap at 20 decimal places for display
-    decimalPlaces = Math.min(decimalPlaces, 20);
+    // Cap at MAX_DECIMAL_PLACES for display
+    decimalPlaces = Math.min(decimalPlaces, MAX_DECIMAL_PLACES);
     
     // Format with calculated precision
     let formatted = rate.toFixed(decimalPlaces);
@@ -183,7 +180,7 @@ function RateRow({
     ADDITIONAL_DISPLAY_NAMES[code] ||
     displayCode;
   const symbol = CURRENCY_SYMBOLS[code] || "$";
-  const { formatted: formattedRate, isApproximate } = formatRate(rate, isCrypto);
+  const { formatted: formattedRate } = formatRate(rate, isCrypto);
 
   // Get flag URL from the imported constant
   const flagUrl = CURRENCY_FLAG_URLS[code];
@@ -210,8 +207,8 @@ function RateRow({
         <Image
           source={{ uri: flagUrl }}
           style={styles.backgroundFlag}
-          // Use 'contain' for flags and 'center' for crypto icons for a better subtle effect
-          resizeMode={isCrypto ? "center" : "contain"}
+          // Use 'cover' to ensure consistent sizing and fill the container
+          resizeMode="cover"
         />
       )}
 
