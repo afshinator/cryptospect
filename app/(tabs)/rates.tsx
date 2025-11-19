@@ -168,12 +168,13 @@ export default function RatesScreen() {
     isLoading: isRatesLoading,
     error,
   } = useExchangeRates();
+  const loadingTintColor = useThemeColor({}, "tint");
 
   // Guard Clauses for Loading/Error
   if (isPrefsPending || isRatesLoading || !prefs) {
     return (
       <ThemedView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={useThemeColor({}, "tint")} />
+        <ActivityIndicator size="large" color={loadingTintColor} />
         <ThemedText type="body" style={{ marginTop: Spacing.md }}>
           Loading exchange rates...
         </ThemedText>

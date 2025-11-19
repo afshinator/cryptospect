@@ -59,7 +59,7 @@ export default function DominanceScreen() {
         <ThemedView style={[styles.container, styles.center]}>
           <ThemedText type="subtitle">
             {error
-              ? `Error: ${(error as Error).message}`
+              ? `❌ Error: ${(error as Error).message}`
               : "No dominance data available."}
           </ThemedText>
         </ThemedView>
@@ -111,7 +111,6 @@ export default function DominanceScreen() {
     <SafeAreaView style={{ flex: 1 }}>
       <ScreenContainer>
         <ThemedView style={styles.container}>
-
           <ThemedText type="large" style={styles.title}>
             Dominance Dashboard
           </ThemedText>
@@ -137,17 +136,54 @@ export default function DominanceScreen() {
             {monthLabel}
           </ThemedText>
 
-          <Collapsible title="Details">
+          <Collapsible title="Ratio Distribution Details">
             <ThemedText>
               The chart provides context for the current ratio by answering the
               question: "How often has the ratio been at this level in the
               past?"
+            </ThemedText>
+            <ThemedText>
+              The "Fair Value Zone" on this chart is simply the range of ratios
+              where the market has spent the most time. Tall Bars = Fair Value:
+              The tallest bars represent the most frequent ratios. This is the
+              statistical mean or mode of the data. The market generally
+              gravitates toward this area. Meaning: When the ratio is inside
+              this zone, it suggests the relationship between BTC's dominance
+              and ETH's dominance is stable, balanced, and historically common.
+              No significant, non-standard capital rotation is likely signaled.
+            </ThemedText>
+            <ThemedText>
+              If the current ratio falls into one of the short-bar extreme
+              zones, the chart is signaling an imbalance that often precedes a
+              market rotation or correction in dominance.
             </ThemedText>
           </Collapsible>
           <ThemedView style={styles.chartWrapper}>
             <DominanceRatioHistogram historicalData={dominanceData} />
           </ThemedView>
 
+          <Collapsible title="Ratio Chart Details">
+            <ThemedText>
+              This chart plots the BTC/ETH Dominance Ratio over time, providing
+              a clear visual signal for whether market leadership is
+              consolidating into Bitcoin or rotating toward Ethereum and the
+              wider altcoin market.
+            </ThemedText>
+
+            <ThemedText>
+              Rising Ratio (Moving Up): This means BTC.D is gaining strength
+              faster than ETH.D, or ETH.D is weakening faster than BTC.D. This
+              signals a consolidation of capital into Bitcoin, which is
+              typically a defensive or "risk-off" move within the crypto space.
+            </ThemedText>
+
+            <ThemedText>
+              Falling Ratio (Moving Down): This means ETH.D is gaining strength
+              relative to BTC.D. This signals a rotation of capital into
+              Ethereum and often serves as a lead indicator for the wider
+              altcoin rally (the "altcoin season").
+            </ThemedText>
+          </Collapsible>
           {/* BTC/ETH Dominance Ratio Chart (New Rotational Signal) */}
           <ThemedView style={styles.chartWrapper}>
             <DominanceRatioChart historicalData={dominanceData} />

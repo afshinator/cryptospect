@@ -210,6 +210,7 @@ export function CurrencyBanner({ lessText = false }: CurrencyBannerProps) {
   // Dynamic Theme Colors
   const bannerBackgroundColor = useThemeColor({}, "background");
   const bannerBorderColor = useThemeColor({}, "border");
+  const loadingTintColor = useThemeColor({}, "tint");
 
   // Filter out non-fiat currencies (like btc, eth) and map to TickerItem
   const fiatTickerData: TickerItem[] = React.useMemo(() => {
@@ -264,7 +265,7 @@ export function CurrencyBanner({ lessText = false }: CurrencyBannerProps) {
           }
         ]}
       >
-        <ActivityIndicator size="small" color={useThemeColor({}, "tint")} />
+        <ActivityIndicator size="small" color={loadingTintColor} />
       </View>
     );
   }
