@@ -101,6 +101,8 @@ const GenericTickerItem = React.memo(({ item, lessText, itemWidth }: GenericTick
   );
 });
 
+GenericTickerItem.displayName = 'GenericTickerItem';
+
 // =========================================================================
 // 3. HORIZONTAL TICKER COMPONENT (REUSABLE)
 // =========================================================================

@@ -47,10 +47,10 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
       : Colors.light.textSecondary;
   
   // 1. Data Calculation: Ratio, Bins, and Distribution
-  const { chartData, currentRatio, binLabels, maxDays, yAxisLabelFunc } = useMemo(() => {
+  const { chartData, currentRatio, binLabels, yAxisLabelFunc } = useMemo(() => {
     if (!historicalData || historicalData.length === 0) {
       // Return null for chartData to trigger loading state
-      return { chartData: null, currentRatio: 0, binLabels: [], maxDays: 0, yAxisLabelFunc: () => "" };
+      return { chartData: null, currentRatio: 0, binLabels: [], yAxisLabelFunc: () => "" };
     }
 
     // A. Calculate all Ratios
@@ -61,7 +61,7 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
     }).filter(ratio => ratio > 0); 
 
     if (ratios.length === 0) {
-      return { chartData: null, currentRatio: 0, binLabels: [], maxDays: 0, yAxisLabelFunc: () => "" };
+      return { chartData: null, currentRatio: 0, binLabels: [], yAxisLabelFunc: () => "" };
     }
     
     const currentR = ratios[ratios.length - 1];
@@ -117,7 +117,6 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
         chartData: dataForChart, 
         currentRatio: currentR,
         binLabels: labels,
-        maxDays: mDays,
         yAxisLabelFunc: yAxisFunc,
     };
   }, [historicalData]);
@@ -186,7 +185,7 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
       </ThemedView>
 
       <ThemedText style={styles.caption} variant="secondary">
-        Bars show the number of days spent in that ratio range. The tall bars are the "fair value" zone.
+        Bars show the number of days spent in that ratio range. The tall bars are the &quot;fair value&quot; zone.
       </ThemedText>
       
       <ThemedText style={styles.currentRatioMarker} variant="secondary">

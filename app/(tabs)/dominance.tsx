@@ -139,17 +139,17 @@ export default function DominanceScreen() {
           <Collapsible title="Ratio Distribution Details">
             <ThemedText>
               The chart provides context for the current ratio by answering the
-              question: "How often has the ratio been at this level in the
-              past?"
+              question: &quot;How often has the ratio been at this level in the
+              past?&quot;
             </ThemedText>
             <ThemedText>
-              The "Fair Value Zone" on this chart is simply the range of ratios
+              The &quot;Fair Value Zone&quot; on this chart is simply the range of ratios
               where the market has spent the most time. Tall Bars = Fair Value:
               The tallest bars represent the most frequent ratios. This is the
               statistical mean or mode of the data. The market generally
               gravitates toward this area. Meaning: When the ratio is inside
-              this zone, it suggests the relationship between BTC's dominance
-              and ETH's dominance is stable, balanced, and historically common.
+              this zone, it suggests the relationship between BTC&apos;s dominance
+              and ETH&apos;s dominance is stable, balanced, and historically common.
               No significant, non-standard capital rotation is likely signaled.
             </ThemedText>
             <ThemedText>
@@ -174,14 +174,14 @@ export default function DominanceScreen() {
               Rising Ratio (Moving Up): This means BTC.D is gaining strength
               faster than ETH.D, or ETH.D is weakening faster than BTC.D. This
               signals a consolidation of capital into Bitcoin, which is
-              typically a defensive or "risk-off" move within the crypto space.
+              typically a defensive or &quot;risk-off&quot; move within the crypto space.
             </ThemedText>
 
             <ThemedText>
               Falling Ratio (Moving Down): This means ETH.D is gaining strength
               relative to BTC.D. This signals a rotation of capital into
               Ethereum and often serves as a lead indicator for the wider
-              altcoin rally (the "altcoin season").
+              altcoin rally (the &quot;altcoin season&quot;).
             </ThemedText>
           </Collapsible>
           {/* BTC/ETH Dominance Ratio Chart (New Rotational Signal) */}
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   },
   monthLabel: {
     textAlign: "center",
-    marginTop: Spacing.sm,
+    // marginTop: Spacing.sm,
     marginBottom: Spacing.md,
     fontSize: 12,
   },

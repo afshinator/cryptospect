@@ -21,7 +21,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.contentContainer}
       >
         <ThemedView style={styles.titleContainer}>
-          <ThemedText type="large">Welcome!</ThemedText>
+          <ThemedText type="large">CryptoSpect</ThemedText>
           <HelloWave />
         </ThemedView>
 
