@@ -1,25 +1,22 @@
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Switch,
-  View,
 } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Spacing } from "@/constants/theme";
 
+import { RateRow } from "@/components/RateRow";
 import { ScreenContainer } from "@/components/ScreenContainer";
-import { Collapsible } from "@/components/ui/collapsible";
 import { CryptoMarketSnapshot } from "@/constants/coinGecko";
 import {
   CURRENCY_DISPLAY_NAMES,
-  CURRENCY_FLAG_URLS,
   CURRENCY_SYMBOLS,
   DISPLAY_CURRENCIES,
   ExchangeRateCache,
@@ -38,22 +35,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 // UI Constants
 const MAX_ROW_WIDTH = 290;
-const SELECTED_TEXT_COLOR = Colors.dark.text;
-
-// Decimal Places Configuration (for crypto precision calculation)
-const MAX_DECIMAL_PLACES = 20; // Maximum decimal places for very small crypto values
 
 // Crypto Coin IDs from CoinGecko API
 const COINGECKO_BTC_ID = "bitcoin";
 const COINGECKO_ETH_ID = "ethereum";
-
-// Local map for display names not present in CURRENCY_DISPLAY_NAMES (e.g., crypto)
-const ADDITIONAL_DISPLAY_NAMES: Partial<
-  Record<SupportedCurrency | "btc" | "eth", string>
-> = {
-  btc: "Bitcoin",
-  eth: "Ethereum",
-};
 
 
 // =========================================================================
@@ -87,15 +72,6 @@ function calculateRelativeRate(
 }
 
 /**
- * Formats a rate value with appropriate decimal places.
- * For crypto: Shows full precision (no rounding) - up to 15 significant digits
- * For fiat: Rounds based on fullPrecision flag (2 decimal places if false, full precision if true)
- * @param rate The rate value to format
- * @param isCrypto Whether this is a cryptocurrency
- * @param fullPrecision Whether to show full precision for fiat currencies
- * @returns Object with formatted string and whether it's approximate
- */
-function formatRate(rate: number, isCrypto: boolean, fullPrecision: boolean = false): { formatted: string; isApproximate: boolean } {
   if (isCrypto) {
     // For crypto, show full precision without rounding
     if (rate === 0) {
@@ -176,100 +152,6 @@ function getCryptoPrice(
   return coin?.current_price ?? null;
 }
 
-// =========================================================================
-// COMPONENTS
-// =========================================================================
-
-/**
- * Renders a single row in the rates list.
- */
-function RateRow({
-  code,
-  rate,
-  isSelected,
-  isCrypto,
-  fullPrecision,
-}: {
-  code: SupportedCurrency | "btc" | "eth";
-  rate: number;
-  isSelected: boolean;
-  isCrypto: boolean;
-  fullPrecision: boolean;
-}) {
-  const highlightColor = useThemeColor({}, "tint");
-  const backgroundColor = useThemeColor({}, "backgroundSecondary");
-
-  // Determine display properties
-  const displayCode = code.toUpperCase();
-  // We explicitly check for both CURRENCY_DISPLAY_NAMES (fiat) and ADDITIONAL_DISPLAY_NAMES (crypto)
-  const displayName =
-    (CURRENCY_DISPLAY_NAMES as Record<string, string>)[code] ||
-    ADDITIONAL_DISPLAY_NAMES[code] ||
-    displayCode;
-  const symbol = CURRENCY_SYMBOLS[code] || "$";
-  const { formatted: formattedRate } = formatRate(rate, isCrypto, fullPrecision);
-
-  // Get flag URL from the imported constant
-  const flagUrl = CURRENCY_FLAG_URLS[code];
-
-  // Set color props to force light text when selected, ensuring contrast on 'tint' background
-  const textProps = isSelected
-    ? {
-        lightColor: SELECTED_TEXT_COLOR,
-        darkColor: SELECTED_TEXT_COLOR,
-      }
-    : {};
-
-  return (
-    <ThemedView
-      style={[
-        styles.rateRow,
-        { backgroundColor: isSelected ? highlightColor : backgroundColor },
-        isSelected && styles.rateRowSelected,
-      ]}
-      shadow={isSelected ? "md" : "sm"}
-    >
-      {/* BACKGROUND FLAG/ICON IMAGE (Absolute position for subtle watermark/tile effect) */}
-      {flagUrl && (
-        <Image
-          source={{ uri: flagUrl }}
-          style={styles.backgroundFlag}
-          // Use 'cover' to ensure consistent sizing and fill the container
-          resizeMode="cover"
-        />
-      )}
-
-      {/* Column 1: Currency Code and Name (z-index for foreground visibility) */}
-      <View style={styles.codeColumn}>
-        <Collapsible
-          title={displayCode}
-          hideChevron
-          style={{ backgroundColor: "transparent" }}
-        >
-          <ThemedText
-            type="small"
-            variant={isSelected ? "default" : "secondary"} // Use default (light) or secondary text based on selection
-            {...textProps} // Apply forced light text if selected
-            style={{ backgroundColor: "transparent" }}
-          >
-            {displayName}
-          </ThemedText>
-        </Collapsible>
-      </View>
-
-      {/* Column 2: Rate (z-index for foreground visibility) */}
-      <View style={styles.rateColumn}>
-        <ThemedText
-          type="body"
-          propFontScale={1.3}
-          {...textProps} // Apply forced light text if selected
-        >
-          {symbol} {formattedRate}
-        </ThemedText>
-      </View>
-    </ThemedView>
-  );
-}
 
 export default function RatesScreen() {
   const { data: prefs, isPending: isPrefsPending } = usePreferences();
@@ -576,41 +458,6 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     borderBottomColor: Colors.light.border, // Explicitly use light border for separator visibility
     // No explicit maxWidth needed here, as it's wrapped in headerRowWrapper
-  },
-  rateRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: Spacing.sm,
-    borderRadius: Spacing.md,
-    marginVertical: Spacing.xs,
-    borderWidth: 1,
-    borderColor: "transparent",
-    position: "relative",
-    overflow: "hidden", // Ensures flag doesn't bleed out of rounded corners
-  },
-  rateRowSelected: {
-    borderWidth: 1,
-    borderColor: Colors.dark.text,
-  },
-  backgroundFlag: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0.15, // Low opacity for subtle effect
-    width: "100%",
-    height: "100%",
-  },
-  codeColumn: {
-    // flex: 1,
-    zIndex: 1,
-  },
-  rateColumn: {
-    // flex: 1,
-    alignItems: "flex-end",
-    zIndex: 1,
   },
   footerNote: {
     marginTop: Spacing.lg,
