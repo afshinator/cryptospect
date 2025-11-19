@@ -1,11 +1,14 @@
 // Fallback for using MaterialIcons on Android and web.
 
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { SymbolViewProps, SymbolWeight } from 'expo-symbols';
-import { ComponentProps } from 'react';
-import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { SymbolViewProps, SymbolWeight } from "expo-symbols";
+import { ComponentProps } from "react";
+import { OpaqueColorValue, type StyleProp, type TextStyle } from "react-native";
 
-type IconMapping = Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>;
+type IconMapping = Record<
+  SymbolViewProps["name"],
+  ComponentProps<typeof MaterialIcons>["name"]
+>;
 type IconSymbolName = keyof typeof MAPPING;
 
 /**
@@ -14,23 +17,50 @@ type IconSymbolName = keyof typeof MAPPING;
  * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
  */
 const MAPPING = {
-  'house.fill': 'home',
-  'paperplane.fill': 'send',
-  'chevron.left.forwardslash.chevron.right': 'code',
-  'chevron.right': 'chevron-right',
-    // Exchange Rates: SF Symbol 'dollarsign.arrow.circlepath' mapped to Material Icon 'currency-exchange'
-  'dollarsign.arrow.circlepath': 'currency-exchange', 
-  
+  "house.fill": "home",
+  "paperplane.fill": "send",
+  "chevron.left.forwardslash.chevron.right": "code",
+  "chevron.right": "chevron-right",
+  // Exchange Rates: SF Symbol 'dollarsign.arrow.circlepath' mapped to Material Icon 'currency-exchange'
+  "dollarsign.arrow.circlepath": "currency-exchange",
+
   // Settings: SF Symbol 'gearshape.fill' mapped to Material Icon 'settings'
-  'gearshape.fill': 'settings',
-  
+  "gearshape.fill": "settings",
+
   // More: SF Symbol 'ellipsis.circle.fill' mapped to Material Icon 'more-horiz' or 'menu'
-  'ellipsis.circle.fill': 'more-horiz', 
-    // Lists/Transactions Screen: SF Symbol 'list.bullet.rectangle.fill' mapped to Material Icon 'list-alt'
-  'list.bullet.rectangle.fill': 'list-alt',
-  
+  "ellipsis.circle.fill": "more-horiz",
+  // Lists/Transactions Screen: SF Symbol 'list.bullet.rectangle.fill' mapped to Material Icon 'list-alt'
+  "list.bullet.rectangle.fill": "list-alt",
+
   // Crypto/Blockchain Screen: SF Symbol 'bitcoinsign.circle.fill' mapped to Material Icon 'monetization-on'
-  'bitcoinsign.circle.fill': 'monetization-on', // A general currency/coin icon
+  "bitcoinsign.circle.fill": "monetization-on", // A general currency/coin icon
+
+  // Dominance/Value/Growth: SF Symbol 'chart.line.uptrend.xyaxis' mapped to Material Icon 'trending-up'
+  "chart.line.uptrend.xyaxis": "trending-up",
+
+  // Dominance/Analysis: SF Symbol 'chart.bar.fill' mapped to Material Icon 'bar-chart',
+  "chart.bar.fill": "bar-chart",
+
+  // History: SF Symbol 'clock.arrow.circlepath' mapped to Material Icon 'history',
+  "clock.arrow.circlepath": "history",
+
+  // Bag/Inventory: SF Symbol 'bag.fill' mapped to Material Icon 'shopping-bag'
+  "bag.fill": "shopping-bag",
+
+  // Portfolio/Assets: SF Symbol 'briefcase.fill' mapped to Material Icon 'work',
+  "briefcase.fill": "work",
+
+  // Wallet/Stash: SF Symbol 'yensign.circle.fill' mapped to Material Icon 'account-balance-wallet',
+  "yensign.circle.fill": "account-balance-wallet",
+
+  // Checklist/Task List: SF Symbol 'checklist' mapped to Material Icon 'check-box',
+  checklist: "check-box",
+
+  // Portfolio/Allocation: SF Symbol 'chart.pie.fill' mapped to Material Icon 'pie-chart',
+  "chart.pie.fill": "pie-chart",
+
+  // General List/Index: SF Symbol 'list.bullet' mapped to Material Icon 'list',
+  "list.bullet": "list",
 } as IconMapping;
 
 /**
@@ -50,5 +80,12 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  return (
+    <MaterialIcons
+      color={color}
+      size={size}
+      name={MAPPING[name]}
+      style={style}
+    />
+  );
 }

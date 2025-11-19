@@ -55,7 +55,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <IconSymbol
               size={28}
-              name="bitcoinsign.circle.fill"
+              name="chart.line.uptrend.xyaxis"
               color={color}
             />
           ),
