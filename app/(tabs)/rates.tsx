@@ -7,7 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { CurrencySelectorModal } from "@/components/CurrencySelectorModal";
 import { ErrorState } from "@/components/ErrorState";
 import { LoadingState } from "@/components/LoadingState";
-import { RateRow } from "@/components/RateRow";
+import { MAX_ROW_WIDTH, RateRow } from "@/components/RateRow";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -19,9 +19,6 @@ import { usePreferences } from "@/hooks/use-preference";
 import { useRatesData } from "@/hooks/use-rates-data";
 import { useThemeColor } from "@/hooks/use-theme-color";
 
-// UI Constants
-const MAX_ROW_WIDTH = 290;
-
 export default function RatesScreen() {
   const { data: prefs, isPending: isPrefsPending } = usePreferences();
   const {
@@ -30,12 +27,12 @@ export default function RatesScreen() {
     error,
   } = useExchangeRates();
   const { cryptoMarket } = useAppInitialization();
-  
+
   const borderColor = useThemeColor({}, "border");
   const tintColor = useThemeColor({}, "tint");
   const backgroundColor = useThemeColor({}, "background");
   const backgroundSecondaryColor = useThemeColor({}, "backgroundSecondary");
-  
+
   // Local state for currency selection (defaults to app preference, only fiat currencies)
   const [selectedCurrency, setSelectedCurrency] = React.useState<SupportedCurrency>(
     prefs?.currency || "usd"
@@ -81,7 +78,7 @@ export default function RatesScreen() {
             onPress={() => setShowCurrencyModal(true)}
             style={({ pressed }) => [
               styles.currencySelector,
-              { 
+              {
                 borderColor: borderColor,
                 backgroundColor: backgroundSecondaryColor,
               },
@@ -138,7 +135,7 @@ export default function RatesScreen() {
               <RateRow
                 code={item.code}
                 rate={item.rate}
-                isSelected={item.isSelected} 
+                isSelected={item.isSelected}
                 isCrypto={item.isCrypto}
                 fullPrecision={fullPrecision}
               />
@@ -147,21 +144,31 @@ export default function RatesScreen() {
           />
         </ThemedView>
 
-        <ThemedText type="small" variant="secondary" style={styles.footerNote}>
-          Base currency is {ratesData.base}, cached locally for 24 hours. Last
-          updated: {new Date(ratesData.timestamp).toLocaleTimeString()}
-        </ThemedText>
-        <ThemedText type="small" variant="secondary" style={styles.footerNote}>
-          {fullPrecision 
-            ? "Fiat currency rates show full precision. Cryptocurrency rates (BTC, ETH) always show full precision."
-            : "Fiat currency rates are rounded to the smallest currency denomination. Cryptocurrency rates (BTC, ETH) show full precision without rounding."}
-        </ThemedText>
+        <ThemedView style={styles.footerNote}>
+          <ThemedText style={styles.centered}>
+            Base currency is {ratesData.base}, cached 24 hours.
+          </ThemedText>
+          <ThemedText style={styles.centered}>Last updated: {new Date(ratesData.timestamp).toLocaleTimeString()}</ThemedText>
+          <ThemedText style={styles.centered}>
+            {fullPrecision
+              ? "Fiat currency rates show full precision. "
+              : "Fiat currency rates are rounded to the smallest currency denomination."}
+          </ThemedText>
+          <ThemedText style={styles.centered}>
+            {fullPrecision
+              ? "Cryptocurrency rates (BTC, ETH) always show full precision."
+              : "Cryptocurrency rates (BTC, ETH) show full precision without rounding."}
+          </ThemedText>
+        </ThemedView>
       </ScreenContainer>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  centered: {
+    textAlign: "center",
+  },
   container: {
     padding: Spacing.md,
   },
@@ -176,8 +183,9 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   footerNote: {
+    padding: Spacing.sm,
+    borderRadius: Spacing.sm,
     marginTop: Spacing.lg,
-    textAlign: "center",
   },
   controlsContainer: {
     flexDirection: "row",

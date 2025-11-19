@@ -16,7 +16,7 @@ import { Colors, Spacing } from "@/constants/theme";
 import { useThemeColor } from "@/hooks/use-theme-color";
 
 // UI Constants
-const MAX_ROW_WIDTH = 290;
+export const MAX_ROW_WIDTH = 290;
 const SELECTED_TEXT_COLOR = Colors.dark.text;
 
 // Flag/Icon Image Configuration
