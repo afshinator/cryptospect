@@ -49,6 +49,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="dominance"
+        options={{
+          title: "Dominance",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol
+              size={28}
+              name="bitcoinsign.circle.fill"
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="example"
         options={{
           title: "example",

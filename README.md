@@ -23,14 +23,27 @@ In the output, you'll find options to open the app in a
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
 - [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
-## Get a fresh project
+### CoinGecko data - frontend real-time snapshot vs backend historical
 
-When you're ready, run:
+A. The Historical Feed (/api/dominance Vercel Backend)
 
-```bash
-npm run reset-project
-```
+Source: fetchRawHistoricalData in lib/coinGeckoFetcher.ts.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Data Endpoint: Primarily uses the CoinGecko Market Chart endpoint (.../market_chart?days=180).
+
+Timing/Delay: Data from the market_chart endpoint is aggregated hourly and is often delayed by 1 to 2 hours from the current moment.
+
+- Caching: Backend caches the entire historical array for up to CACHE_LIFETIME_MS (24 hours by default). This means the last point 
+could be 1 hour old plus up to 24 hours stale.
+
+
+B. The Real-Time Snapshot (getCryptoOverview Frontend)
+
+Source: getCryptoOverview in utils/coinGeckoOverviewApi.ts.
+
+Data Endpoint: Directly calls the CoinGecko Global endpoint (/global).
+
+Timing/Delay: This endpoint provides the most current, live data that CoinGecko publishes. It is typically updated every few minutes.
+
+Caching: The frontend cache for this data is very short (CRYPTO_OVERVIEW_REFRESH_INTERVAL_MS, likely 60 seconds).
