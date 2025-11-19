@@ -6,6 +6,8 @@ import { Platform } from 'react-native';
 
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#666';
+const BTC_GOLD = '#F7931A'
+const ETH_BLUE = '#627EEA'
 
 export const Colors = {
   light: {
@@ -22,6 +24,9 @@ export const Colors = {
     success: '#16a34a',
     warning: '#ea580c',
     border: '#e5e7eb',
+    // Crypto asset colors
+    btc: BTC_GOLD, // Orange
+    eth: ETH_BLUE, // Blue
   },
   dark: {
     text: '#ECEDEE',
@@ -37,6 +42,9 @@ export const Colors = {
     success: '#22c55e',
     warning: '#fb923c',
     border: '#374151',
+    // Crypto asset colors
+    btc: BTC_GOLD, // Orange
+    eth: ETH_BLUE, // Blue
   },
 };
 

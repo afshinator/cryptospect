@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import DominanceChartWrapper from "@/components/DominanceChartWrapper";
 import DominanceRatioChart from "@/components/DominanceRatioChart";
 import DominanceRatioHistogram from "@/components/DominanceRatioHistogram";
-import LatestDominanceSnapshot from "@/components/LatestDominanceSnapshot";
+import { DominanceSection } from "@/components/DominanceSection";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { Collapsible } from "@/components/ui/collapsible";
 
@@ -73,6 +73,9 @@ export default function DominanceScreen() {
   const latestData = dominanceData[dominanceData.length - 1];
   const latestBtcD = latestData.btcDominance;
   const latestEthD = latestData.ethDominance;
+  // Use usdtDominance as proxy for stablecoins (since historical data doesn't have full stablecoins breakdown)
+  const latestStablecoinsD = latestData.usdtDominance;
+  const latestOthersD = latestData.othersDominance;
 
   const latestDate = new Date(latestData.date).toLocaleDateString("en-US", {
     year: "numeric",
@@ -119,11 +122,9 @@ export default function DominanceScreen() {
             Market Composition and Rotation Signals
           </ThemedText>
 
-          {/* LATEST SNAPSHOT CARD (Live Data) */}
-          <LatestDominanceSnapshot
-            latestBtcD={latestBtcD}
-            latestEthD={latestEthD}
-            latestDate={latestDate}
+          {/* LATEST SNAPSHOT CARD (Live Data) - Uses real-time data from CoinGecko /global endpoint */}
+          <DominanceSection
+            showAllFour={true}
           />
 
           {/* BTC/ETH Historical Line Chart (Main View) */}

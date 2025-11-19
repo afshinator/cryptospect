@@ -4,7 +4,10 @@ import { LineChart } from "react-native-chart-kit";
 
 // Calculated Dimensions are kept here since they are directly needed by the RN Chart Kit component
 const SCREEN_WIDTH = Dimensions.get("window").width;
-const CHART_WIDTH = SCREEN_WIDTH;
+// Add extra width to account for chart-kit's internal padding and prevent label cutoff
+// The chart-kit library needs extra space for labels, especially on the right side
+const CHART_WIDTH_PADDING = 40; // Extra pixels to add for label space
+const CHART_WIDTH = SCREEN_WIDTH + CHART_WIDTH_PADDING;
 
 interface RnChartKitLineChartProps {
   chartData: any; // react-native-chart-kit data structure
@@ -42,9 +45,11 @@ export default function RnChartKitLineChart({
 
 const styles = StyleSheet.create({
   chartContainer: {
-    // Container for the chart
+    // Container for the chart - allow horizontal scrolling if needed
+    overflow: "hidden",
   },
   chart: {
-    // Additional chart styling
+    // Additional chart styling - negative margin to shift left and reduce excessive left padding
+    marginLeft: -20,
   },
 });

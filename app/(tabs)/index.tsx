@@ -26,7 +26,7 @@ export default function HomeScreen() {
         </ThemedView>
 
         {/* Dominance Section */}
-        <DominanceSection />
+        <DominanceSection showAllFour={true}/>
 
         <ThemedView style={styles.placeholder}>
           <ThemedText type="bodySemibold">Content Area</ThemedText>

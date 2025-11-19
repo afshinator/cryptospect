@@ -14,9 +14,9 @@ const LINE_STROKE_WIDTH_MINOR = 0.5;
 const LABEL_FONT_SIZE_SMALL = 10;
 const UI_DECIMAL_PRECISION = 0; // for y-axis
 
-// Defined Colors (Asset-specific colors)
-const BTC_COLOR = "#FF9900"; // Orange
-const ETH_COLOR = "#627EEA"; // Blue
+// Use theme colors for BTC and ETH
+const BTC_COLOR = Colors.light.btc; // Orange
+const ETH_COLOR = Colors.light.eth; // Blue
 const TRANSPARENT_COLOR = "#00000000"; // Fully Transparent
 
 // Legend Metrics
@@ -48,8 +48,8 @@ export default function DominanceChartWrapper({
 
   // --- Data preparation for chart-kit ---
 
-  // 1. Prepare Labels (X-Axis) - Sample roughly every 15 days
-  const labelSamplingRate = 15;
+  // 1. Prepare Labels (X-Axis) - Sample roughly every 30 days to reduce label density
+  const labelSamplingRate = 30;
 
   const labels = dominanceData.map((item, index) => {
     const isSamplePoint = index % labelSamplingRate === 0;
