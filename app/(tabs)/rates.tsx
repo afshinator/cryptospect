@@ -12,23 +12,38 @@ import { Colors, Spacing } from "@/constants/theme";
 
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { Collapsible } from "@/components/ui/collapsible";
+import { CryptoMarketSnapshot } from "@/constants/coinGecko";
 import {
-  CRYPTO_DECIMAL_PLACES,
   CURRENCY_DISPLAY_NAMES,
   CURRENCY_FLAG_URLS,
   CURRENCY_SYMBOLS,
   DISPLAY_CURRENCIES,
   ExchangeRateCache,
-  FIAT_DECIMAL_PLACES,
   SupportedCurrency,
 } from "@/constants/currency";
+import { useAppInitialization } from "@/hooks/use-app-initializations";
 import { useExchangeRates } from "@/hooks/use-exchange-rates";
 import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Maximum width of the rate rows and list container
+// =========================================================================
+// CONSTANTS
+// =========================================================================
+
+// UI Constants
 const MAX_ROW_WIDTH = 270;
+const SELECTED_TEXT_COLOR = Colors.dark.text;
+
+// Decimal Places Configuration
+const MIN_DECIMAL_PLACES = 2;
+const MAX_DECIMAL_PLACES = 8;
+const SMALL_RATE_THRESHOLD = 0.01; // If rate is smaller than this, use more decimals
+const VERY_SMALL_RATE_THRESHOLD = 0.0001; // If rate is smaller than this, use even more decimals
+
+// Crypto Coin IDs from CoinGecko API
+const COINGECKO_BTC_ID = "bitcoin";
+const COINGECKO_ETH_ID = "ethereum";
 
 // Local map for display names not present in CURRENCY_DISPLAY_NAMES (e.g., crypto)
 const ADDITIONAL_DISPLAY_NAMES: Partial<
@@ -38,9 +53,10 @@ const ADDITIONAL_DISPLAY_NAMES: Partial<
   eth: "Ethereum",
 };
 
-// The color to force on text when the row is selected (guaranteed light/white text)
-const SELECTED_TEXT_COLOR = Colors.dark.text;
 
+// =========================================================================
+// UTILITY FUNCTIONS
+// =========================================================================
 
 /**
  * Calculates the exchange rate of a target currency relative to the user's selected base currency.
@@ -68,7 +84,79 @@ function calculateRelativeRate(
   return targetRate / baseRate;
 }
 
-// --- COMPONENTS ---
+/**
+ * Formats a rate value with appropriate decimal places.
+ * For crypto: Shows full precision (no rounding) - up to 15 significant digits
+ * For fiat: Rounds to 2 decimal places (smallest denomination) and marks as approximate
+ * @param rate The rate value to format
+ * @param isCrypto Whether this is a cryptocurrency
+ * @returns Object with formatted string and whether it's approximate
+ */
+function formatRate(rate: number, isCrypto: boolean): { formatted: string; isApproximate: boolean } {
+  if (isCrypto) {
+    // For crypto, show full precision without rounding
+    if (rate === 0) {
+      return { formatted: '0', isApproximate: false };
+    }
+    
+    // Use enough decimal places to show full precision
+    // For very small numbers, calculate based on magnitude
+    const absRate = Math.abs(rate);
+    let decimalPlaces = 12; // Default precision
+    
+    if (absRate < 1) {
+      // For numbers less than 1, calculate decimal places needed
+      // Use log10 to determine how many leading zeros
+      const log10 = Math.log10(absRate);
+      if (log10 < 0) {
+        // Add extra precision for very small numbers
+        decimalPlaces = Math.ceil(-log10) + 10;
+      }
+    }
+    
+    // Cap at 20 decimal places for display
+    decimalPlaces = Math.min(decimalPlaces, 20);
+    
+    // Format with calculated precision
+    let formatted = rate.toFixed(decimalPlaces);
+    
+    // Remove trailing zeros but preserve the decimal point if there are significant digits
+    formatted = formatted.replace(/\.?0+$/, '');
+    
+    return { formatted, isApproximate: false };
+  }
+
+  // For fiat currencies, round to 2 decimal places (smallest denomination)
+  const rounded = Math.round(rate * 100) / 100;
+  const formatted = rounded.toFixed(2);
+  const isApproximate = Math.abs(rate - rounded) > 0.0001; // Mark as approximate if rounding changed value
+  
+  return { formatted, isApproximate };
+}
+
+/**
+ * Gets BTC or ETH price from cryptoMarket data.
+ * @param cryptoMarket The crypto market snapshot from CoinGecko
+ * @param coinId Either "btc" or "eth"
+ * @returns The current price in the market's currency, or null if not found
+ */
+function getCryptoPrice(
+  cryptoMarket: CryptoMarketSnapshot | undefined,
+  coinId: "btc" | "eth"
+): number | null {
+  if (!cryptoMarket?.data || !Array.isArray(cryptoMarket.data)) {
+    return null;
+  }
+
+  const coingeckoId = coinId === "btc" ? COINGECKO_BTC_ID : COINGECKO_ETH_ID;
+  const coin = cryptoMarket.data.find((item) => item.id === coingeckoId);
+  
+  return coin?.current_price ?? null;
+}
+
+// =========================================================================
+// COMPONENTS
+// =========================================================================
 
 /**
  * Renders a single row in the rates list.
@@ -95,8 +183,7 @@ function RateRow({
     ADDITIONAL_DISPLAY_NAMES[code] ||
     displayCode;
   const symbol = CURRENCY_SYMBOLS[code] || "$";
-  const decimalPlaces = isCrypto ? CRYPTO_DECIMAL_PLACES : FIAT_DECIMAL_PLACES;
-  const formattedRate = rate.toFixed(decimalPlaces);
+  const { formatted: formattedRate, isApproximate } = formatRate(rate, isCrypto);
 
   // Get flag URL from the imported constant
   const flagUrl = CURRENCY_FLAG_URLS[code];
@@ -167,6 +254,7 @@ export default function RatesScreen() {
     isLoading: isRatesLoading,
     error,
   } = useExchangeRates();
+  const { cryptoMarket } = useAppInitialization();
   const loadingTintColor = useThemeColor({}, "tint");
 
   // Guard Clauses for Loading/Error
@@ -208,19 +296,28 @@ export default function RatesScreen() {
   // 1. Map all currencies to data objects
   const allMappedData = DISPLAY_CURRENCIES.map((code) => {
     const isCrypto = code === "btc" || code === "eth";
+    let rate: number;
 
-    // Calculate the rate relative to the user's selected currency
-    const relativeRate = calculateRelativeRate(
-      selectedCurrency,
-      code,
-      ratesData.rates
-    );
+    // For BTC and ETH, use prices from cryptoMarket API if available and currency matches
+    if (isCrypto && cryptoMarket && cryptoMarket.currency === selectedCurrency) {
+      const cryptoPrice = getCryptoPrice(cryptoMarket, code);
+      if (cryptoPrice !== null && cryptoPrice > 0) {
+        // cryptoPrice is the price of 1 BTC/ETH in the selected currency
+        // We need to invert it: 1 unit of selected currency = 1/cryptoPrice BTC/ETH
+        rate = 1 / cryptoPrice;
+      } else {
+        // Fallback to exchange rate calculation if cryptoMarket data not available
+        rate = calculateRelativeRate(selectedCurrency, code, ratesData.rates);
+      }
+    } else {
+      // For fiat currencies or if cryptoMarket currency doesn't match, calculate relative rate
+      rate = calculateRelativeRate(selectedCurrency, code, ratesData.rates);
+    }
 
     return {
       id: code,
       code: code,
-      rate: relativeRate,
-      // isSelected flag is no longer strictly necessary since the selected currency is filtered out, but we keep it here just in case.
+      rate: rate,
       isSelected: code === selectedCurrency,
       isCrypto: isCrypto,
     };
@@ -274,12 +371,18 @@ export default function RatesScreen() {
           Base currency is {ratesData.base}, cached locally for 24 hours. Last
           updated: {new Date(ratesData.timestamp).toLocaleTimeString()}
         </ThemedText>
+        <ThemedText type="small" variant="secondary" style={styles.footerNote}>
+          Fiat currency rates are rounded to the smallest currency denomination. 
+          Cryptocurrency rates (BTC, ETH) show full precision without rounding.
+        </ThemedText>
       </ScreenContainer>
     </SafeAreaView>
   );
 }
 
-// --- STYLES ---
+// =========================================================================
+// STYLES
+// =========================================================================
 const styles = StyleSheet.create({
   container: {
     padding: Spacing.md,
