@@ -27,7 +27,7 @@ import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// New constant for the maximum width of the rate rows and list container
+// Maximum width of the rate rows and list container
 const MAX_ROW_WIDTH = 270;
 
 // Local map for display names not present in CURRENCY_DISPLAY_NAMES (e.g., crypto)
@@ -41,7 +41,6 @@ const ADDITIONAL_DISPLAY_NAMES: Partial<
 // The color to force on text when the row is selected (guaranteed light/white text)
 const SELECTED_TEXT_COLOR = Colors.dark.text;
 
-// --- UTILITIES ---
 
 /**
  * Calculates the exchange rate of a target currency relative to the user's selected base currency.
