@@ -1,97 +1,26 @@
-import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-} from "react-native";
+// app/(tabs)/rates.tsx
 
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { Colors, Spacing } from "@/constants/theme";
+import React from "react";
+import { FlatList, Pressable, StyleSheet, Switch } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
+import { CurrencySelectorModal } from "@/components/CurrencySelectorModal";
+import { ErrorState } from "@/components/ErrorState";
+import { LoadingState } from "@/components/LoadingState";
 import { RateRow } from "@/components/RateRow";
 import { ScreenContainer } from "@/components/ScreenContainer";
-import { CryptoMarketSnapshot } from "@/constants/coinGecko";
-import {
-  CURRENCY_DISPLAY_NAMES,
-  CURRENCY_SYMBOLS,
-  DISPLAY_CURRENCIES,
-  ExchangeRateCache,
-  SupportedCurrency,
-} from "@/constants/currency";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { CURRENCY_DISPLAY_NAMES, CURRENCY_SYMBOLS, SupportedCurrency } from "@/constants/currency";
+import { Spacing } from "@/constants/theme";
 import { useAppInitialization } from "@/hooks/use-app-initializations";
 import { useExchangeRates } from "@/hooks/use-exchange-rates";
 import { usePreferences } from "@/hooks/use-preference";
+import { useRatesData } from "@/hooks/use-rates-data";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import React from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
-
-// =========================================================================
-// CONSTANTS
-// =========================================================================
 
 // UI Constants
 const MAX_ROW_WIDTH = 290;
-
-// Crypto Coin IDs from CoinGecko API
-const COINGECKO_BTC_ID = "bitcoin";
-const COINGECKO_ETH_ID = "ethereum";
-
-
-// =========================================================================
-// UTILITY FUNCTIONS
-// =========================================================================
-
-/**
- * Calculates the exchange rate of a target currency relative to the user's selected base currency.
- * @param selectedCurrency The user's preferred currency (the new base, e.g., NGN).
- * @param targetCurrency The currency to convert to (e.g., USD).
- * @param rates The USD-based exchange rates object from the API.
- * @returns The converted rate.
- */
-function calculateRelativeRate(
-  selectedCurrency: SupportedCurrency,
-  targetCurrency: SupportedCurrency | "btc" | "eth",
-  rates: ExchangeRateCache["rates"]
-): number {
-  const selectedCode = selectedCurrency.toUpperCase();
-  const targetCode = targetCurrency.toUpperCase();
-
-  // Find the base rate (how many units of the selected currency equal 1 USD)
-  const baseRate = rates[selectedCode] ?? 1.0;
-
-  // Find the target rate (how many units of the target currency equal 1 USD)
-  // Defaults to 1.0 if the target is a placeholder like BTC/ETH (since base currency for API is USD)
-  const targetRate = rates[targetCode] ?? 1.0;
-
-  // Ratio: Target units / Base units
-  return targetRate / baseRate;
-}
-
-
-/**
- * Gets BTC or ETH price from cryptoMarket data.
- * @param cryptoMarket The crypto market snapshot from CoinGecko
- * @param coinId Either "btc" or "eth"
- * @returns The current price in the market's currency, or null if not found
- */
-function getCryptoPrice(
-  cryptoMarket: CryptoMarketSnapshot | undefined,
-  coinId: "btc" | "eth"
-): number | null {
-  if (!cryptoMarket?.data || !Array.isArray(cryptoMarket.data)) {
-    return null;
-  }
-
-  const coingeckoId = coinId === "btc" ? COINGECKO_BTC_ID : COINGECKO_ETH_ID;
-  const coin = cryptoMarket.data.find((item) => item.id === coingeckoId);
-  
-  return coin?.current_price ?? null;
-}
-
 
 export default function RatesScreen() {
   const { data: prefs, isPending: isPrefsPending } = usePreferences();
@@ -101,7 +30,7 @@ export default function RatesScreen() {
     error,
   } = useExchangeRates();
   const { cryptoMarket } = useAppInitialization();
-  const loadingTintColor = useThemeColor({}, "tint");
+  
   const borderColor = useThemeColor({}, "border");
   const tintColor = useThemeColor({}, "tint");
   const backgroundColor = useThemeColor({}, "background");
@@ -121,83 +50,22 @@ export default function RatesScreen() {
     }
   }, [prefs?.currency]);
 
+  // Prepare rates data using custom hook
+  const dataForList = useRatesData(selectedCurrency, ratesData, cryptoMarket);
+
   // Guard Clauses for Loading/Error
   if (isPrefsPending || isRatesLoading || !prefs) {
-    return (
-      <ThemedView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={loadingTintColor} />
-        <ThemedText type="body" style={{ marginTop: Spacing.md }}>
-          Loading exchange rates...
-        </ThemedText>
-      </ThemedView>
-    );
+    return <LoadingState message="Loading exchange rates..." />;
   }
 
   if (error || !ratesData || !ratesData.rates) {
     return (
-      <ThemedView style={styles.loadingContainer}>
-        <ThemedText
-          type="subtitle"
-          variant="error"
-          style={{ textAlign: "center" }}
-        >
-          Failed to load exchange rates.
-        </ThemedText>
-        <ThemedText
-          type="small"
-          variant="secondary"
-          style={{ marginTop: Spacing.sm }}
-        >
-          Base currency: {ratesData?.base || "N/A"}
-        </ThemedText>
-      </ThemedView>
+      <ErrorState
+        title="Failed to load exchange rates."
+        message={`Base currency: ${ratesData?.base || "N/A"}`}
+      />
     );
   }
-
-  // --- Prepare and Sort Data for FlatList ---
-  // 1. Map all currencies to data objects
-  const allMappedData = DISPLAY_CURRENCIES.map((code) => {
-    const isCrypto = code === "btc" || code === "eth";
-    let rate: number;
-
-    // For BTC and ETH, use prices from cryptoMarket API if available and currency matches
-    if (isCrypto && cryptoMarket && cryptoMarket.currency === selectedCurrency) {
-      const cryptoPrice = getCryptoPrice(cryptoMarket, code);
-      if (cryptoPrice !== null && cryptoPrice > 0) {
-        // cryptoPrice is the price of 1 BTC/ETH in the selected currency
-        // We need to invert it: 1 unit of selected currency = 1/cryptoPrice BTC/ETH
-        rate = 1 / cryptoPrice;
-      } else {
-        // Fallback to exchange rate calculation if cryptoMarket data not available
-        rate = calculateRelativeRate(selectedCurrency, code, ratesData.rates);
-      }
-    } else {
-      // For fiat currencies or if cryptoMarket currency doesn't match, calculate relative rate
-      rate = calculateRelativeRate(selectedCurrency, code, ratesData.rates);
-    }
-
-    return {
-      id: code,
-      code: code,
-      rate: rate,
-      isSelected: code === selectedCurrency,
-      isCrypto: isCrypto,
-    };
-  });
-
-  // 2. Filter out the selected base currency (the one that equals 1)
-  const filteredData = allMappedData.filter(item => item.code !== selectedCurrency);
-
-  // 3. Separate Fiat and Crypto from the filtered list
-  const fiatCurrencies = filteredData.filter(item => !item.isCrypto);
-  const cryptoCurrencies = filteredData.filter(item => item.isCrypto);
-
-  // 4. Sort Fiat currencies alphabetically by code
-  fiatCurrencies.sort((a, b) => a.code.localeCompare(b.code));
-
-  // 5. Combine: sorted fiat + cryptos at the bottom
-  const dataForList = [...fiatCurrencies, ...cryptoCurrencies];
-  // --- End Data Prep ---
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -254,68 +122,12 @@ export default function RatesScreen() {
         </ThemedView>
 
         {/* Currency Selection Modal */}
-        <Modal
+        <CurrencySelectorModal
           visible={showCurrencyModal}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowCurrencyModal(false)}
-        >
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setShowCurrencyModal(false)}
-          >
-            <ThemedView style={[
-              styles.modalContent,
-              { backgroundColor: backgroundColor }
-            ]}>
-              <ThemedText type="subtitle" style={styles.modalTitle}>
-                Select Currency
-              </ThemedText>
-              <ScrollView style={styles.modalScrollView}>
-                {Object.keys(CURRENCY_DISPLAY_NAMES).map((code) => {
-                  const currencyCode = code as SupportedCurrency;
-                  const displayName = CURRENCY_DISPLAY_NAMES[currencyCode];
-                  const isSelected = currencyCode === selectedCurrency;
-
-                  return (
-                    <Pressable
-                      key={currencyCode}
-                      onPress={() => {
-                        setSelectedCurrency(currencyCode);
-                        setShowCurrencyModal(false);
-                      }}
-                      style={({ pressed }) => [
-                        styles.modalItem,
-                        isSelected && {
-                          ...styles.modalItemSelected,
-                          backgroundColor: backgroundSecondaryColor,
-                        },
-                        pressed && styles.modalItemPressed,
-                      ]}
-                    >
-                      <ThemedView style={styles.modalItemContent}>
-                        <ThemedText
-                          type="bodySemibold"
-                          variant={isSelected ? "default" : "secondary"}
-                        >
-                          {currencyCode.toUpperCase()}
-                        </ThemedText>
-                        <ThemedText type="small" variant="secondary">
-                          {displayName}
-                        </ThemedText>
-                      </ThemedView>
-                      {isSelected && (
-                        <ThemedText type="body" style={{ color: tintColor }}>
-                          ✓
-                        </ThemedText>
-                      )}
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </ThemedView>
-          </Pressable>
-        </Modal>
+          selectedCurrency={selectedCurrency}
+          onSelectCurrency={setSelectedCurrency}
+          onClose={() => setShowCurrencyModal(false)}
+        />
 
         {/* Rates List Container - Constrained and centered */}
         <ThemedView style={styles.listContainer}>
@@ -326,7 +138,6 @@ export default function RatesScreen() {
               <RateRow
                 code={item.code}
                 rate={item.rate}
-                // isSelected will always be false for items in this filtered list
                 isSelected={item.isSelected} 
                 isCrypto={item.isCrypto}
                 fullPrecision={fullPrecision}
@@ -350,54 +161,19 @@ export default function RatesScreen() {
   );
 }
 
-// =========================================================================
-// STYLES
-// =========================================================================
 const styles = StyleSheet.create({
   container: {
     padding: Spacing.md,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: Spacing.xl,
-    minHeight: 300,
-  },
-  headerImage: {
-    bottom: -90,
-    left: -35,
-    position: "absolute",
-    opacity: 0.15,
   },
   titleContainer: {
     flexDirection: "row",
     gap: Spacing.sm,
     marginBottom: Spacing.md,
   },
-  description: {
-    // marginBottom: Spacing.lg,
-  },
-  // Wrapper for the header row to apply max width and centering
-  headerRowWrapper: {
-    width: "100%", // Crucial for mobile layout to ensure full width use
+  listContainer: {
+    width: "100%",
     maxWidth: MAX_ROW_WIDTH,
     alignSelf: "center",
-    marginBottom: Spacing.sm, // Add space before the list starts
-  },
-  listContainer: {
-    // Container for the list
-    width: "100%", // Crucial for mobile layout to ensure full width use
-    maxWidth: MAX_ROW_WIDTH, // Constrain width
-    alignSelf: "center", // Center the list on wider screens
-  },
-  listHeader: {
-    paddingVertical: Spacing.sm,
-    // Use theme color for border
-    borderBottomWidth: 1,
-    backgroundColor: "transparent",
-    borderBottomColor: Colors.light.border, // Explicitly use light border for separator visibility
-    // No explicit maxWidth needed here, as it's wrapped in headerRowWrapper
   },
   footerNote: {
     marginTop: Spacing.lg,
@@ -416,7 +192,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     borderRadius: Spacing.md,
     borderWidth: 1,
-    minHeight: 56, // Ensure consistent height
+    minHeight: 56,
   },
   currencySelectorPressed: {
     opacity: 0.7,
@@ -440,44 +216,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     borderRadius: Spacing.md,
     borderWidth: 1,
-    minHeight: 56, // Match currency selector height
+    minHeight: 56,
   },
   precisionLabel: {
     marginRight: Spacing.xs,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    borderTopLeftRadius: Spacing.lg,
-    borderTopRightRadius: Spacing.lg,
-    padding: Spacing.lg,
-    maxHeight: "80%",
-  },
-  modalTitle: {
-    marginBottom: Spacing.md,
-    textAlign: "center",
-  },
-  modalScrollView: {
-    maxHeight: 400,
-  },
-  modalItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: Spacing.md,
-    borderRadius: Spacing.sm,
-    marginBottom: Spacing.xs,
-  },
-  modalItemSelected: {
-    // backgroundColor set dynamically in component
-  },
-  modalItemPressed: {
-    opacity: 0.7,
-  },
-  modalItemContent: {
-    flex: 1,
   },
 });

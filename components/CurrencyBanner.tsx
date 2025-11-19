@@ -23,6 +23,7 @@ import { Spacing } from "@/constants/theme";
 import { useExchangeRates } from "@/hooks/use-exchange-rates";
 import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { calculateRelativeRate } from "@/utils/currencyCalculations";
 
 // --- GLOBAL BANNER CONSTANTS ---
 const BANNER_HEIGHT = 70;
@@ -176,20 +177,7 @@ const HorizontalTicker = ({ data, lessText = false, itemWidth }: HorizontalTicke
 // =========================================================================
 // 4. CURRENCY UTILITIES
 // =========================================================================
-
-function calculateRelativeRate(
-  selectedCurrency: SupportedCurrency,
-  targetCurrency: SupportedCurrency,
-  rates: ExchangeRateCache["rates"]
-): number {
-  const selectedCode = selectedCurrency.toUpperCase();
-  const targetCode = targetCurrency.toUpperCase();
-
-  const baseRate = rates[selectedCode] ?? 1.0;
-  const targetRate = rates[targetCode] ?? 1.0;
-
-  return targetRate / baseRate;
-}
+// Note: calculateRelativeRate is now imported from utils/currencyCalculations
 
 // =========================================================================
 // 5. CURRENCY BANNER (WRAPPER COMPONENT)
