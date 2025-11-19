@@ -37,7 +37,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 // =========================================================================
 
 // UI Constants
-const MAX_ROW_WIDTH = 270;
+const MAX_ROW_WIDTH = 290;
 const SELECTED_TEXT_COLOR = Colors.dark.text;
 
 // Decimal Places Configuration (for crypto precision calculation)
@@ -384,7 +384,7 @@ export default function RatesScreen() {
           <ThemedText type="large">Exchange Rates</ThemedText>
         </ThemedView>
 
-        {/* Currency Selector and Precision Toggle */}
+        {/* Currency Selector and Precision Toggle - Single Row */}
         <ThemedView style={styles.controlsContainer}>
           {/* Currency Dropdown */}
           <Pressable
@@ -399,17 +399,19 @@ export default function RatesScreen() {
             ]}
           >
             <ThemedView style={styles.currencySelectorContent}>
-              <ThemedText type="bodySemibold" style={styles.currencySelectorText}>
+              <ThemedText type="bodySemibold" style={styles.currencySelectorText} numberOfLines={1}>
                 1 {CURRENCY_SYMBOLS[selectedCurrency]} {selectedCurrency.toUpperCase()}
               </ThemedText>
-              <ThemedText type="small" variant="secondary">
+              <ThemedText type="small" variant="secondary" numberOfLines={1}>
                 {CURRENCY_DISPLAY_NAMES[selectedCurrency]}
               </ThemedText>
             </ThemedView>
-            <ThemedText type="body" variant="secondary">▼</ThemedText>
+            <ThemedText type="small" variant="secondary" style={styles.dropdownArrow}>
+              ▼
+            </ThemedText>
           </Pressable>
 
-          {/* Precision Toggle */}
+          {/* Precision Toggle - Compact */}
           <ThemedView style={[
             styles.precisionToggle,
             {
@@ -418,7 +420,7 @@ export default function RatesScreen() {
             }
           ]}>
             <ThemedText type="small" variant="secondary" style={styles.precisionLabel}>
-              Full Precision
+              Precision
             </ThemedText>
             <Switch
               value={fullPrecision}
@@ -615,16 +617,19 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   controlsContainer: {
+    flexDirection: "row",
     marginBottom: Spacing.md,
-    gap: Spacing.md,
+    gap: Spacing.sm,
   },
   currencySelector: {
+    flex: 2,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    padding: Spacing.md,
+    padding: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     borderRadius: Spacing.md,
     borderWidth: 1,
+    minHeight: 56, // Ensure consistent height
   },
   currencySelectorPressed: {
     opacity: 0.7,
@@ -633,18 +638,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   currencySelectorText: {
-    marginBottom: Spacing.xs,
+    marginBottom: 2,
+  },
+  dropdownArrow: {
+    marginLeft: Spacing.xs,
+    fontSize: 10,
   },
   precisionToggle: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: Spacing.md,
+    padding: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     borderRadius: Spacing.md,
     borderWidth: 1,
+    minHeight: 56, // Match currency selector height
   },
   precisionLabel: {
-    flex: 1,
+    marginRight: Spacing.xs,
   },
   modalOverlay: {
     flex: 1,
