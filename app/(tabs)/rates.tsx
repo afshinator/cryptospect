@@ -71,66 +71,6 @@ function calculateRelativeRate(
   return targetRate / baseRate;
 }
 
-/**
-  if (isCrypto) {
-    // For crypto, show full precision without rounding
-    if (rate === 0) {
-      return { formatted: '0', isApproximate: false };
-    }
-    
-    // Use enough decimal places to show full precision
-    // For very small numbers, calculate based on magnitude
-    const absRate = Math.abs(rate);
-    let decimalPlaces = 12; // Default precision
-    
-    if (absRate < 1) {
-      // For numbers less than 1, calculate decimal places needed
-      // Use log10 to determine how many leading zeros
-      const log10 = Math.log10(absRate);
-      if (log10 < 0) {
-        // Add extra precision for very small numbers
-        decimalPlaces = Math.ceil(-log10) + 10;
-      }
-    }
-    
-    // Cap at MAX_DECIMAL_PLACES for display
-    decimalPlaces = Math.min(decimalPlaces, MAX_DECIMAL_PLACES);
-    
-    // Format with calculated precision
-    let formatted = rate.toFixed(decimalPlaces);
-    
-    // Remove trailing zeros but preserve the decimal point if there are significant digits
-    formatted = formatted.replace(/\.?0+$/, '');
-    
-    return { formatted, isApproximate: false };
-  }
-
-  // For fiat currencies
-  if (fullPrecision) {
-    // Show full precision for fiat currencies
-    // Use enough decimal places to show significant digits
-    const absRate = Math.abs(rate);
-    let decimalPlaces = 4; // Default precision
-    
-    if (absRate < 1) {
-      const log10 = Math.log10(absRate);
-      if (log10 < 0) {
-        decimalPlaces = Math.ceil(-log10) + 4;
-      }
-    }
-    
-    decimalPlaces = Math.min(decimalPlaces, MAX_DECIMAL_PLACES);
-    let formatted = rate.toFixed(decimalPlaces);
-    formatted = formatted.replace(/\.?0+$/, '');
-    return { formatted, isApproximate: false };
-  } else {
-    // Round to 2 decimal places (smallest denomination)
-    const rounded = Math.round(rate * 100) / 100;
-    const formatted = rounded.toFixed(2);
-    const isApproximate = Math.abs(rate - rounded) > 0.0001;
-    return { formatted, isApproximate };
-  }
-}
 
 /**
  * Gets BTC or ETH price from cryptoMarket data.

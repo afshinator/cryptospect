@@ -15,10 +15,6 @@ import {
 import { Colors, Spacing } from "@/constants/theme";
 import { useThemeColor } from "@/hooks/use-theme-color";
 
-// =========================================================================
-// CONSTANTS
-// =========================================================================
-
 // UI Constants
 const MAX_ROW_WIDTH = 290;
 const SELECTED_TEXT_COLOR = Colors.dark.text;
@@ -40,9 +36,6 @@ const ADDITIONAL_DISPLAY_NAMES: Partial<
   eth: "Ethereum",
 };
 
-// =========================================================================
-// UTILITY FUNCTIONS
-// =========================================================================
 
 /**
  * Formats a rate value with appropriate decimal places.
@@ -251,9 +244,6 @@ export function RateRow({
   );
 }
 
-// =========================================================================
-// STYLES
-// =========================================================================
 
 const styles = StyleSheet.create({
   rateRow: {
