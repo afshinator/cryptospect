@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 
 // Import the new components
 import DominanceChartWrapper from "@/components/DominanceChartWrapper";
+import DominancePercentageChangeChart from "@/components/DominancePercentageChangeChart";
 import DominanceRatioChart from "@/components/DominanceRatioChart";
 import DominanceRatioHistogram from "@/components/DominanceRatioHistogram";
 import { DominanceSection } from "@/components/DominanceSection";
@@ -52,10 +53,10 @@ export default function DominanceScreen() {
 
   const latestDate = latestData
     ? new Date(latestData.date).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
     : null;
 
   // 4. Determine the Month Label for display below the main chart (if data available)
@@ -139,6 +140,34 @@ export default function DominanceScreen() {
           {/* Charts and details - Only show when data is available */}
           {dominanceData && dominanceData.length > 0 && (
             <>
+              {/* === CHART 1: RATIO LINE CHART === */}
+              <Collapsible title="Ratio Chart Details">
+                <ThemedText>
+                  This chart plots the BTC/ETH Dominance Ratio over time, providing
+                  a clear visual signal for whether market leadership is
+                  consolidation into Bitcoin or rotating toward Ethereum and the
+                  wider altcoin market.
+                </ThemedText>
+
+                <ThemedText>
+                  Rising Ratio (Moving Up): This means BTC.D is gaining strength
+                  faster than ETH.D, or ETH.D is weakening faster than BTC.D. This
+                  signals a consolidation of capital into Bitcoin, which is
+                  typically a defensive or &quot;risk-off&quot; move within the crypto space.
+                </ThemedText>
+
+                <ThemedText>
+                  Falling Ratio (Moving Down): This means ETH.D is gaining strength
+                  relative to BTC.D. This signals a rotation of capital into
+                  Ethereum and often serves as a lead indicator for the wider
+                  altcoin rally (the &quot;altcoin season&quot;).
+                </ThemedText>
+              </Collapsible>
+              <ThemedView style={styles.chartWrapper}>
+                <DominanceRatioChart historicalData={dominanceData} />
+              </ThemedView>
+
+              {/* === CHART 2: RATIO HISTOGRAM === */}
               <Collapsible title="Ratio Distribution Details">
                 <ThemedText>
                   The chart provides context for the current ratio by answering the
@@ -165,31 +194,20 @@ export default function DominanceScreen() {
                 <DominanceRatioHistogram historicalData={dominanceData} />
               </ThemedView>
 
-              <Collapsible title="Ratio Chart Details">
+              {/* === CHART 3: PERCENTAGE CHANGE INDICATOR (NEW) === */}
+              <Collapsible title="Momentum Chart Details">
                 <ThemedText>
-                  This chart plots the BTC/ETH Dominance Ratio over time, providing
-                  a clear visual signal for whether market leadership is
-                  consolidating into Bitcoin or rotating toward Ethereum and the
-                  wider altcoin market.
+                  This chart filters out long-term trends to highlight short-term rotational velocity and momentum. It plots the 7-day percentage change of the BTC/ETH Dominance Ratio.
                 </ThemedText>
-
                 <ThemedText>
-                  Rising Ratio (Moving Up): This means BTC.D is gaining strength
-                  faster than ETH.D, or ETH.D is weakening faster than BTC.D. This
-                  signals a consolidation of capital into Bitcoin, which is
-                  typically a defensive or &quot;risk-off&quot; move within the crypto space.
+                  Sharp Spikes Above 0%: Indicates a sudden, strong rotational momentum into BTC within the last week. This is often a sign of market defensiveness or a flight to safety within the crypto market.
                 </ThemedText>
-
                 <ThemedText>
-                  Falling Ratio (Moving Down): This means ETH.D is gaining strength
-                  relative to BTC.D. This signals a rotation of capital into
-                  Ethereum and often serves as a lead indicator for the wider
-                  altcoin rally (the &quot;altcoin season&quot;).
+                  Sharp Dips Below 0%: Indicates a sudden, strong rotational momentum into ETH (and potentially wider altcoins) within the last week. This is often a sign of increasing risk appetite or rotation out of BTC.
                 </ThemedText>
               </Collapsible>
-              {/* BTC/ETH Dominance Ratio Chart (New Rotational Signal) */}
               <ThemedView style={styles.chartWrapper}>
-                <DominanceRatioChart historicalData={dominanceData} />
+                <DominancePercentageChangeChart historicalData={dominanceData} />
               </ThemedView>
             </>
           )}
