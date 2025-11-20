@@ -194,7 +194,7 @@ export default function DominanceScreen() {
                 <DominanceRatioHistogram historicalData={dominanceData} />
               </ThemedView>
 
-              {/* === CHART 3: PERCENTAGE CHANGE INDICATOR (NEW) === */}
+              {/* === CHART 3: PERCENTAGE CHANGE INDICATOR */}
               <Collapsible title="Momentum Chart Details">
                 <ThemedText>
                   This chart filters out long-term trends to highlight short-term rotational velocity and momentum. It plots the 7-day percentage change of the BTC/ETH Dominance Ratio.
