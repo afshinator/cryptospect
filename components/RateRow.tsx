@@ -1,16 +1,16 @@
 // components/RateRow.tsx
 
 import React from "react";
-import { Image, StyleSheet, View } from "react-native";
+import { Image, Platform, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Collapsible } from "@/components/ui/collapsible";
 import {
-    CURRENCY_DISPLAY_NAMES,
-    CURRENCY_FLAG_URLS,
-    CURRENCY_SYMBOLS,
-    SupportedCurrency,
+  CURRENCY_DISPLAY_NAMES,
+  CURRENCY_FLAG_URLS,
+  CURRENCY_SYMBOLS,
+  SupportedCurrency,
 } from "@/constants/currency";
 import { Colors, Spacing } from "@/constants/theme";
 import { useThemeColor } from "@/hooks/use-theme-color";
@@ -23,7 +23,7 @@ const SELECTED_TEXT_COLOR = Colors.dark.text;
 const FLAG_IMAGE_SIZE = 40; // Fixed size for flag/icon images (should not exceed row height)
 type FlagImagePosition = "left" | "center" | "right";
 const FLAG_IMAGE_POSITION: FlagImagePosition = "center"; // Options: "left" | "center" | "right"
-const FLAG_IMAGE_OPACITY = 0.15; // Opacity for background flag effect
+const FLAG_IMAGE_OPACITY = 0.35; // Opacity for background flag effect
 
 // Decimal Places Configuration (for crypto precision calculation)
 const MAX_DECIMAL_PLACES = 20; // Maximum decimal places for very small crypto values
@@ -159,18 +159,22 @@ export function RateRow({
 
   // Calculate flag image positioning based on FLAG_IMAGE_POSITION constant
   const flagImageStyle = React.useMemo(() => {
-    const baseStyle: {
-      width: number;
-      height: number;
-      opacity: number;
-      position: "absolute";
-      top: number;
-    } = {
+    const verticalPosition = Platform.select({
+      web: {
+        top: "50%" as any,
+        transform: [{ translateY: -FLAG_IMAGE_SIZE / 2 }],
+      },
+      default: {
+        top: -5,
+      },
+    });
+
+    const baseStyle = {
       width: FLAG_IMAGE_SIZE,
       height: FLAG_IMAGE_SIZE,
       opacity: FLAG_IMAGE_OPACITY,
-      position: "absolute",
-      top: Spacing.sm,
+      position: "absolute" as const,
+      ...verticalPosition,
     };
 
     switch (FLAG_IMAGE_POSITION) {
@@ -250,7 +254,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: Spacing.sm,
+    ...Platform.select({
+      web: {
+        padding: Spacing.sm,
+      },
+      default: {
+        paddingHorizontal: Spacing.sm,
+      },
+    }),
     borderRadius: Spacing.md,
     marginVertical: Spacing.xs,
     borderWidth: 1,
