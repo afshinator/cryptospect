@@ -153,19 +153,18 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
   // 2. Create modified chart data with colored bar for current ratio
   // react-native-chart-kit BarChart supports per-bar coloring via colors array of functions
   // Requires withCustomBarColorFromData={true} and flatColor={true} props
-  const barColorFunctions = chartData && currentBinIndex >= 0 && chartData.datasets[0].data.length > 0
-    ? chartData.datasets[0].data.map((_, index) => 
-        (opacity = 1) => index === currentBinIndex ? CURRENT_RATIO_COLOR : BAR_COLOR
-      )
-    : chartData?.datasets[0].data.map(() => (opacity = 1) => BAR_COLOR) || [];
-
-  const modifiedChartData = chartData ? {
+  const modifiedChartData = chartData && chartData.datasets[0].data.length > 0 ? {
     ...chartData,
     datasets: [
       {
         ...chartData.datasets[0],
-        colors: barColorFunctions, // Array of color functions, one per bar
-        color: (opacity = 1) => BAR_COLOR, // Fallback color (not used when colors array is provided)
+        // Create colors array: one function per bar
+        colors: chartData.datasets[0].data.map((_, index) => {
+          return (opacity = 1) => {
+            // Color the current ratio bar red, others gray
+            return index === currentBinIndex ? CURRENT_RATIO_COLOR : BAR_COLOR;
+          };
+        }),
       }
     ],
   } : null;

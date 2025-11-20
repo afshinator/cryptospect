@@ -131,7 +131,7 @@ export default function DominanceRatioChart({ historicalData }: DominanceRatioCh
         BTC/ETH Dominance Rotation Signal
       </ThemedText>
       
-      <ThemedText type="default" variant="secondary" style={styles.ratioDisplay}>
+      <ThemedText type="body" variant="secondary" style={styles.ratioDisplay}>
         Current: <ThemedText style={{ color: RATIO_COLOR, fontWeight: 'bold' }}>{formatRatio(currentRatio)}</ThemedText> | 
         180D Avg: <ThemedText style={{ color: AVERAGE_COLOR, fontWeight: 'bold' }}>{formatRatio(averageRatio)}</ThemedText>
       </ThemedText>
