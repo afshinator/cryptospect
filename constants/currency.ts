@@ -10,13 +10,69 @@ export interface ExchangeRateCache {
 }
 
 export type CurrencyCode = 
-  | 'usd' | 'aed' | 'ars' | 'aud' | 'bdt' | 'bhd' | 'bmd' | 'brl' | 'cad' 
-  | 'chf' | 'clp' | 'cny' | 'czk' | 'dkk' | 'eur' | 'gbp' | 'gel' | 'hkd' 
-  | 'huf' | 'idr' | 'ils' | 'inr' | 'jpy' | 'krw' | 'kwd' | 'lkr' | 'mmk' 
-  | 'mxn' | 'myr' | 'ngn' | 'nok' | 'nzd' | 'php' | 'pkr' | 'pln' | 'rub' 
-  | 'sar' | 'sek' | 'sgd' | 'thb' | 'try' | 'twd' | 'uah' | 'vef' | 'vnd' 
-  | 'zar' | 'xdr' | 'xag' | 'xau' | 'btc' | 'eth' | 'ltc' | 'bch' | 'bnb' 
-  | 'eos' | 'xrp' | 'xlm' | 'link' | 'dot' | 'yfi';
+  // Fiat Currencies
+  | 'usd' // United States Dollar
+  | 'aed' // United Arab Emirates Dirham
+  | 'ars' // Argentine Peso
+  | 'aud' // Australian Dollar
+  | 'bdt' // Bangladeshi Taka
+  | 'bhd' // Bahraini Dinar
+  | 'bmd' // Bermudian Dollar
+  | 'brl' // Brazilian Real
+  | 'cad' // Canadian Dollar
+  | 'chf' // Swiss Franc
+  | 'clp' // Chilean Peso
+  | 'cny' // Chinese Yuan
+  | 'czk' // Czech Koruna
+  | 'dkk' // Danish Krone
+  | 'eur' // Euro (European Union)
+  | 'gbp' // British Pound (United Kingdom)
+  | 'gel' // Georgian Lari
+  | 'hkd' // Hong Kong Dollar
+  | 'huf' // Hungarian Forint
+  | 'idr' // Indonesian Rupiah
+  | 'ils' // Israeli Shekel
+  | 'inr' // Indian Rupee
+  | 'jpy' // Japanese Yen
+  | 'krw' // South Korean Won
+  | 'kwd' // Kuwaiti Dinar
+  | 'lkr' // Sri Lankan Rupee
+  | 'mmk' // Myanmar Kyat
+  | 'mxn' // Mexican Peso
+  | 'myr' // Malaysian Ringgit
+  | 'ngn' // Nigerian Naira
+  | 'nok' // Norwegian Krone
+  | 'nzd' // New Zealand Dollar
+  | 'php' // Philippine Peso
+  | 'pkr' // Pakistani Rupee
+  | 'pln' // Polish Zloty
+  | 'rub' // Russian Ruble
+  | 'sar' // Saudi Riyal
+  | 'sek' // Swedish Krona
+  | 'sgd' // Singapore Dollar
+  | 'thb' // Thai Baht
+  | 'try' // Turkish Lira
+  | 'twd' // New Taiwan Dollar
+  | 'uah' // Ukrainian Hryvnia
+  | 'vef' // Venezuelan Bolívar
+  | 'vnd' // Vietnamese Dong
+  | 'zar' // South African Rand
+  // Special Drawing Rights & Precious Metals
+  | 'xdr' // Special Drawing Rights (IMF)
+  | 'xag' // Silver (troy ounce)
+  | 'xau' // Gold (troy ounce)
+  // Cryptocurrencies
+  | 'btc' // Bitcoin
+  | 'eth' // Ethereum
+  | 'ltc' // Litecoin
+  | 'bch' // Bitcoin Cash
+  | 'bnb' // Binance Coin
+  | 'eos' // EOS
+  | 'xrp' // Ripple (XRP)
+  | 'xlm' // Stellar (XLM)
+  | 'link' // Chainlink (LINK)
+  | 'dot' // Polkadot (DOT)
+  | 'yfi'; // Yearn.finance (YFI)
 
 
 export type SupportedCurrency = 
@@ -30,6 +86,14 @@ export type SupportedCurrency =
   | 'cad' // Canadian Dollar
   | 'ngn' // Nigerian Naira
   | 'try' // Turkish Lira
+  | 'brl' // Brazilian Real
+  | 'chf' // Swiss Franc
+  | 'hkd' // Hong Kong Dollar
+  | 'krw' // South Korean Won
+  | 'php' // Philippine Peso
+  | 'pkr' // Pakistani Rupee
+  | 'rub' // Russian Ruble
+  | 'zar' // South African Rand
 
 
 export const DEFAULT_CURRENCY: SupportedCurrency = 'usd';
@@ -40,6 +104,7 @@ export const DEFAULT_CURRENCY: SupportedCurrency = 'usd';
  */
 export const DISPLAY_CURRENCIES: (SupportedCurrency | 'btc' | 'eth')[] = [
   'usd', 'eur', 'gbp', 'jpy', 'cny', 'inr', 'aud', 'cad', 'ngn', 'try',
+  'brl', 'chf', 'hkd', 'krw', 'php', 'pkr', 'rub', 'zar',
   'btc', // Bitcoin (Crypto)
   'eth', // Ethereum (Crypto)
 ];
@@ -56,6 +121,14 @@ export const CURRENCY_DISPLAY_NAMES: Record<SupportedCurrency, string> = {
   cad: 'Canadian Dollar',
   ngn: 'Nigerian Naira',
   try: 'Turkish Lira',
+  brl: 'Brazilian Real',
+  chf: 'Swiss Franc',
+  hkd: 'Hong Kong Dollar',
+  krw: 'South Korean Won',
+  php: 'Philippine Peso',
+  pkr: 'Pakistani Rupee',
+  rub: 'Russian Ruble',
+  zar: 'South African Rand',
 };
 
 /**
@@ -74,6 +147,14 @@ export const CURRENCY_FLAG_URLS: Partial<Record<CurrencyCode, string>> = {
   cad: 'https://flagcdn.com/w160/ca.png',
   ngn: 'https://flagcdn.com/w160/ng.png',
   try: 'https://flagcdn.com/w160/tr.png',
+  brl: 'https://flagcdn.com/w160/br.png',
+  chf: 'https://flagcdn.com/w160/ch.png',
+  hkd: 'https://flagcdn.com/w160/hk.png',
+  krw: 'https://flagcdn.com/w160/kr.png',
+  php: 'https://flagcdn.com/w160/ph.png',
+  pkr: 'https://flagcdn.com/w160/pk.png',
+  rub: 'https://flagcdn.com/w160/ru.png',
+  zar: 'https://flagcdn.com/w160/za.png',
   // Crypto icons from CoinGecko
   btc: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
   eth: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
