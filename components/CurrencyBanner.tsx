@@ -26,6 +26,7 @@ import { calculateRelativeRate } from "@/utils/currencyCalculations";
 
 // --- GLOBAL BANNER CONSTANTS ---
 const BANNER_HEIGHT = 70;
+const BANNER_HEIGHT_SMALL = 35; // Half height for small version
 const SCROLL_SPEED_MS = 30000;
 
 
@@ -40,14 +41,30 @@ interface TickerItem {
 interface GenericTickerItemProps {
   item: TickerItem;
   lessText: boolean; // Whether to display only label1 (less text)
+  hideCurrencyName: boolean; // Whether to hide currency name (label2)
   itemWidth: number;
+  itemHeight: number;
+  size: CurrencyBannerSize;
 }
 
 
-const GenericTickerItem = React.memo(({ item, lessText, itemWidth }: GenericTickerItemProps) => {
+const GenericTickerItem = React.memo(({ item, lessText, hideCurrencyName, itemWidth, itemHeight, size }: GenericTickerItemProps) => {
   const itemBackgroundColor = useThemeColor({}, "backgroundSecondary");
   const itemBorderColor = useThemeColor({}, "border");
   const textColor = useThemeColor({}, "text");
+
+  // Calculate font sizes based on size variant
+  const labelFontSize = size === "small" ? 10 : 16; // Smaller for small size
+  const rateFontSize = size === "small" ? 12 : 18; // Smaller for small size
+  const rateMarginTop = size === "small" ? 1 : 2;
+  
+  // Reduce padding for small size to maximize text space
+  const itemPadding = size === "small" ? Spacing.xs : Spacing.md;
+
+  // Determine what text to display
+  const displayText = lessText 
+    ? item.label1  // Only show currency code (USD)
+    : `${item.label2} ${item.label1}`; // Show currency name + code (US Dollar USD)
 
   return (
     <ThemedView
@@ -55,8 +72,10 @@ const GenericTickerItem = React.memo(({ item, lessText, itemWidth }: GenericTick
         styles.itemContainer,
         {
           width: itemWidth,
+          height: itemHeight,
           backgroundColor: itemBackgroundColor,
           borderRightColor: itemBorderColor,
+          paddingHorizontal: itemPadding,
         }
       ]}
       shadow="sm"
@@ -65,29 +84,55 @@ const GenericTickerItem = React.memo(({ item, lessText, itemWidth }: GenericTick
       {item.flagUrl && (
         <Image
           source={{ uri: item.flagUrl }}
-          style={styles.flagBackgroundImage}
+          style={[
+            styles.flagBackgroundImage,
+            {
+              width: itemWidth,
+              height: itemHeight,
+            }
+          ]}
           resizeMode={'cover'}
         />
       )}
 
       {/* TEXT CONTAINER - CENTERED */}
-      <View style={styles.textContainer}>
-        {/* Main Code/Label - bodySemibold */}
-        <ThemedText
-          type="bodySemibold"
-          style={{
-            color: textColor,
-            maxWidth: '100%',
-            textAlign: 'center'
-          }}
-          numberOfLines={1}
-        >
-          {/* UPDATED LOGIC: If lessText is true, show only label1 (USD). Otherwise, show label2 + label1 (US Dollar USD) */}
-          {lessText ? item.label1 : `${item.label2} ${item.label1}`}
-        </ThemedText>
+      <View style={[styles.textContainer, { width: itemWidth - (itemPadding * 2) }]}>
+        {/* Main Code/Label - bodySemibold (only show if not hiding currency name) */}
+        {!hideCurrencyName && (
+          <ThemedText
+            type="bodySemibold"
+            style={{
+              color: textColor,
+              width: '100%',
+              textAlign: 'center',
+              fontSize: labelFontSize,
+            }}
+            numberOfLines={1}
+            adjustsFontSizeToFit={true}
+            minimumFontScale={0.7}
+            ellipsizeMode="tail"
+          >
+            {displayText}
+          </ThemedText>
+        )}
 
         {/* Converted Value/Rate - bodySemibold */}
-        <ThemedText type="bodySemibold" style={styles.rateText}>
+        <ThemedText 
+          type="bodySemibold" 
+          style={[
+            styles.rateText,
+            {
+              fontSize: rateFontSize,
+              marginTop: hideCurrencyName ? 0 : rateMarginTop,
+              width: '100%',
+              textAlign: 'center',
+            }
+          ]}
+          numberOfLines={1}
+          adjustsFontSizeToFit={true}
+          minimumFontScale={0.7}
+          ellipsizeMode="tail"
+        >
           {item.value}
         </ThemedText>
       </View>
@@ -104,10 +149,13 @@ GenericTickerItem.displayName = 'GenericTickerItem';
 interface HorizontalTickerProps {
   data: TickerItem[];
   lessText?: boolean; // RENAMED: New prop definition
+  hideCurrencyName: boolean; // Whether to hide currency name
   itemWidth: number;
+  itemHeight: number;
+  size: CurrencyBannerSize;
 }
 
-const HorizontalTicker = ({ data, lessText = false, itemWidth }: HorizontalTickerProps) => {
+const HorizontalTicker = ({ data, lessText = false, hideCurrencyName, itemWidth, itemHeight, size }: HorizontalTickerProps) => {
   const scrollAnim = useRef(new Animated.Value(0)).current;
 
   const fullDataWidth = data.length * itemWidth;
@@ -159,7 +207,10 @@ const HorizontalTicker = ({ data, lessText = false, itemWidth }: HorizontalTicke
           key={item.id + index}
           item={item}
           lessText={lessText} // Pass the renamed prop
+          hideCurrencyName={hideCurrencyName}
           itemWidth={itemWidth}
+          itemHeight={itemHeight}
+          size={size}
         />
       ))}
     </Animated.View>
@@ -168,12 +219,17 @@ const HorizontalTicker = ({ data, lessText = false, itemWidth }: HorizontalTicke
 
 
 const CURRENCY_ITEM_WIDTH = 140;
+const CURRENCY_ITEM_WIDTH_SMALL = 70; // Half width for small version
+
+export type CurrencyBannerSize = "default" | "small";
 
 interface CurrencyBannerProps {
-  lessText?: boolean; // RENAMED: New prop definition
+  lessText?: boolean; // Whether to display only currency code (default: true)
+  hideCurrencyName?: boolean; // Whether to hide currency name (default: true for small size, false otherwise)
+  size?: CurrencyBannerSize; // Size variant: "default" or "small"
 }
 
-export function CurrencyBanner({ lessText = false }: CurrencyBannerProps) {
+export function CurrencyBanner({ lessText = true, hideCurrencyName, size = "default" }: CurrencyBannerProps) {
   const { data: prefs, isPending: isPrefsPending } = usePreferences();
   const {
     data: ratesData,
@@ -185,6 +241,15 @@ export function CurrencyBanner({ lessText = false }: CurrencyBannerProps) {
   const bannerBackgroundColor = useThemeColor({}, "background");
   const bannerBorderColor = useThemeColor({}, "border");
   const loadingTintColor = useThemeColor({}, "tint");
+
+  // Calculate dimensions based on size
+  const bannerHeight = size === "small" ? BANNER_HEIGHT_SMALL : BANNER_HEIGHT;
+  const itemWidth = size === "small" ? CURRENCY_ITEM_WIDTH_SMALL : CURRENCY_ITEM_WIDTH;
+  
+  // For small size, default to hiding currency name if not explicitly set
+  const shouldHideCurrencyName = hideCurrencyName !== undefined 
+    ? hideCurrencyName 
+    : size === "small";
 
   // Filter out non-fiat currencies (like btc, eth) and map to TickerItem
   const fiatTickerData: TickerItem[] = React.useMemo(() => {
@@ -233,7 +298,7 @@ export function CurrencyBanner({ lessText = false }: CurrencyBannerProps) {
           styles.bannerContainer,
           styles.loadingBanner,
           {
-            height: BANNER_HEIGHT,
+            height: bannerHeight,
             backgroundColor: bannerBackgroundColor,
             borderBottomColor: bannerBorderColor
           }
@@ -249,7 +314,7 @@ export function CurrencyBanner({ lessText = false }: CurrencyBannerProps) {
       style={[
         styles.bannerContainer,
         {
-          height: BANNER_HEIGHT,
+          height: bannerHeight,
           backgroundColor: bannerBackgroundColor,
           borderBottomColor: bannerBorderColor
         }
@@ -258,7 +323,10 @@ export function CurrencyBanner({ lessText = false }: CurrencyBannerProps) {
       <HorizontalTicker
         data={fiatTickerData}
         lessText={lessText} // Pass the renamed prop
-        itemWidth={CURRENCY_ITEM_WIDTH}
+        hideCurrencyName={shouldHideCurrencyName}
+        itemWidth={itemWidth}
+        itemHeight={bannerHeight}
+        size={size}
       />
     </View>
   );
@@ -284,10 +352,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   itemContainer: {
-    height: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
     justifyContent: 'space-between',
     borderRightWidth: StyleSheet.hairlineWidth,
     gap: Spacing.xs,
@@ -298,14 +364,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
     opacity: 0.15,
   },
   textContainer: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,

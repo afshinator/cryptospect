@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
@@ -23,7 +23,11 @@ export default function HomeScreen() {
     <SafeAreaView style={{ flex: 1 }}> 
       
       {/* FIXED CONTENT: Currency Banner remains at the top */}
-      <CurrencyBanner lessText />
+      <CurrencyBanner 
+        lessText 
+        hideCurrencyName={Platform.OS === "web" ? false : true}
+        size={Platform.OS === "web" ? "default" : "small"} 
+      />
 
       {/* SCROLLABLE CONTENT */}
       <ScrollView 
