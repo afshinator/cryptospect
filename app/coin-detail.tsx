@@ -79,6 +79,36 @@ export default function CoinDetailScreen() {
     return `${sign}${num.toFixed(2)}%`;
   };
 
+  const formatDataAge = (lastUpdated: string | null | undefined, snapshotTimestamp: number | undefined): string | null => {
+    let timestamp: number | null = null;
+
+    if (lastUpdated) {
+      timestamp = new Date(lastUpdated).getTime();
+    } else if (snapshotTimestamp) {
+      timestamp = snapshotTimestamp;
+    }
+
+    if (!timestamp) return null;
+
+    const now = Date.now();
+    const diffSeconds = Math.floor((now - timestamp) / 1000);
+
+    if (diffSeconds < 60) {
+      return `${diffSeconds}s ago`;
+    } else if (diffSeconds < 3600) {
+      const minutes = Math.floor(diffSeconds / 60);
+      return `${minutes}m ago`;
+    } else if (diffSeconds < 86400) {
+      const hours = Math.floor(diffSeconds / 3600);
+      return `${hours}h ago`;
+    } else {
+      const days = Math.floor(diffSeconds / 86400);
+      return `${days}d ago`;
+    }
+  };
+
+  const dataAge = formatDataAge(coin.last_updated, cryptoMarket?.timestamp);
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScreenContainer>
@@ -107,9 +137,16 @@ export default function CoinDetailScreen() {
               <ThemedText type="subtitle" style={styles.sectionTitle}>
                 Price
               </ThemedText>
-              <ThemedText type="xlarge">
-                {formatPrice(coin.current_price)}
-              </ThemedText>
+              <ThemedView style={styles.priceRow}>
+                <ThemedText type="xlarge">
+                  {formatPrice(coin.current_price)}
+                </ThemedText>
+                {dataAge && (
+                  <ThemedText type="small" variant="secondary">
+                    {dataAge}
+                  </ThemedText>
+                )}
+              </ThemedView>
               {coin.price_change_percentage_24h !== null && (
                 <ThemedText
                   type="body"
@@ -292,6 +329,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginBottom: Spacing.sm,
+  },
+  priceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.xs,
   },
   dataRow: {
     flexDirection: "row",
