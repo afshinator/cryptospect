@@ -25,9 +25,12 @@ export function useCreateCoinList() {
     mutationFn: async (list: Omit<CoinList, "id" | "createdAt" | "updatedAt">) => {
       const existingLists = await getCoinLists();
       
+      // Trim and normalize the name for comparison
+      const trimmedName = list.name.trim();
+      
       // Check for duplicate name (case-insensitive)
       const nameExists = existingLists.some(
-        (l) => l.name.toLowerCase() === list.name.toLowerCase()
+        (l) => l.name.trim().toLowerCase() === trimmedName.toLowerCase()
       );
       
       if (nameExists) {
@@ -36,6 +39,7 @@ export function useCreateCoinList() {
       
       const newList: CoinList = {
         ...list,
+        name: trimmedName,
         id: `list_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -67,15 +71,21 @@ export function useUpdateCoinList() {
       
       // If updating the name, check for duplicates (excluding current list)
       if (updates.name) {
+        // Trim and normalize the name for comparison
+        const trimmedName = updates.name.trim();
+        
         const nameExists = existingLists.some(
           (l) =>
             l.id !== id &&
-            l.name.toLowerCase() === updates.name!.toLowerCase()
+            l.name.trim().toLowerCase() === trimmedName.toLowerCase()
         );
         
         if (nameExists) {
           throw new Error("A list with this name already exists");
         }
+        
+        // Use trimmed name in updates
+        updates.name = trimmedName;
       }
       
       const updatedLists = existingLists.map((list) =>
