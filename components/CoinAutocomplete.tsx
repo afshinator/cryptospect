@@ -7,7 +7,7 @@ import { CoinGeckoMarketData } from "@/constants/coinGecko";
 import { Spacing } from "@/constants/theme";
 import { useAppInitialization } from "@/hooks/use-app-initializations";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     Image,
     Keyboard,
@@ -18,7 +18,6 @@ import {
     ScrollView,
     StyleSheet,
     TextInput,
-    TouchableOpacity,
     View,
 } from "react-native";
 
@@ -63,12 +62,15 @@ export function CoinAutocomplete({
   }, [searchQuery, cryptoMarket?.data, excludeCoinIds]);
 
   const handleSelect = (coin: CoinGeckoMarketData) => {
+    // Select immediately
     onSelect(coin);
     setSearchQuery("");
     setIsModalVisible(false);
-    // Dismiss keyboard and blur input
-    Keyboard.dismiss();
-    inputRef.current?.blur();
+    // Dismiss keyboard after closing modal
+    setTimeout(() => {
+      Keyboard.dismiss();
+      inputRef.current?.blur();
+    }, 0);
   };
 
   const handleTextChange = (text: string) => {
@@ -77,10 +79,22 @@ export function CoinAutocomplete({
 
   const handleCloseModal = () => {
     setIsModalVisible(false);
+    setSearchQuery("");
     // Dismiss keyboard and blur input when closing modal
     Keyboard.dismiss();
     inputRef.current?.blur();
   };
+
+  // Auto-focus input when modal opens (with delay for mobile)
+  useEffect(() => {
+    if (isModalVisible) {
+      // Small delay to ensure modal is fully rendered before focusing
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, Platform.OS === "ios" ? 300 : 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isModalVisible]);
 
   return (
     <View style={styles.container}>
@@ -126,6 +140,7 @@ export function CoinAutocomplete({
 
               {/* Search Input in Modal */}
               <TextInput
+                ref={inputRef}
                 style={[
                   styles.modalInput,
                   { color: textColor, backgroundColor, borderColor },
@@ -136,7 +151,8 @@ export function CoinAutocomplete({
                 onChangeText={setSearchQuery}
                 autoCapitalize="none"
                 autoCorrect={false}
-                autoFocus
+                autoFocus={false}
+                returnKeyType="search"
               />
 
               {/* Results List */}
@@ -147,11 +163,12 @@ export function CoinAutocomplete({
                   contentContainerStyle={styles.modalScrollViewContent}
                 >
                   {filteredCoins.map((item) => (
-                    <TouchableOpacity
+                    <Pressable
                       key={item.id}
-                      style={[
+                      style={({ pressed }) => [
                         styles.modalItem,
                         { borderBottomColor: borderColor },
+                        pressed && { opacity: 0.7 },
                       ]}
                       onPress={() => handleSelect(item)}
                     >
@@ -167,7 +184,7 @@ export function CoinAutocomplete({
                           {item.symbol.toUpperCase()}
                         </ThemedText>
                       </View>
-                    </TouchableOpacity>
+                    </Pressable>
                   ))}
                 </ScrollView>
               ) : searchQuery ? (
