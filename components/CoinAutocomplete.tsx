@@ -43,7 +43,7 @@ export function CoinAutocomplete({
   const placeholderColor = useThemeColor({}, "textSecondary");
   const tintColor = useThemeColor({}, "tint");
 
-  // Filter and search coins
+  // Filter and search coins - prioritize coins that start with the query
   const filteredCoins = useMemo(() => {
     if (!cryptoMarket?.data) return [];
 
@@ -54,11 +54,43 @@ export function CoinAutocomplete({
       (coin) => !excludeCoinIds.includes(coin.id)
     );
 
-    return availableCoins.filter((coin) => {
-      const nameMatch = coin.name.toLowerCase().includes(query);
-      const symbolMatch = coin.symbol.toLowerCase().includes(query);
-      return nameMatch || symbolMatch;
-    }).slice(0, 50); // Show more results in modal
+    // Separate coins into groups with priority:
+    // 1. Symbol starts with query (highest priority)
+    // 2. Name starts with query (but symbol doesn't)
+    // 3. Symbol contains query (but doesn't start)
+    // 4. Name contains query (but doesn't start)
+    const symbolStartsWith: CoinGeckoMarketData[] = [];
+    const nameStartsWith: CoinGeckoMarketData[] = [];
+    const symbolContains: CoinGeckoMarketData[] = [];
+    const nameContains: CoinGeckoMarketData[] = [];
+
+    availableCoins.forEach((coin) => {
+      const nameLower = coin.name.toLowerCase();
+      const symbolLower = coin.symbol.toLowerCase();
+      
+      const nameStartsWithQuery = nameLower.startsWith(query);
+      const symbolStartsWithQuery = symbolLower.startsWith(query);
+      const nameContainsQuery = nameLower.includes(query);
+      const symbolContainsQuery = symbolLower.includes(query);
+
+      if (symbolStartsWithQuery) {
+        symbolStartsWith.push(coin);
+      } else if (nameStartsWithQuery) {
+        nameStartsWith.push(coin);
+      } else if (symbolContainsQuery) {
+        symbolContains.push(coin);
+      } else if (nameContainsQuery) {
+        nameContains.push(coin);
+      }
+    });
+
+    // Return in priority order, limit to 50 total
+    return [
+      ...symbolStartsWith,
+      ...nameStartsWith,
+      ...symbolContains,
+      ...nameContains,
+    ].slice(0, 50);
   }, [searchQuery, cryptoMarket?.data, excludeCoinIds]);
 
   const handleSelect = (coin: CoinGeckoMarketData) => {
