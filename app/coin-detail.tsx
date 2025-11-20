@@ -83,7 +83,7 @@ export default function CoinDetailScreen() {
     <SafeAreaView style={{ flex: 1 }}>
       <ScreenContainer>
         <ThemedView style={styles.container}>
-          <ScrollView>
+          <ScrollView accessibilityViewIsModal={false}>
             {/* Coin Header */}
             <ThemedView style={styles.header}>
               {coin.image && (
@@ -220,6 +220,8 @@ export default function CoinDetailScreen() {
                     key={list.id}
                     onPress={() => router.push(`/list-detail?id=${list.id}`)}
                     style={[styles.listItem, { borderColor }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View list ${list.name}`}
                   >
                     <ThemedText type="bodySemibold">{list.name}</ThemedText>
                     <IconSymbol name="chevron.right" size={20} color={tintColor} />
