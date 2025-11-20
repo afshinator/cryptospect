@@ -45,11 +45,11 @@ function RootLayoutContent() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="list-detail"
-          options={{ presentation: "card", title: "List Detail", headerShown: true }}
+          options={{ presentation: "card", title: "List Details", headerShown: true, headerTitleAlign: "center" }}
         />
         <Stack.Screen
           name="coin-detail"
-          options={{ presentation: "card", title: "Coin Detail", headerShown: true }}
+          options={{ presentation: "card", title: "Coin Details", headerShown: true, headerTitleAlign: "center" }}
         />
         <Stack.Screen
           name="modal"
