@@ -55,6 +55,9 @@ export function CoinListItem({
 
   const isListsVariant = variant === "lists";
 
+  // Capitalize first character of list name
+  const capitalizedName = list.name.charAt(0).toUpperCase() + list.name.slice(1);
+
   return (
     <Pressable
       onPress={() => onPress(list.id)}
@@ -72,14 +75,14 @@ export function CoinListItem({
       >
         {isListsVariant && showDeleteButton ? (
           <ThemedView style={styles.listItemHeader}>
-            <ThemedText type="subtitle">{list.name}</ThemedText>
+            <ThemedText type="subtitle">{capitalizedName}</ThemedText>
             <Pressable onPress={handleDelete} style={styles.deleteButton}>
               <IconSymbol name="trash.fill" size={30} color={tintColor} />
             </Pressable>
           </ThemedView>
         ) : (
           <ThemedText type={isListsVariant ? "subtitle" : "bodySemibold"}>
-            {list.name}
+            {capitalizedName}
           </ThemedText>
         )}
         <CoinListPreview list={list} />
