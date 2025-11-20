@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { CoinListPreview } from "@/components/CoinListPreview";
+import { CoinListItem } from "@/components/CoinListItem";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { ThemedText } from "@/components/themed-text";
@@ -185,40 +185,15 @@ export default function ListsScreen() {
           <ScrollView style={styles.listsContainer}>
             {lists && lists.length > 0 ? (
               lists.map((list) => (
-                <Pressable
+                <CoinListItem
                   key={list.id}
-                  onPress={() => handleListPress(list.id)}
-                  style={[styles.listItem, { borderColor }]}
-                >
-                  <ThemedView style={styles.listItemContent}>
-                    <ThemedView style={styles.listItemHeader}>
-                      <ThemedText type="subtitle">{list.name}</ThemedText>
-                      <Pressable
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleDelete(list.id, list.name);
-                        }}
-                        style={styles.deleteButton}
-                      >
-                        <IconSymbol
-                          name="trash.fill"
-                          size={30}
-                          color={tintColor}
-                        />
-                      </Pressable>
-                    </ThemedView>
-                    <CoinListPreview list={list} />
-                    {list.notes && (
-                      <ThemedText
-                        type="small"
-                        variant="secondary"
-                        numberOfLines={1}
-                      >
-                        {list.notes}
-                      </ThemedText>
-                    )}
-                  </ThemedView>
-                </Pressable>
+                  list={list}
+                  onPress={handleListPress}
+                  showDeleteButton={true}
+                  onDelete={handleDelete}
+                  showNotes={true}
+                  variant="lists"
+                />
               ))
             ) : (
               <ThemedView style={styles.emptyContainer}>
@@ -300,25 +275,6 @@ const styles = StyleSheet.create({
   },
   listsContainer: {
     flex: 1,
-  },
-  listItem: {
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  listItemContent: {
-    padding: Spacing.md,
-  },
-  listItemHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Spacing.xs,
-  },
-  deleteButton: {
-    padding: Spacing.xs,
   },
   emptyContainer: {
     padding: Spacing.xl,

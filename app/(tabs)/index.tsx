@@ -3,21 +3,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { CurrencyBanner } from "@/components/CurrencyBanner";
-import { CoinListPreview } from "@/components/CoinListPreview";
+import { CoinListItem } from "@/components/CoinListItem";
 import { DominanceSection } from "@/components/DominanceSection";
 import { HelloWave } from "@/components/hello-wave";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Spacing } from "@/constants/theme";
-import { useThemeColor } from "@/hooks/use-theme-color";
 import { useCoinLists } from "@/hooks/use-coin-lists";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { data: lists, isLoading } = useCoinLists();
-  const borderColor = useThemeColor({}, "border");
-  const tintColor = useThemeColor({}, "tint");
 
   const handleListPress = (listId: string) => {
     router.push(`/list-detail?id=${listId}`);
@@ -53,17 +49,13 @@ export default function HomeScreen() {
             </ThemedText>
           ) : lists && lists.length > 0 ? (
             lists.map((list) => (
-              <Pressable
+              <CoinListItem
                 key={list.id}
-                onPress={() => handleListPress(list.id)}
-                style={[styles.listItem, { borderColor }]}
-              >
-                <ThemedView style={styles.listItemContent}>
-                  <ThemedText type="bodySemibold">{list.name}</ThemedText>
-                  <CoinListPreview list={list} />
-                </ThemedView>
-                <IconSymbol name="chevron.right" size={20} color={tintColor} />
-              </Pressable>
+                list={list}
+                onPress={handleListPress}
+                showChevron={true}
+                variant="home"
+              />
             ))
           ) : (
             <ThemedText type="body" variant="secondary">
@@ -97,18 +89,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginBottom: Spacing.md,
-  },
-  listItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderRadius: 8,
-  },
-  listItemContent: {
-    flex: 1,
   },
   stepContainer: {
     gap: Spacing.sm,
