@@ -55,7 +55,7 @@ export default function SettingsScreen() {
   const previewScaleFactor = displayFontScale / preferences.fontScale;
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={[styles.container, { flex: 1 }]} edges={["top"]}>
       <ScreenContainer>
         <ThemedText type="large" style={styles.title}>
           Settings

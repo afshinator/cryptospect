@@ -65,7 +65,7 @@ export default function RatesScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={[styles.container, { flex: 1 }]} edges={["top"]}>
       <ScreenContainer>
         <ThemedView style={styles.titleContainer}>
           <ThemedText type="large">Exchange Rates</ThemedText>

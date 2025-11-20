@@ -32,25 +32,19 @@ export function ScreenContainer({ children }: { children: ReactNode }) {
 // Applying the ScreenStyles interface to StyleSheet.create
 const styles = StyleSheet.create<ScreenStyles>({
     // The main container needs flex: 1 to ensure it takes up the full screen height
+    // This is especially critical on web where ScrollView needs explicit height constraints
     container: {
-        // flex: 1,
-        // backgroundColor: '#fff', // Use your main background color
+        flex: 1,
     },
     // The content container ensures padding and alignment for the content inside
     content: {
         // paddingHorizontal: 16,
         // paddingBottom: 40,
-        // On web, using minHeight: '100vh' helps ensure short content still pushes
-        // the scroll area to the bottom of the viewport.
-        // @ts-ignore
-        minHeight: Platform.select({
-            web: '100vh', 
-            default: undefined,
-        })
+        // Note: We don't set minHeight here as it can prevent scrolling on web
+        // when content exceeds the viewport height
     }
 });
 
-// TODO:  ⚠️ scrolling still broken on WEB!!!!!!!!!!!❌
 // Example Usage (for your RatesScreen or SettingsScreen):
 /*
 import { ScreenContainer } from './ScreenContainer';
