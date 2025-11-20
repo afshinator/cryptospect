@@ -3,13 +3,13 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -19,9 +19,9 @@ import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Spacing } from "@/constants/theme";
 import {
-    useCoinLists,
-    useCreateCoinList,
-    useDeleteCoinList,
+  useCoinLists,
+  useCreateCoinList,
+  useDeleteCoinList,
 } from "@/hooks/use-coin-lists";
 import { useThemeColor } from "@/hooks/use-theme-color";
 
@@ -104,7 +104,9 @@ export default function ListsScreen() {
         <ScreenContainer>
           <ThemedView style={styles.centerContainer}>
             <ActivityIndicator size="large" />
-            <ThemedText style={{ marginTop: Spacing.md }}>Loading lists...</ThemedText>
+            <ThemedText style={{ marginTop: Spacing.md }}>
+              Loading lists...
+            </ThemedText>
           </ThemedView>
         </ScreenContainer>
       </SafeAreaView>
@@ -160,7 +162,10 @@ export default function ListsScreen() {
               style={[styles.addButton, { borderColor }]}
             >
               <IconSymbol name="plus.circle.fill" size={24} color={tintColor} />
-              <ThemedText type="bodySemibold" style={{ marginLeft: Spacing.sm }}>
+              <ThemedText
+                type="bodySemibold"
+                style={{ marginLeft: Spacing.sm }}
+              >
                 Create New List
               </ThemedText>
             </Pressable>
@@ -185,14 +190,23 @@ export default function ListsScreen() {
                         }}
                         style={styles.deleteButton}
                       >
-                        <IconSymbol name="trash.fill" size={30} color={tintColor} />
+                        <IconSymbol
+                          name="trash.fill"
+                          size={30}
+                          color={tintColor}
+                        />
                       </Pressable>
                     </ThemedView>
                     <ThemedText type="small" variant="secondary">
-                      {list.coins.length} coin{list.coins.length !== 1 ? "s" : ""}
+                      {list.coins.length} coin
+                      {list.coins.length !== 1 ? "s" : ""}
                     </ThemedText>
                     {list.notes && (
-                      <ThemedText type="small" variant="secondary" numberOfLines={1}>
+                      <ThemedText
+                        type="small"
+                        variant="secondary"
+                        numberOfLines={1}
+                      >
                         {list.notes}
                       </ThemedText>
                     )}
@@ -292,4 +306,3 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 });
-
