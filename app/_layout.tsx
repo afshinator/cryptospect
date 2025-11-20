@@ -44,6 +44,14 @@ function RootLayoutContent() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
+          name="list-detail"
+          options={{ presentation: "card", title: "List Detail", headerShown: true }}
+        />
+        <Stack.Screen
+          name="coin-detail"
+          options={{ presentation: "card", title: "Coin Detail", headerShown: true }}
+        />
+        <Stack.Screen
           name="modal"
           options={{ presentation: "modal", title: "Modal" }}
         />

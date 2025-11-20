@@ -61,6 +61,18 @@ const MAPPING = {
 
   // General List/Index: SF Symbol 'list.bullet' mapped to Material Icon 'list',
   "list.bullet": "list",
+
+  // Add/Create: SF Symbol 'plus.circle.fill' mapped to Material Icon 'add-circle'
+  "plus.circle.fill": "add-circle",
+
+  // Delete/Remove: SF Symbol 'trash.fill' mapped to Material Icon 'delete'
+  "trash.fill": "delete",
+
+  // Edit: SF Symbol 'pencil' mapped to Material Icon 'edit'
+  pencil: "edit",
+
+  // Close/Cancel: SF Symbol 'xmark.circle.fill' mapped to Material Icon 'cancel'
+  "xmark.circle.fill": "cancel",
 } as IconMapping;
 
 /**

@@ -21,4 +21,5 @@ export type CoinList = {
   coins: CoinListItem[];
   createdAt: number;
   updatedAt: number;
+  notes: string; // User-created notes
 };

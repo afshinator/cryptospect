@@ -1,14 +1,26 @@
-import { ScrollView, StyleSheet } from "react-native";
+import { Pressable, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
 import { CurrencyBanner } from "@/components/CurrencyBanner";
 import { DominanceSection } from "@/components/DominanceSection";
 import { HelloWave } from "@/components/hello-wave";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Spacing } from "@/constants/theme";
+import { useThemeColor } from "@/hooks/use-theme-color";
+import { useCoinLists } from "@/hooks/use-coin-lists";
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const { data: lists, isLoading } = useCoinLists();
+  const borderColor = useThemeColor({}, "border");
+
+  const handleListPress = (listId: string) => {
+    router.push(`/list-detail?id=${listId}`);
+  };
+
   return (
     <SafeAreaView style={{ flex: 1 }}> 
       
@@ -28,12 +40,36 @@ export default function HomeScreen() {
         {/* Dominance Section */}
         <DominanceSection showAllFour={true}/>
 
-        <ThemedView style={styles.placeholder}>
-          <ThemedText type="bodySemibold">Content Area</ThemedText>
-          <ThemedText type="body">
-            This ScrollView now fills the rest of the screen.
-            Scrolling is automatically enabled when content overflows.
+        {/* Coin Lists Section */}
+        <ThemedView style={styles.listsSection}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Coin Lists
           </ThemedText>
+          {isLoading ? (
+            <ThemedText type="body" variant="secondary">
+              Loading lists...
+            </ThemedText>
+          ) : lists && lists.length > 0 ? (
+            lists.map((list) => (
+              <Pressable
+                key={list.id}
+                onPress={() => handleListPress(list.id)}
+                style={[styles.listItem, { borderColor }]}
+              >
+                <ThemedView style={styles.listItemContent}>
+                  <ThemedText type="bodySemibold">{list.name}</ThemedText>
+                  <ThemedText type="small" variant="secondary">
+                    {list.coins.length} coin{list.coins.length !== 1 ? "s" : ""}
+                  </ThemedText>
+                </ThemedView>
+                <IconSymbol name="chevron.right" size={20} />
+              </Pressable>
+            ))
+          ) : (
+            <ThemedText type="body" variant="secondary">
+              No lists yet. Create your first list in the Lists tab!
+            </ThemedText>
+          )}
         </ThemedView>
 
       </ScrollView>
@@ -55,15 +91,24 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     marginBottom: Spacing.md,
   },
-  placeholder: {
-    height: 800, 
+  listsSection: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    marginBottom: Spacing.md,
+  },
+  listItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'gray',
-    gap: Spacing.sm,
+  },
+  listItemContent: {
+    flex: 1,
   },
   stepContainer: {
     gap: Spacing.sm,
