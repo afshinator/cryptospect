@@ -1,8 +1,6 @@
-// hooks/use-coin-lists.ts
-
 import { CoinList, CoinListItem } from "@/constants/coinLists";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCoinLists, saveCoinLists } from "@/utils/coinListStorage";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const COIN_LISTS_QUERY_KEY = ["coinLists"];
 
@@ -177,4 +175,3 @@ export function useRemoveCoinFromList() {
     },
   });
 }
-

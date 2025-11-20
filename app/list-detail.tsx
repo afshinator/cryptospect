@@ -1,37 +1,93 @@
 // app/list-detail.tsx
 
-import { useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
+  Keyboard,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
-  Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { CoinAutocomplete } from "@/components/CoinAutocomplete";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { CoinListItem } from "@/constants/coinLists";
 import { CoinGeckoMarketData } from "@/constants/coinGecko";
+import { CoinListItem } from "@/constants/coinLists";
 import { SupportedCurrency } from "@/constants/currency";
 import { Spacing } from "@/constants/theme";
-import { usePreferences } from "@/hooks/use-preference";
-import { useThemeColor } from "@/hooks/use-theme-color";
 import {
-  useCoinLists,
   useAddCoinToList,
+  useCoinLists,
   useRemoveCoinFromList,
   useUpdateCoinList,
 } from "@/hooks/use-coin-lists";
+import { usePreferences } from "@/hooks/use-preference";
+import { useThemeColor } from "@/hooks/use-theme-color";
 
+// --- Custom Confirmation Modal Component ---
+interface ConfirmationModalProps {
+  visible: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  coinName: string;
+}
+
+const RemoveConfirmationModal: React.FC<ConfirmationModalProps> = ({
+  visible,
+  onConfirm,
+  onCancel,
+  coinName,
+}) => {
+  const cardColor = useThemeColor({}, "backgroundSecondary");
+  const tintColor = useThemeColor({}, "tint");
+  const dangerColor = useThemeColor({}, "error");
+
+  return (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onCancel}
+    >
+      {/* FIX: Set a semi-transparent background color directly on the overlay for reliable dimming */}
+      <ThemedView style={modalStyles.overlay}>
+        <ThemedView style={[modalStyles.card, { backgroundColor: cardColor }]}>
+          <ThemedText type="subtitle" style={modalStyles.title}>
+            Remove Coin
+          </ThemedText>
+          <ThemedText style={modalStyles.message}>
+            Are you sure you want to remove <ThemedText type="bodySemibold">{coinName}</ThemedText> from this list?
+          </ThemedText>
+
+          <ThemedView style={modalStyles.buttonRow}>
+            <Pressable 
+              onPress={onCancel} 
+              style={[modalStyles.button, { borderColor: tintColor }]}
+            >
+              <ThemedText style={{ color: tintColor }}>Cancel</ThemedText>
+            </Pressable>
+            <Pressable 
+              onPress={onConfirm} 
+              style={[modalStyles.button, { backgroundColor: dangerColor, borderColor: dangerColor }]}
+            >
+              <ThemedText type="bodySemibold" style={{ color: '#fff' }}>Remove</ThemedText>
+            </Pressable>
+          </ThemedView>
+        </ThemedView>
+      </ThemedView>
+    </Modal>
+  );
+};
+
+// --- Main Screen Component ---
 export default function ListDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -40,10 +96,16 @@ export default function ListDetailScreen() {
   const addCoin = useAddCoinToList();
   const removeCoin = useRemoveCoinFromList();
   const updateList = useUpdateCoinList();
+  
+  // State for List Editing
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedNotes, setEditedNotes] = useState("");
+  
+  // State for Custom Confirmation Modal
+  const [isConfirmingRemoval, setIsConfirmingRemoval] = useState(false);
+  const [coinToRemoveId, setCoinToRemoveId] = useState<string | null>(null);
 
   const textColor = useThemeColor({}, "text");
   const backgroundColor = useThemeColor({}, "background");
@@ -66,6 +128,8 @@ export default function ListDetailScreen() {
     );
   }
 
+  const coinToRemove = list.coins.find(c => c.coinId === coinToRemoveId);
+
   const handleAddCoin = (coin: CoinGeckoMarketData) => {
     const currency = (preferences?.currency || "usd") as SupportedCurrency;
     const coinItem: Omit<CoinListItem, "addedAt"> = {
@@ -81,39 +145,47 @@ export default function ListDetailScreen() {
       { listId: list.id, coin: coinItem },
       {
         onError: (error) => {
-          Alert.alert("Error", `Failed to add coin: ${error.message}`);
+          console.error("Failed to add coin:", error);
+          // In-app message box would be preferred over Alert, but keeping Alert for now outside of the main problem area
         },
       }
     );
   };
 
-  const handleRemoveCoin = (coinId: string) => {
-    Alert.alert(
-      "Remove Coin",
-      "Are you sure you want to remove this coin from the list?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => {
-            removeCoin.mutate(
-              { listId: list.id, coinId },
-              {
-                onError: (error) => {
-                  Alert.alert("Error", `Failed to remove coin: ${error.message}`);
-                },
-              }
-            );
-          },
+  const handleRemoveCoin = useCallback((coinId: string) => {
+    // Show custom confirmation modal instead of native Alert.alert
+    setCoinToRemoveId(coinId);
+    setIsConfirmingRemoval(true);
+  }, []);
+
+  const handleConfirmRemoval = () => {
+    if (!coinToRemoveId) return;
+
+    removeCoin.mutate(
+      { listId: list.id, coinId: coinToRemoveId },
+      {
+        onSuccess: () => {
+          setIsConfirmingRemoval(false);
+          setCoinToRemoveId(null);
         },
-      ]
+        onError: (error) => {
+          console.error("Failed to remove coin:", error);
+          setIsConfirmingRemoval(false);
+          setCoinToRemoveId(null);
+          // In-app message box would be preferred over Alert
+        },
+      }
     );
+  };
+
+  const handleCancelRemoval = () => {
+    setIsConfirmingRemoval(false);
+    setCoinToRemoveId(null);
   };
 
   const handleSaveName = () => {
     if (!editedName.trim()) {
-      Alert.alert("Error", "List name cannot be empty");
+      // In-app message box would be preferred over Alert
       return;
     }
 
@@ -125,7 +197,7 @@ export default function ListDetailScreen() {
     );
 
     if (nameExists) {
-      Alert.alert("Error", "A list with this name already exists");
+      // In-app message box would be preferred over Alert
       return;
     }
 
@@ -137,7 +209,8 @@ export default function ListDetailScreen() {
           setEditedName("");
         },
         onError: (error) => {
-          Alert.alert("Error", `Failed to update name: ${error.message}`);
+          console.error("Failed to update name:", error);
+          // In-app message box would be preferred over Alert
         },
       }
     );
@@ -151,7 +224,8 @@ export default function ListDetailScreen() {
           setIsEditingNotes(false);
         },
         onError: (error) => {
-          Alert.alert("Error", `Failed to update notes: ${error.message}`);
+          console.error("Failed to update notes:", error);
+          // In-app message box would be preferred over Alert
         },
       }
     );
@@ -295,15 +369,22 @@ export default function ListDetailScreen() {
                         </ThemedText>
                       )}
                     </ThemedView>
-                    <Pressable
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleRemoveCoin(coin.coinId);
-                      }}
-                      style={styles.removeButton}
-                    >
-                      <IconSymbol name="trash.fill" size={30} color={tintColor} />
-                    </Pressable>
+                    
+                    {/* Trash Button Container */}
+                    <ThemedView style={styles.removeButtonContainer}>
+                      <Pressable
+                        onPress={(e) => {
+                          console.log('Remove coin handler called - stopping propagation'); 
+                          // Standard synthetic event propagation stop (still necessary!)
+                          e.stopPropagation(); 
+                          handleRemoveCoin(coin.coinId);
+                        }}
+                        style={styles.removeButton}
+                        accessibilityRole="button"
+                      >
+                        <IconSymbol name="trash.fill" size={30} color={tintColor} />
+                      </Pressable>
+                    </ThemedView>
                   </Pressable>
                 ))
               ) : (
@@ -317,6 +398,14 @@ export default function ListDetailScreen() {
           </ThemedView>
         </ThemedView>
       </ScreenContainer>
+
+      {/* RENDER CUSTOM MODAL AT THE TOP LEVEL */}
+      <RemoveConfirmationModal
+        visible={isConfirmingRemoval}
+        onConfirm={handleConfirmRemoval}
+        onCancel={handleCancelRemoval}
+        coinName={coinToRemove?.name || "this coin"}
+      />
     </SafeAreaView>
   );
 }
@@ -405,8 +494,12 @@ const styles = StyleSheet.create({
   coinInfo: {
     flex: 1,
   },
+  removeButtonContainer: {
+    paddingLeft: Spacing.sm,
+  },
   removeButton: {
     padding: Spacing.xs,
+    zIndex: 10, 
   },
   emptyContainer: {
     padding: Spacing.xl,
@@ -414,3 +507,41 @@ const styles = StyleSheet.create({
   },
 });
 
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    // FIXED: Manually apply a semi-transparent black background for reliable dimming
+    backgroundColor: 'rgba(0, 0, 0, 0.85)', 
+  },
+  card: {
+    width: '80%',
+    maxWidth: 350,
+    borderRadius: 12,
+    padding: Spacing.xl,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  title: {
+    marginBottom: Spacing.md,
+  },
+  message: {
+    marginBottom: Spacing.lg,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: Spacing.sm,
+  },
+  button: {
+    flex: 1,
+    padding: Spacing.sm,
+    borderRadius: 8,
+    alignItems: "center",
+    borderWidth: 1,
+  },
+});
