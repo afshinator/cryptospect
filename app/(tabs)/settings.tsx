@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ScreenContainer } from "@/components/ScreenContainer";
+import { SectionContainer } from "@/components/SectionContainer";
 import {
   CURRENCY_DISPLAY_NAMES,
   SupportedCurrency,
@@ -33,6 +34,7 @@ export default function SettingsScreen() {
   const sliderThumbColor = useThemeColor({}, "tint");
   const sliderMinColor = useThemeColor({}, "tint");
   const sliderMaxColor = useThemeColor({}, "border");
+  const dividerColor = useThemeColor({}, "border");
 
   // Local state for slider value during drag
   const [tempFontScale, setTempFontScale] = useState<number | null>(null);
@@ -62,7 +64,7 @@ export default function SettingsScreen() {
         </ThemedText>
 
         {/* Appearance */}
-        <ThemedView style={styles.section}>
+        <SectionContainer>
           <ThemedText type="subtitle">Appearance</ThemedText>
           <ThemedText
             variant="secondary"
@@ -104,10 +106,101 @@ export default function SettingsScreen() {
               </Pressable>
             ))}
           </View>
-        </ThemedView>
+        </SectionContainer>
+
+        {/* Font Scale */}
+        <SectionContainer>
+          <View style={styles.fontSizeTitleRow}>
+            <ThemedText type="subtitle">Font Size</ThemedText>
+            <Pressable
+              onPress={() => {
+                setTempFontScale(null);
+                updatePreferences.mutate({ fontScale: 1.0 });
+              }}
+              disabled={preferences.fontScale === 1.0}
+              style={styles.resetButtonPressable}
+            >
+              <ThemedView 
+                shadow="sm" 
+                style={[
+                  styles.resetButton,
+                  preferences.fontScale === 1.0 && styles.resetButtonDisabled,
+                ]}
+              >
+                <ThemedText type="small" variant="link">
+                  Reset
+                </ThemedText>
+              </ThemedView>
+            </Pressable>
+          </View>
+          <ThemedText
+            variant="secondary"
+            type="small"
+            style={styles.sectionDescription}
+          >
+            Current size: {displayFontScale.toFixed(1)}x
+          </ThemedText>
+
+          <ThemedView style={styles.sliderContainer}>
+            <ThemedText type="small" variant="secondary">
+              {FONT_SCALE_MIN}×
+            </ThemedText>
+            <Slider
+              style={styles.slider}
+              minimumValue={FONT_SCALE_MIN}
+              maximumValue={FONT_SCALE_MAX}
+              step={FONT_SCALE_STEP}
+              value={preferences.fontScale}
+              onValueChange={(value) =>
+                setTempFontScale(
+                  Math.round(value / FONT_SCALE_STEP) * FONT_SCALE_STEP
+                )
+              }
+              onSlidingComplete={(value) => {
+                const rounded =
+                  Math.round(value / FONT_SCALE_STEP) * FONT_SCALE_STEP;
+                setTempFontScale(null);
+                updatePreferences.mutate({ fontScale: rounded });
+              }}
+              minimumTrackTintColor={sliderMinColor}
+              maximumTrackTintColor={sliderMaxColor}
+              thumbTintColor={sliderThumbColor}
+            />
+            <ThemedText type="small" variant="secondary">
+              {FONT_SCALE_MAX}×
+            </ThemedText>
+          </ThemedView>
+
+          {/* Divider */}
+          <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+          {/* Preview */}
+          <ThemedView style={styles.previewContent}>
+            <ThemedText
+              type="caption"
+              variant="secondary"
+              propFontScale={previewScaleFactor}
+            >
+              PREVIEW
+            </ThemedText>
+            <ThemedText type="title" propFontScale={previewScaleFactor}>
+              Title Text
+            </ThemedText>
+            <ThemedText type="body" propFontScale={previewScaleFactor}>
+              This is body text to preview your settings.
+            </ThemedText>
+            <ThemedText
+              type="small"
+              variant="secondary"
+              propFontScale={previewScaleFactor}
+            >
+              Small secondary text
+            </ThemedText>
+          </ThemedView>
+        </SectionContainer>
 
         {/* Currency Selection */}
-        <ThemedView style={styles.section}>
+        <SectionContainer>
           <ThemedText type="subtitle">Preferred Currency</ThemedText>
           <ThemedText
             variant="secondary"
@@ -153,73 +246,7 @@ export default function SettingsScreen() {
               </Pressable>
             ))}
           </View>
-        </ThemedView>
-
-        {/* Font Scale */}
-        <ThemedView style={styles.section}>
-          <ThemedText type="subtitle">Font Size</ThemedText>
-          <ThemedText
-            variant="secondary"
-            type="small"
-            style={styles.sectionDescription}
-          >
-            Current size: {displayFontScale.toFixed(1)}x
-          </ThemedText>
-
-          <ThemedView style={styles.sliderContainer}>
-            <ThemedText type="small" variant="secondary">
-              {FONT_SCALE_MIN}×
-            </ThemedText>
-            <Slider
-              style={styles.slider}
-              minimumValue={FONT_SCALE_MIN}
-              maximumValue={FONT_SCALE_MAX}
-              step={FONT_SCALE_STEP}
-              value={preferences.fontScale}
-              onValueChange={(value) =>
-                setTempFontScale(
-                  Math.round(value / FONT_SCALE_STEP) * FONT_SCALE_STEP
-                )
-              }
-              onSlidingComplete={(value) => {
-                const rounded =
-                  Math.round(value / FONT_SCALE_STEP) * FONT_SCALE_STEP;
-                setTempFontScale(null);
-                updatePreferences.mutate({ fontScale: rounded });
-              }}
-              minimumTrackTintColor={sliderMinColor}
-              maximumTrackTintColor={sliderMaxColor}
-              thumbTintColor={sliderThumbColor}
-            />
-            <ThemedText type="small" variant="secondary">
-              {FONT_SCALE_MAX}×
-            </ThemedText>
-          </ThemedView>
-        </ThemedView>
-
-        {/* Preview */}
-        <ThemedView variant="secondary" style={styles.preview}>
-          <ThemedText
-            type="caption"
-            variant="secondary"
-            propFontScale={previewScaleFactor}
-          >
-            PREVIEW
-          </ThemedText>
-          <ThemedText type="title" propFontScale={previewScaleFactor}>
-            Title Text
-          </ThemedText>
-          <ThemedText type="body" propFontScale={previewScaleFactor}>
-            This is body text to preview your settings.
-          </ThemedText>
-          <ThemedText
-            type="small"
-            variant="secondary"
-            propFontScale={previewScaleFactor}
-          >
-            Small secondary text
-          </ThemedText>
-        </ThemedView>
+        </SectionContainer>
       </ScreenContainer>
     </SafeAreaView>
   );
@@ -235,13 +262,28 @@ const styles = StyleSheet.create({
   title: {
     marginBottom: Spacing.lg,
   },
-  section: {
-    marginBottom: Spacing.xl,
-    padding: Spacing.sm,
-  },
   sectionDescription: {
     marginTop: Spacing.xs,
     marginBottom: Spacing.md,
+  },
+  fontSizeTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.xs,
+  },
+  resetButtonPressable: {
+    // No additional styles needed, Pressable handles press state
+  },
+  resetButton: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    borderWidth: BUTTON_BORDER_WIDTH,
+    borderColor: "transparent",
+  },
+  resetButtonDisabled: {
+    opacity: 0.5,
   },
   buttonRow: {
     flexDirection: "row",
@@ -281,10 +323,14 @@ const styles = StyleSheet.create({
     flex: 1,
     height: SLIDER_HEIGHT,
   },
-  preview: {
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    width: '80%',
+    alignSelf: 'center',
+    marginVertical: Spacing.md,
+  },
+  previewContent: {
     gap: Spacing.sm,
-    // marginTop: Spacing.lg,
   },
 });
+

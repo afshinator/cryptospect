@@ -1,5 +1,6 @@
 // components/DominanceSection.tsx
 
+import { SectionContainer } from "@/components/SectionContainer";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Spacing } from "@/constants/theme";
@@ -70,7 +71,7 @@ export function DominanceSection({
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <SectionContainer>
       <View style={styles.header}>
         <ThemedText type="subtitle">
           Market Dominance
@@ -225,18 +226,11 @@ export function DominanceSection({
           Unable to load dominance data
         </ThemedText>
       )}
-    </ThemedView>
+    </SectionContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: Spacing.lg,
-    padding: Spacing.sm,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'gray',
-  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",

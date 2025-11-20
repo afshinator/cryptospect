@@ -23,7 +23,7 @@ export const Colors = {
     error: '#dc2626',
     success: '#16a34a',
     warning: '#ea580c',
-    border: '#e5e7eb',
+    border: '#a9a9a9',
     // Crypto asset colors
     btc: BTC_GOLD, // Orange
     eth: ETH_BLUE, // Blue
@@ -41,7 +41,7 @@ export const Colors = {
     error: '#ef4444',
     success: '#22c55e',
     warning: '#fb923c',
-    border: '#374151',
+    border: '#a9a9a9',
     // Crypto asset colors
     btc: BTC_GOLD, // Orange
     eth: ETH_BLUE, // Blue
