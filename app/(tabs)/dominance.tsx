@@ -39,74 +39,51 @@ export default function DominanceScreen() {
     refetchOnWindowFocus: false,
   });
 
-  // 2. Loading and Error Handling
-  if (isPending) {
-    return (
-      <SafeAreaView style={{ flex: 1 }}>
-        <ThemedView style={[styles.container, styles.center]}>
-          <ActivityIndicator size="large" />
-          <ThemedText style={{ marginTop: Spacing.md }}>
-            Loading Dominance Data...
-          </ThemedText>
-        </ThemedView>
-      </SafeAreaView>
-    );
-  }
+  // 2. Prepare data (will be null if still loading or error)
+  const dominanceData = historicalDominance && historicalDominance.length > 0 ? historicalDominance : null;
 
-  if (error || !historicalDominance || historicalDominance.length === 0) {
-    return (
-      <SafeAreaView style={{ flex: 1 }}>
-        <ThemedView style={[styles.container, styles.center]}>
-          <ThemedText type="subtitle">
-            {error
-              ? `❌ Error: ${(error as Error).message}`
-              : "No dominance data available."}
-          </ThemedText>
-        </ThemedView>
-      </SafeAreaView>
-    );
-  }
-
-  const dominanceData = historicalDominance;
-
-  // 3. Extract Latest Data for Snapshot Card
-  const latestData = dominanceData[dominanceData.length - 1];
-  const latestBtcD = latestData.btcDominance;
-  const latestEthD = latestData.ethDominance;
+  // 3. Extract Latest Data for Snapshot Card (if available)
+  const latestData = dominanceData ? dominanceData[dominanceData.length - 1] : null;
+  const latestBtcD = latestData?.btcDominance;
+  const latestEthD = latestData?.ethDominance;
   // Use usdtDominance as proxy for stablecoins (since historical data doesn't have full stablecoins breakdown)
-  const latestStablecoinsD = latestData.usdtDominance;
-  const latestOthersD = latestData.othersDominance;
+  const latestStablecoinsD = latestData?.usdtDominance;
+  const latestOthersD = latestData?.othersDominance;
 
-  const latestDate = new Date(latestData.date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  const latestDate = latestData
+    ? new Date(latestData.date).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : null;
 
-  // 4. Determine the Month Label for display below the main chart
-  const firstDate = new Date(dominanceData[0].date);
-  const lastDate = new Date(dominanceData[dominanceData.length - 1].date);
+  // 4. Determine the Month Label for display below the main chart (if data available)
+  let monthLabel = "";
+  if (dominanceData && dominanceData.length > 0) {
+    const firstDate = new Date(dominanceData[0].date);
+    const lastDate = new Date(dominanceData[dominanceData.length - 1].date);
 
-  let monthLabel;
-  if (
-    firstDate.getMonth() === lastDate.getMonth() &&
-    firstDate.getFullYear() === lastDate.getFullYear()
-  ) {
-    monthLabel = firstDate.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-    });
-  } else {
-    // Show the range of months covered
-    const startMonth = firstDate.toLocaleDateString("en-US", {
-      month: "short",
-      year: "numeric",
-    });
-    const endMonth = lastDate.toLocaleDateString("en-US", {
-      month: "short",
-      year: "numeric",
-    });
-    monthLabel = `${startMonth} - ${endMonth}`;
+    if (
+      firstDate.getMonth() === lastDate.getMonth() &&
+      firstDate.getFullYear() === lastDate.getFullYear()
+    ) {
+      monthLabel = firstDate.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+      });
+    } else {
+      // Show the range of months covered
+      const startMonth = firstDate.toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      });
+      const endMonth = lastDate.toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      });
+      monthLabel = `${startMonth} - ${endMonth}`;
+    }
   }
 
   // 5. Render Components
@@ -126,67 +103,96 @@ export default function DominanceScreen() {
           <View style={styles.dominanceNumbersWrapper}>
             <DominanceSection
               showAllFour={true}
-            /></View>
+            />
+          </View>
 
-          {/* BTC/ETH Historical Line Chart (Main View) */}
-          <ThemedView >
-            <ThemedText type="subtitle" style={{ marginLeft: Spacing.lg }}>Graph for {monthLabel}</ThemedText>
-            <DominanceChartWrapper dominanceData={dominanceData} />
-          </ThemedView>
+          {/* Loading message for backend data */}
+          {isPending && (
+            <ThemedView style={styles.loadingContainer}>
+              <ActivityIndicator size="small" />
+              <ThemedText type="small" variant="secondary" style={styles.loadingText}>
+                Loading historical data...
+              </ThemedText>
+            </ThemedView>
+          )}
+
+          {/* Error message for backend data */}
+          {error && !isPending && (
+            <ThemedView style={styles.errorContainer}>
+              <ThemedText type="small" variant="error">
+                ⚠️ Error loading historical data: {(error as Error).message}
+              </ThemedText>
+            </ThemedView>
+          )}
+
+          {/* BTC/ETH Historical Line Chart (Main View) - Only show when data is available */}
+          {dominanceData && dominanceData.length > 0 && (
+            <ThemedView>
+              <ThemedText type="subtitle" style={{ marginLeft: Spacing.lg }}>
+                Graph for {monthLabel}
+              </ThemedText>
+              <DominanceChartWrapper dominanceData={dominanceData} />
+            </ThemedView>
+          )}
 
 
-          <Collapsible title="Ratio Distribution Details">
-            <ThemedText>
-              The chart provides context for the current ratio by answering the
-              question: &quot;How often has the ratio been at this level in the
-              past?&quot;
-            </ThemedText>
-            <ThemedText>
-              The &quot;Fair Value Zone&quot; on this chart is simply the range of ratios
-              where the market has spent the most time. Tall Bars = Fair Value:
-              The tallest bars represent the most frequent ratios. This is the
-              statistical mean or mode of the data. The market generally
-              gravitates toward this area. Meaning: When the ratio is inside
-              this zone, it suggests the relationship between BTC&apos;s dominance
-              and ETH&apos;s dominance is stable, balanced, and historically common.
-              No significant, non-standard capital rotation is likely signaled.
-            </ThemedText>
-            <ThemedText>
-              If the current ratio falls into one of the short-bar extreme
-              zones, the chart is signaling an imbalance that often precedes a
-              market rotation or correction in dominance.
-            </ThemedText>
-          </Collapsible>
-          <ThemedView style={styles.histogramWrapper}>
-            <DominanceRatioHistogram historicalData={dominanceData} />
-          </ThemedView>
+          {/* Charts and details - Only show when data is available */}
+          {dominanceData && dominanceData.length > 0 && (
+            <>
+              <Collapsible title="Ratio Distribution Details">
+                <ThemedText>
+                  The chart provides context for the current ratio by answering the
+                  question: &quot;How often has the ratio been at this level in the
+                  past?&quot;
+                </ThemedText>
+                <ThemedText>
+                  The &quot;Fair Value Zone&quot; on this chart is simply the range of ratios
+                  where the market has spent the most time. Tall Bars = Fair Value:
+                  The tallest bars represent the most frequent ratios. This is the
+                  statistical mean or mode of the data. The market generally
+                  gravitates toward this area. Meaning: When the ratio is inside
+                  this zone, it suggests the relationship between BTC&apos;s dominance
+                  and ETH&apos;s dominance is stable, balanced, and historically common.
+                  No significant, non-standard capital rotation is likely signaled.
+                </ThemedText>
+                <ThemedText>
+                  If the current ratio falls into one of the short-bar extreme
+                  zones, the chart is signaling an imbalance that often precedes a
+                  market rotation or correction in dominance.
+                </ThemedText>
+              </Collapsible>
+              <ThemedView style={styles.histogramWrapper}>
+                <DominanceRatioHistogram historicalData={dominanceData} />
+              </ThemedView>
 
-          <Collapsible title="Ratio Chart Details">
-            <ThemedText>
-              This chart plots the BTC/ETH Dominance Ratio over time, providing
-              a clear visual signal for whether market leadership is
-              consolidating into Bitcoin or rotating toward Ethereum and the
-              wider altcoin market.
-            </ThemedText>
+              <Collapsible title="Ratio Chart Details">
+                <ThemedText>
+                  This chart plots the BTC/ETH Dominance Ratio over time, providing
+                  a clear visual signal for whether market leadership is
+                  consolidating into Bitcoin or rotating toward Ethereum and the
+                  wider altcoin market.
+                </ThemedText>
 
-            <ThemedText>
-              Rising Ratio (Moving Up): This means BTC.D is gaining strength
-              faster than ETH.D, or ETH.D is weakening faster than BTC.D. This
-              signals a consolidation of capital into Bitcoin, which is
-              typically a defensive or &quot;risk-off&quot; move within the crypto space.
-            </ThemedText>
+                <ThemedText>
+                  Rising Ratio (Moving Up): This means BTC.D is gaining strength
+                  faster than ETH.D, or ETH.D is weakening faster than BTC.D. This
+                  signals a consolidation of capital into Bitcoin, which is
+                  typically a defensive or &quot;risk-off&quot; move within the crypto space.
+                </ThemedText>
 
-            <ThemedText>
-              Falling Ratio (Moving Down): This means ETH.D is gaining strength
-              relative to BTC.D. This signals a rotation of capital into
-              Ethereum and often serves as a lead indicator for the wider
-              altcoin rally (the &quot;altcoin season&quot;).
-            </ThemedText>
-          </Collapsible>
-          {/* BTC/ETH Dominance Ratio Chart (New Rotational Signal) */}
-          <ThemedView style={styles.chartWrapper}>
-            <DominanceRatioChart historicalData={dominanceData} />
-          </ThemedView>
+                <ThemedText>
+                  Falling Ratio (Moving Down): This means ETH.D is gaining strength
+                  relative to BTC.D. This signals a rotation of capital into
+                  Ethereum and often serves as a lead indicator for the wider
+                  altcoin rally (the &quot;altcoin season&quot;).
+                </ThemedText>
+              </Collapsible>
+              {/* BTC/ETH Dominance Ratio Chart (New Rotational Signal) */}
+              <ThemedView style={styles.chartWrapper}>
+                <DominanceRatioChart historicalData={dominanceData} />
+              </ThemedView>
+            </>
+          )}
         </ThemedView>
       </ScreenContainer>
     </SafeAreaView>
@@ -208,7 +214,7 @@ const styles = StyleSheet.create({
   },
   histogramWrapper: {
     marginBottom: Spacing.xl,
-  marginLeft: -30,
+    marginLeft: -30,
   },
   center: {
     justifyContent: "center",
@@ -222,5 +228,21 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     marginLeft: Spacing.lg,
   },
-
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    marginHorizontal: Spacing.lg,
+  },
+  loadingText: {
+    // Text styling handled by ThemedText
+  },
+  errorContainer: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
 });
