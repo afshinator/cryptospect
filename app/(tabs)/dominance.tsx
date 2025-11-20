@@ -1,6 +1,6 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { ActivityIndicator, StyleSheet } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BACKEND_DOMINANCE_QUERY_KEY } from "@/constants/misc";
@@ -115,7 +115,7 @@ export default function DominanceScreen() {
       <ScreenContainer>
         <ThemedView style={styles.container}>
           <ThemedText type="large" style={styles.title}>
-            Dominance Dashboard
+            Coin Dominance
           </ThemedText>
 
           <ThemedText type="small" variant="secondary" style={styles.subtitle}>
@@ -123,19 +123,17 @@ export default function DominanceScreen() {
           </ThemedText>
 
           {/* LATEST SNAPSHOT CARD (Live Data) - Uses real-time data from CoinGecko /global endpoint */}
-          <DominanceSection
-            showAllFour={true}
-          />
+          <View style={styles.dominanceNumbersWrapper}>
+            <DominanceSection
+              showAllFour={true}
+            /></View>
 
           {/* BTC/ETH Historical Line Chart (Main View) */}
-          <ThemedView style={styles.chartWrapper}>
+          <ThemedView >
+            <ThemedText type="subtitle" style={{ marginLeft: Spacing.lg }}>Graph for {monthLabel}</ThemedText>
             <DominanceChartWrapper dominanceData={dominanceData} />
           </ThemedView>
 
-          {/* MONTH LABEL - Centered label for the month span of the main chart */}
-          <ThemedText style={styles.monthLabel} variant="secondary">
-            {monthLabel}
-          </ThemedText>
 
           <Collapsible title="Ratio Distribution Details">
             <ThemedText>
@@ -159,7 +157,7 @@ export default function DominanceScreen() {
               market rotation or correction in dominance.
             </ThemedText>
           </Collapsible>
-          <ThemedView style={styles.chartWrapper}>
+          <ThemedView style={styles.histogramWrapper}>
             <DominanceRatioHistogram historicalData={dominanceData} />
           </ThemedView>
 
@@ -200,9 +198,17 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: Spacing.md,
   },
+  dominanceNumbersWrapper: {
+    marginBottom: Spacing.xl,
+    paddingHorizontal: Spacing.lg
+  },
   chartWrapper: {
     // paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.xl,
+  },
+  histogramWrapper: {
+    marginBottom: Spacing.xl,
+  marginLeft: -30,
   },
   center: {
     justifyContent: "center",
@@ -216,10 +222,5 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     marginLeft: Spacing.lg,
   },
-  monthLabel: {
-    textAlign: "center",
-    // marginTop: Spacing.sm,
-    marginBottom: Spacing.md,
-    fontSize: 12,
-  },
+
 });

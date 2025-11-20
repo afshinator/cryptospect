@@ -10,12 +10,14 @@ import { Colors, Spacing } from "@/constants/theme";
 // --- CONFIGURATION CONSTANTS ---
 const CHART_HEIGHT = 180; 
 const TRANSPARENT_COLOR = "#00000000"; 
-const BAR_COLOR = "#34d399"; // Green/teal for distribution
+const BAR_COLOR = "#9ca3af"; // Gray for non-highlighted bars
 const CURRENT_RATIO_COLOR = "#ef4444"; // Red for the current ratio marker
 
 // Calculated Dimensions
 const SCREEN_WIDTH = Dimensions.get("window").width;
-const CHART_WIDTH = SCREEN_WIDTH * 0.9; 
+// Add extra width to make chart wider (adjust this value as needed)
+const CHART_WIDTH_PADDING = 0; // Extra pixels to add for width
+const CHART_WIDTH = SCREEN_WIDTH + CHART_WIDTH_PADDING; 
 
 // The number of buckets (bins) we want to divide the data into
 const NUM_BINS = 10; 
@@ -47,7 +49,7 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
       : Colors.light.textSecondary;
   
   // 1. Data Calculation: Ratio, Bins, and Distribution
-  const { chartData, currentRatio, binLabels, yAxisLabelFunc } = useMemo(() => {
+  const { chartData, currentRatio, binLabels, yAxisLabelFunc, maxDays } = useMemo(() => {
     if (!historicalData || historicalData.length === 0) {
       // Return null for chartData to trigger loading state
       return { chartData: null, currentRatio: 0, binLabels: [], yAxisLabelFunc: () => "" };
@@ -93,12 +95,13 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
     const mDays = Math.max(...bins);
     
     // D. Prepare data for BarChart
+    // Note: We'll set the color function after calculating currentBinIndex
     const dataForChart = {
         labels: labels,
         datasets: [
             {
                 data: bins, 
-                color: (opacity = 1) => BAR_COLOR,
+                color: (opacity = 1) => BAR_COLOR, // Default color, will be overridden
             }
         ],
     };
@@ -118,6 +121,7 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
         currentRatio: currentR,
         binLabels: labels,
         yAxisLabelFunc: yAxisFunc,
+        maxDays: mDays,
     };
   }, [historicalData]);
 
@@ -126,8 +130,9 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
     return <ThemedText style={styles.loadingText}>Ratio data loading...</ThemedText>;
   }
 
-  // Find the label for the bin the current ratio falls into
+  // Find the label and index for the bin the current ratio falls into
   let currentBinLabel = '';
+  let currentBinIndex = -1;
   if (binLabels.length > 0) {
       const minRatio = Number(binLabels[0]);
       const binSize = Number(binLabels[1]) - Number(binLabels[0]); 
@@ -141,11 +146,31 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
           binIndex = 0;
       }
 
+      currentBinIndex = binIndex;
       currentBinLabel = binLabels[binIndex];
   }
 
+  // 2. Create modified chart data with colored bar for current ratio
+  // react-native-chart-kit BarChart supports per-bar coloring via colors array of functions
+  // Requires withCustomBarColorFromData={true} and flatColor={true} props
+  const barColorFunctions = chartData && currentBinIndex >= 0 && chartData.datasets[0].data.length > 0
+    ? chartData.datasets[0].data.map((_, index) => 
+        (opacity = 1) => index === currentBinIndex ? CURRENT_RATIO_COLOR : BAR_COLOR
+      )
+    : chartData?.datasets[0].data.map(() => (opacity = 1) => BAR_COLOR) || [];
 
-  // 2. Chart Configuration
+  const modifiedChartData = chartData ? {
+    ...chartData,
+    datasets: [
+      {
+        ...chartData.datasets[0],
+        colors: barColorFunctions, // Array of color functions, one per bar
+        color: (opacity = 1) => BAR_COLOR, // Fallback color (not used when colors array is provided)
+      }
+    ],
+  } : null;
+
+  // 3. Chart Configuration
   const chartConfig = {
     backgroundColor: TRANSPARENT_COLOR,
     backgroundGradientFrom: TRANSPARENT_COLOR,
@@ -158,6 +183,15 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
       fontSize: 8, 
     },
     fillShadowOpacity: 0,
+    // Custom Y-Axis Labeling: Only show 0 and max, return empty string for others to avoid underlines
+    yAxisLabel: (value: string) => {
+      const num = Number(value);
+      // Only display the 0 and the max days count for the scale
+      if (num === 0 || (maxDays !== undefined && num === maxDays)) {
+        return `${num}`;
+      }
+      return ""; // Empty string should not show underline
+    },
   };
 
   return (
@@ -165,34 +199,38 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
       <ThemedText type="subtitle" style={styles.chartTitle}>
         Historical Ratio Distribution
       </ThemedText>
-      
-      <ThemedText type="body" variant="secondary" style={styles.ratioDisplay}>
-        Current Ratio: <ThemedText style={{ color: CURRENT_RATIO_COLOR, fontWeight: 'bold' }}>{formatRatio(currentRatio)}</ThemedText>
-      </ThemedText>
-
 
       {/* RENDER THE CHART (simulated histogram) */}
-      <ThemedView style={styles.chartWrapper}>
-        <BarChart
-            data={chartData}
-            width={CHART_WIDTH}
-            height={CHART_HEIGHT}
-            chartConfig={chartConfig}
-            fromZero={true}
-            // @ts-ignore
-            formatYLabel={yAxisLabelFunc} 
-        />
-      </ThemedView>
+      {modifiedChartData && (
+        <ThemedView style={styles.chartWrapper}>
+          <BarChart
+              data={modifiedChartData}
+              width={CHART_WIDTH}
+              height={CHART_HEIGHT}
+              chartConfig={chartConfig}
+              fromZero={true}
+              showValuesOnTopOfBars={false}
+              withInnerLines={false}
+              withVerticalLabels={true}
+              withHorizontalLabels={true}
+              withCustomBarColorFromData={true}
+              flatColor={true}
+              yAxisLabel=""
+              yAxisSuffix=""
+              style={styles.chart}
+          />
+        </ThemedView>
+      )}
 
       <ThemedText style={styles.caption} variant="secondary">
         Bars show the number of days spent in that ratio range. The tall bars are the &quot;fair value&quot; zone.
       </ThemedText>
       
-      <ThemedText style={styles.currentRatioMarker} variant="secondary">
-        Current Ratio ({formatRatio(currentRatio)}) falls near the {' '}
+      <ThemedText style={styles.currentRatioMarker}>
+        Current ratio {' '}
         <ThemedText style={{ color: CURRENT_RATIO_COLOR, fontWeight: 'bold' }}>
-          {currentBinLabel}
-        </ThemedText> range.
+          {formatRatio(currentRatio)}
+        </ThemedText> falls near the {currentBinLabel} range.
       </ThemedText>
     </ThemedView>
   );
@@ -201,12 +239,18 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
 const styles = StyleSheet.create({
   container: {
     paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
+    paddingLeft: Spacing.lg,
   },
   chartWrapper: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingLeft: Spacing.sm, 
+    justifyContent: 'center',    // paddingHorizontal: Spacing.lg,
+
+    overflow: 'hidden', // Clip the chart if it's wider than container
+    // Extend beyond container's horizontal padding to use full screen width
+    marginRight:10,
+  },
+  chart: {
+    // No adjustments - baseline
   },
   chartTitle: {
     marginBottom: Spacing.xs,

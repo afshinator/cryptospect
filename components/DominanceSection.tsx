@@ -232,6 +232,10 @@ export function DominanceSection({
 const styles = StyleSheet.create({
   container: {
     marginBottom: Spacing.lg,
+    padding: Spacing.sm,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'gray',
   },
   header: {
     flexDirection: "row",
