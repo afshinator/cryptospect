@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "rn-styling-boilerplate",
-    "slug": "rn-styling-boilerplate",
+    "name": "cryptospect",
+    "slug": "cryptospect",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "rnstylingboilerplate",
+    "scheme": "cryptospect",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.rnstylingboilerplate"
+      "bundleIdentifier": "com.anonymous.cryptospect"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +21,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.rnstylingboilerplate"
+      "package": "com.anonymous.cryptospect"
     },
     "web": {
       "output": "static",
