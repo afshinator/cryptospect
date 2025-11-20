@@ -11,6 +11,7 @@ export function useCoinLists() {
     queryKey: COIN_LISTS_QUERY_KEY,
     queryFn: getCoinLists,
     staleTime: 0, // Always check storage for latest data
+    refetchOnWindowFocus: true, // Refetch when screen comes into focus
   });
 }
 
@@ -41,10 +42,15 @@ export function useCreateCoinList() {
       };
       const updatedLists = [...existingLists, newList];
       await saveCoinLists(updatedLists);
+      
+      // Optimistically update the cache immediately
+      queryClient.setQueryData(COIN_LISTS_QUERY_KEY, updatedLists);
+      
       return newList;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: COIN_LISTS_QUERY_KEY });
+    onSuccess: async () => {
+      // Refetch to ensure consistency with storage
+      await queryClient.refetchQueries({ queryKey: COIN_LISTS_QUERY_KEY });
     },
   });
 }
@@ -78,10 +84,15 @@ export function useUpdateCoinList() {
           : list
       );
       await saveCoinLists(updatedLists);
+      
+      // Optimistically update the cache immediately
+      queryClient.setQueryData(COIN_LISTS_QUERY_KEY, updatedLists);
+      
       return updatedLists.find((list) => list.id === id)!;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: COIN_LISTS_QUERY_KEY });
+    onSuccess: async () => {
+      // Refetch to ensure consistency with storage
+      await queryClient.refetchQueries({ queryKey: COIN_LISTS_QUERY_KEY });
     },
   });
 }
@@ -97,10 +108,15 @@ export function useDeleteCoinList() {
       const existingLists = await getCoinLists();
       const updatedLists = existingLists.filter((list) => list.id !== id);
       await saveCoinLists(updatedLists);
+      
+      // Optimistically update the cache immediately
+      queryClient.setQueryData(COIN_LISTS_QUERY_KEY, updatedLists);
+      
       return id;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: COIN_LISTS_QUERY_KEY });
+    onSuccess: async () => {
+      // Refetch to ensure consistency with storage
+      await queryClient.refetchQueries({ queryKey: COIN_LISTS_QUERY_KEY });
     },
   });
 }
@@ -139,10 +155,15 @@ export function useAddCoinToList() {
         return list;
       });
       await saveCoinLists(updatedLists);
+      
+      // Optimistically update the cache immediately
+      queryClient.setQueryData(COIN_LISTS_QUERY_KEY, updatedLists);
+      
       return updatedLists.find((list) => list.id === listId)!;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: COIN_LISTS_QUERY_KEY });
+    onSuccess: async () => {
+      // Refetch to ensure consistency with storage
+      await queryClient.refetchQueries({ queryKey: COIN_LISTS_QUERY_KEY });
     },
   });
 }
@@ -167,10 +188,15 @@ export function useRemoveCoinFromList() {
         return list;
       });
       await saveCoinLists(updatedLists);
+      
+      // Optimistically update the cache immediately
+      queryClient.setQueryData(COIN_LISTS_QUERY_KEY, updatedLists);
+      
       return updatedLists.find((list) => list.id === listId)!;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: COIN_LISTS_QUERY_KEY });
+    onSuccess: async () => {
+      // Refetch to ensure consistency with storage
+      await queryClient.refetchQueries({ queryKey: COIN_LISTS_QUERY_KEY });
     },
   });
 }
