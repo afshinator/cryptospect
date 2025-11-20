@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -32,6 +33,8 @@ export default function ListsScreen() {
   const deleteList = useDeleteCoinList();
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState("");
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [listToDelete, setListToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const textColor = useThemeColor({}, "text");
   const backgroundColor = useThemeColor({}, "background");
@@ -74,24 +77,30 @@ export default function ListsScreen() {
   };
 
   const handleDelete = (listId: string, listName: string) => {
-    Alert.alert(
-      "Delete List",
-      `Are you sure you want to delete "${listName}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            deleteList.mutate(listId, {
-              onError: (error) => {
-                Alert.alert("Error", `Failed to delete list: ${error.message}`);
-              },
-            });
-          },
-        },
-      ]
-    );
+    // Show custom confirmation modal instead of native Alert.alert
+    setListToDelete({ id: listId, name: listName });
+    setIsConfirmingDelete(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!listToDelete) return;
+
+    deleteList.mutate(listToDelete.id, {
+      onSuccess: () => {
+        setIsConfirmingDelete(false);
+        setListToDelete(null);
+      },
+      onError: (error) => {
+        Alert.alert("Error", `Failed to delete list: ${error.message}`);
+        setIsConfirmingDelete(false);
+        setListToDelete(null);
+      },
+    });
+  };
+
+  const handleCancelDelete = () => {
+    setIsConfirmingDelete(false);
+    setListToDelete(null);
   };
 
   const handleListPress = (listId: string) => {
@@ -223,6 +232,18 @@ export default function ListsScreen() {
           </ScrollView>
         </ThemedView>
       </ScreenContainer>
+
+      {/* RENDER CUSTOM MODAL AT THE TOP LEVEL */}
+      <ConfirmationModal
+        visible={isConfirmingDelete}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        title="Delete List"
+        message={`Are you sure you want to delete "${listToDelete?.name}"? This cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmButtonStyle="danger"
+      />
     </SafeAreaView>
   );
 }

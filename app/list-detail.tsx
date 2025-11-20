@@ -1,13 +1,11 @@
 // app/list-detail.tsx
 
-import { useQuery } from "@tanstack/react-query"; // Import useQuery for cache access
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Image,
   Keyboard,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,15 +14,15 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CoinAutocomplete } from "@/components/CoinAutocomplete";
+import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { CoinGeckoMarketData } from "@/constants/coinGecko";
 import { CoinListItem } from "@/constants/coinLists";
 import { SupportedCurrency } from "@/constants/currency";
-import { CRYPTO_MARKET_QUERY_KEY } from "@/constants/misc"; // Import key for global cache
 import { Spacing } from "@/constants/theme";
+import { useAppInitialization } from "@/hooks/use-app-initializations";
 import {
   useAddCoinToList,
   useCoinLists,
@@ -33,61 +31,6 @@ import {
 } from "@/hooks/use-coin-lists";
 import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
-
-// --- Custom Confirmation Modal Component ---
-interface ConfirmationModalProps {
-  visible: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-  coinName: string;
-}
-
-const RemoveConfirmationModal: React.FC<ConfirmationModalProps> = ({
-  visible,
-  onConfirm,
-  onCancel,
-  coinName,
-}) => {
-  const cardColor = useThemeColor({}, "backgroundSecondary");
-  const tintColor = useThemeColor({}, "tint");
-  const dangerColor = useThemeColor({}, "error");
-
-  return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onCancel}
-    >
-      {/* Set a semi-transparent background color directly on the overlay for reliable dimming */}
-      <ThemedView style={modalStyles.overlay}>
-        <ThemedView style={[modalStyles.card, { backgroundColor: cardColor }]}>
-          <ThemedText type="subtitle" style={modalStyles.title}>
-            Remove Coin
-          </ThemedText>
-          <ThemedText style={modalStyles.message}>
-            Are you sure you want to remove <ThemedText type="bodySemibold">{coinName}</ThemedText> from this list?
-          </ThemedText>
-
-          <ThemedView style={modalStyles.buttonRow}>
-            <Pressable 
-              onPress={onCancel} 
-              style={[modalStyles.button, { borderColor: tintColor }]}
-            >
-              <ThemedText style={{ color: tintColor }}>Cancel</ThemedText>
-            </Pressable>
-            <Pressable 
-              onPress={onConfirm} 
-              style={[modalStyles.button, { backgroundColor: dangerColor, borderColor: dangerColor }]}
-            >
-              <ThemedText type="bodySemibold" style={{ color: '#fff' }}>Remove</ThemedText>
-            </Pressable>
-          </ThemedView>
-        </ThemedView>
-      </ThemedView>
-    </Modal>
-  );
-};
 
 // --- Main Screen Component ---
 export default function ListDetailScreen() {
@@ -118,13 +61,8 @@ export default function ListDetailScreen() {
   const list = lists?.find((l) => l.id === id);
 
   // Access the global cached market data (the snapshot)
-  const { data: globalMarketSnapshot } = useQuery<CoinGeckoMarketData[]>({
-      queryKey: CRYPTO_MARKET_QUERY_KEY,
-      // Query the cache directly as the data is managed by useAppInitialization
-      enabled: true, 
-      staleTime: Infinity, 
-      gcTime: Infinity,
-  });
+  const { cryptoMarket } = useAppInitialization();
+  const globalMarketSnapshot = cryptoMarket?.data;
 
   if (!list) {
     return (
@@ -429,11 +367,15 @@ export default function ListDetailScreen() {
       </ScreenContainer>
 
       {/* RENDER CUSTOM MODAL AT THE TOP LEVEL */}
-      <RemoveConfirmationModal
+      <ConfirmationModal
         visible={isConfirmingRemoval}
         onConfirm={handleConfirmRemoval}
         onCancel={handleCancelRemoval}
-        coinName={coinToRemove?.name || "this coin"}
+        title="Remove Coin"
+        message={`Are you sure you want to remove ${coinToRemove?.name || "this coin"} from this list?`}
+        confirmText="Remove"
+        cancelText="Cancel"
+        confirmButtonStyle="danger"
       />
     </SafeAreaView>
   );
@@ -533,44 +475,5 @@ const styles = StyleSheet.create({
   emptyContainer: {
     padding: Spacing.xl,
     alignItems: "center",
-  },
-});
-
-const modalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    // Manually apply a semi-transparent black background for reliable dimming
-    backgroundColor: 'rgba(0, 0, 0, 0.85)', 
-  },
-  card: {
-    width: '80%',
-    maxWidth: 350,
-    borderRadius: 12,
-    padding: Spacing.xl,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  title: {
-    marginBottom: Spacing.md,
-  },
-  message: {
-    marginBottom: Spacing.lg,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: Spacing.sm,
-  },
-  button: {
-    flex: 1,
-    padding: Spacing.sm,
-    borderRadius: 8,
-    alignItems: "center",
-    borderWidth: 1,
   },
 });
