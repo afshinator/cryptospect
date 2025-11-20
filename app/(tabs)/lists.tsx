@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { CoinListPreview } from "@/components/CoinListPreview";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { ThemedText } from "@/components/themed-text";
@@ -206,10 +207,7 @@ export default function ListsScreen() {
                         />
                       </Pressable>
                     </ThemedView>
-                    <ThemedText type="small" variant="secondary">
-                      {list.coins.length} coin
-                      {list.coins.length !== 1 ? "s" : ""}
-                    </ThemedText>
+                    <CoinListPreview list={list} />
                     {list.notes && (
                       <ThemedText
                         type="small"

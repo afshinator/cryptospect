@@ -3,6 +3,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { CurrencyBanner } from "@/components/CurrencyBanner";
+import { CoinListPreview } from "@/components/CoinListPreview";
 import { DominanceSection } from "@/components/DominanceSection";
 import { HelloWave } from "@/components/hello-wave";
 import { ThemedText } from "@/components/themed-text";
@@ -16,6 +17,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { data: lists, isLoading } = useCoinLists();
   const borderColor = useThemeColor({}, "border");
+  const tintColor = useThemeColor({}, "tint");
 
   const handleListPress = (listId: string) => {
     router.push(`/list-detail?id=${listId}`);
@@ -58,11 +60,9 @@ export default function HomeScreen() {
               >
                 <ThemedView style={styles.listItemContent}>
                   <ThemedText type="bodySemibold">{list.name}</ThemedText>
-                  <ThemedText type="small" variant="secondary">
-                    {list.coins.length} coin{list.coins.length !== 1 ? "s" : ""}
-                  </ThemedText>
+                  <CoinListPreview list={list} />
                 </ThemedView>
-                <IconSymbol name="chevron.right" size={20} />
+                <IconSymbol name="chevron.right" size={20} color={tintColor} />
               </Pressable>
             ))
           ) : (
