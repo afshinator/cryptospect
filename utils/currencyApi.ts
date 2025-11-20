@@ -4,9 +4,9 @@ import {
   DAILY_REFRESH_INTERVAL_MS,
   DEFAULT_CURRENCY,
   EXCHANGE_RATE_API_BASE_URL,
-  EXCHANGE_RATE_CACHE_KEY,
   ExchangeRateCache,
 } from '@/constants/currency';
+import { EXCHANGE_RATE_CACHE_KEY } from '@/constants/misc';
 
 // --- REFACATOR: Import utility functions instead of AsyncStorage directly ---
 import { getJSONObject, setJSONObject } from '@/utils/asyncStorage';

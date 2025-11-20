@@ -1,9 +1,8 @@
 // utils/coinListStorage.ts
 
 import { CoinList } from "@/constants/coinLists";
+import { COIN_LISTS_STORAGE_KEY } from "@/constants/misc";
 import { getJSONObject, setJSONObject } from "@/utils/asyncStorage";
-
-const COIN_LISTS_STORAGE_KEY = "CoinLists";
 
 /**
  * Get all coin lists from storage

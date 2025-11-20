@@ -1,8 +1,7 @@
 import { CoinList, CoinListItem } from "@/constants/coinLists";
+import { COIN_LISTS_QUERY_KEY } from "@/constants/misc";
 import { getCoinLists, saveCoinLists } from "@/utils/coinListStorage";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
-const COIN_LISTS_QUERY_KEY = ["coinLists"];
 
 /**
  * Hook to get all coin lists

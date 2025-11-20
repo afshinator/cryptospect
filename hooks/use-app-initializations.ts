@@ -2,13 +2,13 @@
 
 import {
   DEFAULT_CURRENCY,
-  EXCHANGE_RATES_QUERY_KEY,
 } from "@/constants/currency";
 import {
   CRYPTO_MARKET_QUERY_KEY,
   CRYPTO_MARKET_REFRESH_INTERVAL_MS,
   CRYPTO_OVERVIEW_QUERY_KEY,
-  CRYPTO_OVERVIEW_REFRESH_INTERVAL_MS
+  CRYPTO_OVERVIEW_REFRESH_INTERVAL_MS,
+  EXCHANGE_RATES_QUERY_KEY,
 } from "@/constants/misc";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { usePreferences } from "@/hooks/use-preference";

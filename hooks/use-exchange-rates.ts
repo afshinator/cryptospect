@@ -1,6 +1,7 @@
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
  
-import { EXCHANGE_RATES_QUERY_KEY, ExchangeRateCache } from '@/constants/currency';
+import { ExchangeRateCache } from '@/constants/currency';
+import { EXCHANGE_RATES_QUERY_KEY } from '@/constants/misc';
 import { getExchangeRates } from '@/utils/currencyApi';
 
 /**

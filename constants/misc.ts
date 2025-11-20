@@ -33,3 +33,11 @@ export const CRYPTO_OVERVIEW_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Backend Historical Dominance (180 days from Vercel backend)
 export const BACKEND_DOMINANCE_QUERY_KEY = ['backendDominance'];
+
+// Coin Lists
+export const COIN_LISTS_STORAGE_KEY = 'CoinLists';
+export const COIN_LISTS_QUERY_KEY = ['coinLists'];
+
+// Exchange Rates
+export const EXCHANGE_RATE_CACHE_KEY = 'ExchangeRates';
+export const EXCHANGE_RATES_QUERY_KEY = ['exchangeRates'];
