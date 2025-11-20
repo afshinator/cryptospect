@@ -1,5 +1,6 @@
 // app/list-detail.tsx
 
+import { useQuery } from "@tanstack/react-query"; // Import useQuery for cache access
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -22,6 +23,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { CoinGeckoMarketData } from "@/constants/coinGecko";
 import { CoinListItem } from "@/constants/coinLists";
 import { SupportedCurrency } from "@/constants/currency";
+import { CRYPTO_MARKET_QUERY_KEY } from "@/constants/misc"; // Import key for global cache
 import { Spacing } from "@/constants/theme";
 import {
   useAddCoinToList,
@@ -57,7 +59,7 @@ const RemoveConfirmationModal: React.FC<ConfirmationModalProps> = ({
       visible={visible}
       onRequestClose={onCancel}
     >
-      {/* FIX: Set a semi-transparent background color directly on the overlay for reliable dimming */}
+      {/* Set a semi-transparent background color directly on the overlay for reliable dimming */}
       <ThemedView style={modalStyles.overlay}>
         <ThemedView style={[modalStyles.card, { backgroundColor: cardColor }]}>
           <ThemedText type="subtitle" style={modalStyles.title}>
@@ -115,6 +117,15 @@ export default function ListDetailScreen() {
 
   const list = lists?.find((l) => l.id === id);
 
+  // Access the global cached market data (the snapshot)
+  const { data: globalMarketSnapshot } = useQuery<CoinGeckoMarketData[]>({
+      queryKey: CRYPTO_MARKET_QUERY_KEY,
+      // Query the cache directly as the data is managed by useAppInitialization
+      enabled: true, 
+      staleTime: Infinity, 
+      gcTime: Infinity,
+  });
+
   if (!list) {
     return (
       <SafeAreaView style={{ flex: 1 }}>
@@ -132,21 +143,25 @@ export default function ListDetailScreen() {
 
   const handleAddCoin = (coin: CoinGeckoMarketData) => {
     const currency = (preferences?.currency || "usd") as SupportedCurrency;
-    const coinItem: Omit<CoinListItem, "addedAt"> = {
+    
+    // UPDATED: Only store minimal reference data and OMIT apiData
+    const coinItem: Omit<CoinListItem, "addedAt" | "apiData"> = {
       coinId: coin.id,
       symbol: coin.symbol,
       name: coin.name,
       notes: "",
       vsCurrency: currency,
-      apiData: coin,
+      // apiData is explicitly omitted to improve efficiency
     };
 
+    // We cast to CoinListItem because the persistence layer will handle 'addedAt' and 
+    // the structure of CoinListItem allows for apiData to be undefined/null on creation.
     addCoin.mutate(
-      { listId: list.id, coin: coinItem },
+      { listId: list.id, coin: coinItem as CoinListItem },
       {
         onError: (error) => {
           console.error("Failed to add coin:", error);
-          // In-app message box would be preferred over Alert, but keeping Alert for now outside of the main problem area
+          // In-app message box would be preferred over Alert
         },
       }
     );
@@ -346,47 +361,61 @@ export default function ListDetailScreen() {
               onScrollBeginDrag={Keyboard.dismiss}
             >
               {list.coins.length > 0 ? (
-                list.coins.map((coin) => (
-                  <Pressable
-                    key={coin.coinId}
-                    onPress={() => handleCoinPress(coin.coinId)}
-                    style={[styles.coinItem, { borderColor }]}
-                  >
-                    {coin.apiData?.image && (
-                      <Image
-                        source={{ uri: coin.apiData.image }}
-                        style={styles.coinImage}
-                      />
-                    )}
-                    <ThemedView style={styles.coinInfo}>
-                      <ThemedText type="bodySemibold">{coin.name}</ThemedText>
-                      <ThemedText type="small" variant="secondary">
-                        {coin.symbol.toUpperCase()}
-                      </ThemedText>
-                      {coin.notes && (
-                        <ThemedText type="small" variant="secondary">
-                          {coin.notes}
-                        </ThemedText>
+                list.coins.map((coin) => {
+                  // FIX #4: Look up the market data from the global snapshot using the coinId
+                  const marketData = globalMarketSnapshot?.find(
+                    (m) => m.id === coin.coinId
+                  );
+
+                  // Use marketData for live details, otherwise fallback to the minimal data stored in the list item
+                  const displayName = marketData?.name || coin.name;
+                  const displaySymbol = marketData?.symbol || coin.symbol;
+                  // Fallback to legacy coin.apiData.image if global snapshot isn't loaded (for existing items)
+                  const displayImage = marketData?.image || coin.apiData?.image; 
+
+                  return (
+                    <Pressable
+                      key={coin.coinId}
+                      onPress={() => handleCoinPress(coin.coinId)}
+                      style={[styles.coinItem, { borderColor }]}
+                    >
+                      {/* Use the retrieved image from the global snapshot or legacy apiData */}
+                      {displayImage && (
+                        <Image
+                          source={{ uri: displayImage }}
+                          style={styles.coinImage}
+                        />
                       )}
-                    </ThemedView>
-                    
-                    {/* Trash Button Container */}
-                    <ThemedView style={styles.removeButtonContainer}>
-                      <Pressable
-                        onPress={(e) => {
-                          console.log('Remove coin handler called - stopping propagation'); 
-                          // Standard synthetic event propagation stop (still necessary!)
-                          e.stopPropagation(); 
-                          handleRemoveCoin(coin.coinId);
-                        }}
-                        style={styles.removeButton}
-                        accessibilityRole="button"
-                      >
-                        <IconSymbol name="trash.fill" size={30} color={tintColor} />
-                      </Pressable>
-                    </ThemedView>
-                  </Pressable>
-                ))
+                      <ThemedView style={styles.coinInfo}>
+                        <ThemedText type="bodySemibold">{displayName}</ThemedText>
+                        <ThemedText type="small" variant="secondary">
+                          {displaySymbol.toUpperCase()}
+                        </ThemedText>
+                        {coin.notes && (
+                          <ThemedText type="small" variant="secondary">
+                            {coin.notes}
+                          </ThemedText>
+                        )}
+                      </ThemedView>
+                      
+                      {/* Trash Button Container */}
+                      <ThemedView style={styles.removeButtonContainer}>
+                        <Pressable
+                          onPress={(e) => {
+                            console.log('Remove coin handler called - stopping propagation'); 
+                            // Standard synthetic event propagation stop (still necessary!)
+                            e.stopPropagation(); 
+                            handleRemoveCoin(coin.coinId);
+                          }}
+                          style={styles.removeButton}
+                          accessibilityRole="button"
+                        >
+                          <IconSymbol name="trash.fill" size={30} color={tintColor} />
+                        </Pressable>
+                      </ThemedView>
+                    </Pressable>
+                  );
+                })
               ) : (
                 <ThemedView style={styles.emptyContainer}>
                   <ThemedText type="body" variant="secondary">
@@ -512,7 +541,7 @@ const modalStyles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    // FIXED: Manually apply a semi-transparent black background for reliable dimming
+    // Manually apply a semi-transparent black background for reliable dimming
     backgroundColor: 'rgba(0, 0, 0, 0.85)', 
   },
   card: {
