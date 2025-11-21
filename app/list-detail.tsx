@@ -515,10 +515,11 @@ export default function ListDetailScreen() {
 
             {/* Filter Results */}
             {activeFilterIds.length > 0 && (
-              <FilteredCoinsResults
-                matches={filteredMatches}
-                activeFilterIds={activeFilterIds}
-              />
+          <FilteredCoinsResults
+            matches={filteredMatches}
+            activeFilterIds={activeFilterIds}
+            defaultOpen={true}
+          />
             )}
           </ThemedView>
         </ThemedView>

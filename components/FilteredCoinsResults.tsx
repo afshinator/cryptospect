@@ -19,11 +19,13 @@ const formatPercentage = (value: number): string => {
 interface FilteredCoinsResultsProps {
   matches: FilteredCoinMatch[] | { [filterId: string]: FilteredCoinMatch[] };
   activeFilterIds: string[];
+  defaultOpen?: boolean; // If true, Collapsibles start open by default
 }
 
 export function FilteredCoinsResults({
   matches,
   activeFilterIds,
+  defaultOpen = false,
 }: FilteredCoinsResultsProps) {
   const router = useRouter();
   const borderColor = useThemeColor({}, "border");
@@ -238,6 +240,7 @@ export function FilteredCoinsResults({
               key={filterId} 
               title={titleText}
               style={styles.filterCollapsible}
+              isOpen={defaultOpen}
             >
               <ThemedView style={styles.filterResults}>
                 {filterMatches.map((match, index) => renderCoinItem(match, index))}
