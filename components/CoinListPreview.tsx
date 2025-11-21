@@ -38,7 +38,7 @@ export function CoinListPreview({ list }: CoinListPreviewProps) {
 
   return (
     <ThemedView style={styles.container}>
-      {coinImages.length > 0 && (
+      {coinImages.length > 0 ? (
         <View style={styles.iconsContainer}>
           {coinImages.map((imageUri, index) => (
             <Image
@@ -54,7 +54,7 @@ export function CoinListPreview({ list }: CoinListPreviewProps) {
             />
           ))}
         </View>
-      )}
+      ) : null}
       <ThemedText type="small" variant="secondary">
         ({coinCount})
       </ThemedText>

@@ -86,15 +86,15 @@ export function CoinListItem({
           </ThemedText>
         )}
         <CoinListPreview list={list} />
-        {showNotes && list.notes && (
+        {showNotes && list.notes && list.notes.trim() ? (
           <ThemedText type="small" variant="secondary" numberOfLines={1}>
             {list.notes}
           </ThemedText>
-        )}
+        ) : null}
       </ThemedView>
-      {showChevron && (
+      {showChevron ? (
         <IconSymbol name="chevron.right" size={20} color={tintColor} />
-      )}
+      ) : null}
     </Pressable>
   );
 }
