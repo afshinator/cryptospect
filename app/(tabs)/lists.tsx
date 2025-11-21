@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AlertModal } from "@/components/AlertModal";
 import { CoinListItem } from "@/components/CoinListItem";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { ScreenContainer } from "@/components/ScreenContainer";
@@ -51,6 +52,9 @@ export default function ListsScreen() {
   const [newListName, setNewListName] = useState("");
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [listToDelete, setListToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [alertModal, setAlertModal] = useState<{ title: string; message: string; buttonStyle?: "default" | "danger" | "success" } | null>(null);
+  const [isConfirmingImport, setIsConfirmingImport] = useState(false);
+  const [importData, setImportData] = useState<{ lists: CoinList[]; duplicateNames: string[] } | null>(null);
 
   const textColor = useThemeColor({}, "text");
   const backgroundColor = useThemeColor({}, "background");
@@ -58,9 +62,17 @@ export default function ListsScreen() {
   const placeholderColor = useThemeColor({}, "textSecondary");
   const tintColor = useThemeColor({}, "tint");
 
+  const showAlert = (title: string, message: string, buttonStyle: "default" | "danger" | "success" = "default") => {
+    if (Platform.OS === "web") {
+      Alert.alert(title, message);
+    } else {
+      setAlertModal({ title, message, buttonStyle });
+    }
+  };
+
   const handleCreate = () => {
     if (!newListName.trim()) {
-      Alert.alert("Error", "Please enter a list name");
+      showAlert("Error", "Please enter a list name", "danger");
       return;
     }
 
@@ -70,7 +82,7 @@ export default function ListsScreen() {
     );
 
     if (nameExists) {
-      Alert.alert("Error", "A list with this name already exists");
+      showAlert("Error", "A list with this name already exists", "danger");
       return;
     }
 
@@ -86,7 +98,7 @@ export default function ListsScreen() {
           setIsCreating(false);
         },
         onError: (error) => {
-          Alert.alert("Error", `Failed to create list: ${error.message}`);
+          showAlert("Error", `Failed to create list: ${error.message}`, "danger");
         },
       }
     );
@@ -107,7 +119,7 @@ export default function ListsScreen() {
         setListToDelete(null);
       },
       onError: (error) => {
-        Alert.alert("Error", `Failed to delete list: ${error.message}`);
+        showAlert("Error", `Failed to delete list: ${error.message}`, "danger");
         setIsConfirmingDelete(false);
         setListToDelete(null);
       },
@@ -119,13 +131,25 @@ export default function ListsScreen() {
     setListToDelete(null);
   };
 
+  const handleConfirmImport = () => {
+    if (!importData) return;
+    performImport(importData.lists, importData.duplicateNames);
+    setIsConfirmingImport(false);
+    setImportData(null);
+  };
+
+  const handleCancelImport = () => {
+    setIsConfirmingImport(false);
+    setImportData(null);
+  };
+
   const handleListPress = (listId: string) => {
     router.push(`/list-detail?id=${listId}`);
   };
 
   const handleExport = async () => {
     if (!lists || lists.length === 0) {
-      Alert.alert("No Lists", "There are no lists to export.");
+      showAlert("No Lists", "There are no lists to export.", "default");
       return;
     }
 
@@ -162,7 +186,7 @@ export default function ListsScreen() {
         // Don't show success dialog - the share dialog opening is sufficient feedback
         // The file is saved, and user can cancel the share if they want
       } catch (error) {
-        Alert.alert("Error", `Failed to export lists: ${error instanceof Error ? error.message : "Unknown error"}`);
+        showAlert("Error", `Failed to export lists: ${error instanceof Error ? error.message : "Unknown error"}`, "danger");
       }
     }
   };
@@ -190,10 +214,18 @@ export default function ListsScreen() {
           const text = await file.text();
           processImportedCsv(text);
         } catch (error) {
-          Alert.alert(
-            "Import Error",
-            `Failed to import lists: ${error instanceof Error ? error.message : "Unknown error"}`
-          );
+          if (Platform.OS === "web") {
+            Alert.alert(
+              "Import Error",
+              `Failed to import lists: ${error instanceof Error ? error.message : "Unknown error"}`
+            );
+          } else {
+            showAlert(
+              "Import Error",
+              `Failed to import lists: ${error instanceof Error ? error.message : "Unknown error"}`,
+              "danger"
+            );
+          }
         }
       };
       input.click();
@@ -217,9 +249,10 @@ export default function ListsScreen() {
 
         processImportedCsv(text);
       } catch (error) {
-        Alert.alert(
+        showAlert(
           "Import Error",
-          `Failed to import lists: ${error instanceof Error ? error.message : "Unknown error"}`
+          `Failed to import lists: ${error instanceof Error ? error.message : "Unknown error"}`,
+          "danger"
         );
       }
     }
@@ -230,7 +263,7 @@ export default function ListsScreen() {
       const importedLists = importCoinListsFromCsv(text);
 
       if (importedLists.length === 0) {
-        Alert.alert("Error", "No valid lists found in the CSV file.");
+        showAlert("Error", "No valid lists found in the CSV file.", "danger");
         return;
       }
 
@@ -241,27 +274,34 @@ export default function ListsScreen() {
         .map((list) => list.name);
 
       if (duplicateNames.length > 0) {
-        Alert.alert(
-          "Duplicate Lists Found",
-          `The following lists already exist: ${duplicateNames.join(", ")}\n\nDo you want to replace them?`,
-          [
-            {
-              text: "Cancel",
-              style: "cancel",
-            },
-            {
-              text: "Replace",
-              onPress: () => performImport(importedLists, duplicateNames),
-            },
-          ]
-        );
+        if (Platform.OS === "web") {
+          Alert.alert(
+            "Duplicate Lists Found",
+            `The following lists already exist: ${duplicateNames.join(", ")}\n\nDo you want to replace them?`,
+            [
+              {
+                text: "Cancel",
+                style: "cancel",
+              },
+              {
+                text: "Replace",
+                onPress: () => performImport(importedLists, duplicateNames),
+              },
+            ]
+          );
+        } else {
+          // Use ConfirmationModal on mobile
+          setImportData({ lists: importedLists, duplicateNames });
+          setIsConfirmingImport(true);
+        }
       } else {
         performImport(importedLists, []);
       }
     } catch (error) {
-      Alert.alert(
+      showAlert(
         "Import Error",
-        `Failed to import lists: ${error instanceof Error ? error.message : "Unknown error"}`
+        `Failed to import lists: ${error instanceof Error ? error.message : "Unknown error"}`,
+        "danger"
       );
     }
   };
@@ -314,15 +354,16 @@ export default function ListsScreen() {
         message = `Successfully imported ${createdCount} new list(s) and replaced ${replacedCount} existing list(s).`;
       } else if (replacedCount > 0) {
         message = `Successfully replaced ${replacedCount} existing list(s).`;
-      } else {
+      } else if (createdCount > 0) {
         message = `Successfully imported ${createdCount} new list(s).`;
       }
 
-      Alert.alert("Success", message);
+      showAlert("Success", message, "success");
     } catch (error) {
-      Alert.alert(
+      showAlert(
         "Import Error",
-        `Failed to import lists: ${error instanceof Error ? error.message : "Unknown error"}`
+        `Failed to import lists: ${error instanceof Error ? error.message : "Unknown error"}`,
+        "danger"
       );
     }
   };
@@ -447,7 +488,7 @@ export default function ListsScreen() {
         </ThemedView>
       </ScreenContainer>
 
-      {/* RENDER CUSTOM MODAL AT THE TOP LEVEL */}
+      {/* RENDER CUSTOM MODALS AT THE TOP LEVEL */}
       <ConfirmationModal
         visible={isConfirmingDelete}
         onConfirm={handleConfirmDelete}
@@ -457,6 +498,23 @@ export default function ListsScreen() {
         confirmText="Delete"
         cancelText="Cancel"
         confirmButtonStyle="danger"
+      />
+      <ConfirmationModal
+        visible={isConfirmingImport}
+        onConfirm={handleConfirmImport}
+        onCancel={handleCancelImport}
+        title="Duplicate Lists Found"
+        message={`The following lists already exist: ${importData?.duplicateNames.join(", ")}\n\nDo you want to replace them?`}
+        confirmText="Replace"
+        cancelText="Cancel"
+        confirmButtonStyle="default"
+      />
+      <AlertModal
+        visible={alertModal !== null}
+        onDismiss={() => setAlertModal(null)}
+        title={alertModal?.title || ""}
+        message={alertModal?.message || ""}
+        buttonStyle={alertModal?.buttonStyle || "default"}
       />
     </SafeAreaView>
   );

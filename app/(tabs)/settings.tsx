@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Alert, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AlertModal } from "@/components/AlertModal";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { SectionContainer } from "@/components/SectionContainer";
 import {
@@ -45,6 +46,7 @@ export default function SettingsScreen() {
   
   // Local state for directory input - sync with preferences
   const [directoryInput, setDirectoryInput] = useState<string>("");
+  const [alertModal, setAlertModal] = useState<{ title: string; message: string; buttonStyle?: "default" | "danger" | "success" } | null>(null);
   
   // Update directory input when preferences load
   useEffect(() => {
@@ -307,7 +309,11 @@ export default function SettingsScreen() {
                 updatePreferences.mutate({
                   defaultImportExportDirectory: trimmed || undefined,
                 });
-                Alert.alert("Success", "Directory preference saved.");
+                if (Platform.OS === "web") {
+                  Alert.alert("Success", "Directory preference saved.");
+                } else {
+                  setAlertModal({ title: "Success", message: "Directory preference saved.", buttonStyle: "success" });
+                }
               }}
               style={styles.saveDirectoryButton}
             >
@@ -329,6 +335,13 @@ export default function SettingsScreen() {
           )}
         </SectionContainer>
       </ScreenContainer>
+      <AlertModal
+        visible={alertModal !== null}
+        onDismiss={() => setAlertModal(null)}
+        title={alertModal?.title || ""}
+        message={alertModal?.message || ""}
+        buttonStyle={alertModal?.buttonStyle || "default"}
+      />
     </SafeAreaView>
   );
 }
