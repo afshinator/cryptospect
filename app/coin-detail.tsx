@@ -1,29 +1,44 @@
 // app/coin-detail.tsx
 
-import { useMemo } from "react";
-import { Image, Pressable, ScrollView, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useMemo } from "react";
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AthAtlRangeBar } from "@/components/AthAtlRangeBar";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { CURRENCY_SYMBOLS } from "@/constants/currency";
 import { Spacing } from "@/constants/theme";
 import { useAppInitialization } from "@/hooks/use-app-initializations";
-import { useThemeColor } from "@/hooks/use-theme-color";
 import { useCoinLists } from "@/hooks/use-coin-lists";
-import { CURRENCY_SYMBOLS } from "@/constants/currency";
+import { usePreferences } from "@/hooks/use-preference";
+import { useThemeColor } from "@/hooks/use-theme-color";
+
+// Layout constants for alignment and spacing tweaks
+const PRICE_COLUMN_RIGHT_PADDING = 50; // Web: horizontal padding on right side of price column
+const ATH_ATL_MOBILE_BOTTOM_OFFSET = -8; // Mobile: vertical offset for ATH/ATL positioning (moved up one line from -24)
+const PRICE_CONTAINER_BOTTOM_PADDING = 32; // Mobile: bottom padding to enclose absolutely positioned ATH/ATL
+const PRICE_CONTAINER_MIN_HEIGHT = 60; // Mobile: minimum height for price container layout
 
 export default function CoinDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { cryptoMarket } = useAppInitialization();
   const { data: lists } = useCoinLists();
+  const { data: preferences } = usePreferences();
 
   const borderColor = useThemeColor({}, "border");
   const textColor = useThemeColor({}, "text");
+  const textSecondaryColor = useThemeColor({}, "textSecondary");
+  const errorColor = useThemeColor({}, "error");
+  const successColor = useThemeColor({}, "success");
   const tintColor = useThemeColor({}, "tint");
+
+  // Use smaller font for Market Data labels on mobile when font scaling is >= 1.3x
+  const marketDataLabelType = Platform.OS !== 'web' && (preferences?.fontScale ?? 1.0) >= 1.3 ? "xsmall" : "body";
 
   // Find the coin in the market data
   const coin = useMemo(() => {
@@ -79,6 +94,12 @@ export default function CoinDetailScreen() {
     return `${sign}${num.toFixed(2)}%`;
   };
 
+  const formatPercentageValue = (num: number | null | undefined): string => {
+    if (num === null || num === undefined) return "N/A";
+    const sign = num >= 0 ? "+" : "";
+    return `${sign}${num.toFixed(2)}`;
+  };
+
   const formatDataAge = (lastUpdated: string | null | undefined, snapshotTimestamp: number | undefined): string | null => {
     let timestamp: number | null = null;
 
@@ -107,6 +128,25 @@ export default function CoinDetailScreen() {
     }
   };
 
+  const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  // Calculate percentage changes from ATH and ATL
+  const calculateChangeFromAth = (): number | null => {
+    if (!coin.current_price || !coin.ath) return null;
+    return ((coin.current_price - coin.ath) / coin.ath) * 100;
+  };
+
+  const calculateChangeFromAtl = (): number | null => {
+    if (!coin.current_price || !coin.atl) return null;
+    return ((coin.current_price - coin.atl) / coin.atl) * 100;
+  };
+
+  const changeFromAth = calculateChangeFromAth();
+  const changeFromAtl = calculateChangeFromAtl();
+
   const dataAge = formatDataAge(coin.last_updated, cryptoMarket?.timestamp);
 
   return (
@@ -134,31 +174,152 @@ export default function CoinDetailScreen() {
 
             {/* Price Section */}
             <ThemedView style={[styles.section, { borderColor }]}>
-              <ThemedText type="subtitle" style={styles.sectionTitle}>
-                Price
-              </ThemedText>
-              <ThemedView style={styles.priceRow}>
-                <ThemedText type="xlarge">
-                  {formatPrice(coin.current_price)}
+              <View style={styles.priceSectionHeader}>
+                <ThemedText type="subtitle" style={styles.sectionTitle}>
+                  Price
                 </ThemedText>
                 {dataAge && (
-                  <ThemedText type="small" variant="secondary">
+                  <ThemedText type="small" variant="secondary" style={styles.dataAgeTopRight}>
                     {dataAge}
                   </ThemedText>
                 )}
-              </ThemedView>
-              {coin.price_change_percentage_24h !== null && (
-                <ThemedText
-                  type="body"
-                  variant={
-                    (coin.price_change_percentage_24h || 0) >= 0
-                      ? "success"
-                      : "error"
-                  }
-                >
-                  {`${formatPercentage(coin.price_change_percentage_24h)} (24h)`}
-                </ThemedText>
-              )}
+              </View>
+              <View style={styles.priceContainer}>
+                <View style={styles.priceMainRow}>
+                  <View style={styles.priceAndAthAtlRow}>
+                    <View style={Platform.OS === 'web' ? styles.priceTextContainer : undefined}>
+                      <ThemedText type={Platform.OS === 'web' ? "xlarge" : "title"}>
+                        {formatPrice(coin.current_price)}
+                      </ThemedText>
+                    </View>
+                    {Platform.OS === 'web' && (
+                      <>
+                        <View style={styles.athAtlColumn}>
+                          <View style={styles.athAtlRow}>
+                            <ThemedText type="subtitle" variant="secondary" style={styles.athAtlBold}>
+                              ATH:
+                            </ThemedText>
+                            <ThemedText type="subtitle" variant="secondary" style={styles.athAtlBold}>
+                              {formatPrice(coin.ath)}
+                            </ThemedText>
+                            {coin.ath_date && (
+                              <ThemedText type="xsmall" variant="secondary">
+                                {' '}{formatDate(coin.ath_date)}
+                              </ThemedText>
+                            )}
+                          </View>
+                          <View style={styles.athAtlRow}>
+                            <ThemedText type="subtitle" variant="secondary" style={styles.athAtlBold}>
+                              ATL:
+                            </ThemedText>
+                            <ThemedText type="subtitle" variant="secondary" style={styles.athAtlBold}>
+                              {formatPrice(coin.atl)}
+                            </ThemedText>
+                            {coin.atl_date && (
+                              <ThemedText type="xsmall" variant="secondary">
+                                {' '}{formatDate(coin.atl_date)}
+                              </ThemedText>
+                            )}
+                          </View>
+                        </View>
+                        <View style={styles.changeFromColumn}>
+                          {changeFromAth !== null && (
+                            <ThemedText type="subtitle" variant="secondary" style={styles.athAtlBold}>
+                              Down from ATH:{' '}
+                              <Text style={{ color: errorColor, fontWeight: 'bold' }}>
+                                {formatPercentageValue(changeFromAth)}
+                              </Text>
+                              <Text style={{ color: textSecondaryColor }}>%</Text>
+                            </ThemedText>
+                          )}
+                          {changeFromAtl !== null && (
+                            <ThemedText type="subtitle" variant="secondary" style={styles.athAtlBold}>
+                              Up from ATL:{' '}
+                              <Text style={{ color: successColor, fontWeight: 'bold' }}>
+                                {formatPercentageValue(changeFromAtl)}
+                              </Text>
+                              <Text style={{ color: textSecondaryColor }}>%</Text>
+                            </ThemedText>
+                          )}
+                        </View>
+                      </>
+                    )}
+                  </View>
+                </View>
+                {coin.price_change_percentage_24h !== null && (
+                  <View style={Platform.OS === 'web' ? undefined : styles.priceChangeRow}>
+                    <ThemedText
+                      type="body"
+                      variant={
+                        (coin.price_change_percentage_24h || 0) >= 0
+                          ? "success"
+                          : "error"
+                      }
+                      style={Platform.OS === 'web' ? undefined : styles.priceChangeText}
+                    >
+                      {`${formatPercentage(coin.price_change_percentage_24h)} (24h)`}
+                    </ThemedText>
+                    {Platform.OS !== 'web' && (
+                      <View style={styles.rangeBarMobile}>
+                        <AthAtlRangeBar
+                          currentPrice={coin.current_price || 0}
+                          ath={coin.ath || 0}
+                          atl={coin.atl || 0}
+                          currencySymbol={currencySymbol}
+                          width="100%"
+                          barHeight={6}
+                          showLabels={false}
+                          showCurrentPrice={false}
+                          indicatorStyle="bar"
+                          recentChangePercentage={coin.price_change_percentage_24h ? coin.price_change_percentage_24h / 100 : undefined}
+                          formatPrice={formatPrice}
+                          formatDate={formatDate}
+                        />
+                      </View>
+                    )}
+                  </View>
+                )}
+                {Platform.OS === 'web' && (
+                  <View style={styles.rangeBarWeb}>
+                    <AthAtlRangeBar
+                      currentPrice={coin.current_price || 0}
+                      ath={coin.ath || 0}
+                      atl={coin.atl || 0}
+                      currencySymbol={currencySymbol}
+                      width="100%"
+                      barHeight={8}
+                      showLabels={false}
+                      showCurrentPrice={false}
+                      indicatorStyle="bar"
+                      recentChangePercentage={coin.price_change_percentage_24h ? coin.price_change_percentage_24h / 100 : undefined}
+                      formatPrice={formatPrice}
+                      formatDate={formatDate}
+                    />
+                  </View>
+                )}
+                {Platform.OS !== 'web' && (
+                  <View style={styles.athAtlMobile}>
+                    <Text style={[styles.athAtlMobileText, { color: textSecondaryColor }]}>
+                      <Text style={styles.athAtlBold}>ATH:</Text> <Text style={styles.athAtlBold}>{formatPrice(coin.ath)}</Text>
+                      {coin.ath_date && ` ${formatDate(coin.ath_date)}`}
+                      {changeFromAth !== null && (
+                        <Text style={{ color: textSecondaryColor }}>
+                          {' '}(<Text style={{ color: errorColor }}>{formatPercentage(changeFromAth)}</Text>)
+                        </Text>
+                      )}
+                    </Text>
+                    <Text style={[styles.athAtlMobileText, { color: textSecondaryColor }]}>
+                      <Text style={styles.athAtlBold}>ATL:</Text> <Text style={styles.athAtlBold}>{formatPrice(coin.atl)}</Text>
+                      {coin.atl_date && ` ${formatDate(coin.atl_date)}`}
+                      {changeFromAtl !== null && (
+                        <Text style={{ color: textSecondaryColor }}>
+                          {' '}(<Text style={{ color: successColor }}>{formatPercentage(changeFromAtl)}</Text>)
+                        </Text>
+                      )}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </ThemedView>
 
             {/* Market Data */}
@@ -170,26 +331,31 @@ export default function CoinDetailScreen() {
                 label="Market Cap"
                 value={formatPrice(coin.market_cap)}
                 borderColor={borderColor}
+                labelType={marketDataLabelType}
               />
               <DataRow
                 label="24h Volume"
                 value={formatPrice(coin.total_volume)}
                 borderColor={borderColor}
+                labelType={marketDataLabelType}
               />
               <DataRow
                 label="24h High"
                 value={formatPrice(coin.high_24h)}
                 borderColor={borderColor}
+                labelType={marketDataLabelType}
               />
               <DataRow
                 label="24h Low"
                 value={formatPrice(coin.low_24h)}
                 borderColor={borderColor}
+                labelType={marketDataLabelType}
               />
               <DataRow
                 label="Market Cap Change (24h)"
                 value={formatPercentage(coin.market_cap_change_percentage_24h)}
                 borderColor={borderColor}
+                labelType={marketDataLabelType}
               />
             </ThemedView>
 
@@ -215,42 +381,11 @@ export default function CoinDetailScreen() {
               />
             </ThemedView>
 
-            {/* Historical Data */}
-            <ThemedView style={[styles.section, { borderColor }]}>
-              <ThemedText type="subtitle" style={styles.sectionTitle}>
-                Historical
-              </ThemedText>
-              <DataRow
-                label="All-Time High"
-                value={formatPrice(coin.ath)}
-                borderColor={borderColor}
-              />
-              {coin.ath_date && (
-                <DataRow
-                  label="ATH Date"
-                  value={new Date(coin.ath_date).toLocaleDateString()}
-                  borderColor={borderColor}
-                />
-              )}
-              <DataRow
-                label="All-Time Low"
-                value={formatPrice(coin.atl)}
-                borderColor={borderColor}
-              />
-              {coin.atl_date && (
-                <DataRow
-                  label="ATL Date"
-                  value={new Date(coin.atl_date).toLocaleDateString()}
-                  borderColor={borderColor}
-                />
-              )}
-            </ThemedView>
-
             {/* Lists Containing This Coin */}
             {containingLists.length > 0 && (
               <ThemedView style={[styles.section, { borderColor }]}>
                 <ThemedText type="subtitle" style={styles.sectionTitle}>
-                  In Lists ({containingLists.length})
+                  {coin.symbol.toUpperCase()} is in these lists ({containingLists.length})
                 </ThemedText>
                 {containingLists.map((list) => (
                   <Pressable
@@ -277,16 +412,18 @@ function DataRow({
   label,
   value,
   borderColor,
+  labelType = "body",
 }: {
   label: string;
   value: string;
   borderColor: string;
+  labelType?: "body" | "xsmall";
 }) {
   return (
     <ThemedView
       style={[styles.dataRow, { borderBottomColor: borderColor }]}
     >
-      <ThemedText type="body" variant="secondary">
+      <ThemedText type={labelType} variant="secondary">
         {label}
       </ThemedText>
       <ThemedText type="bodySemibold">{value}</ThemedText>
@@ -330,11 +467,69 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: Spacing.sm,
   },
-  priceRow: {
+  priceSectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
+    marginBottom: Spacing.sm,
+  },
+  dataAgeTopRight: {
+    alignSelf: "flex-start",
+  },
+  priceContainer: {
     marginBottom: Spacing.xs,
+    ...Platform.select({
+      default: {
+        position: 'relative',
+        minHeight: PRICE_CONTAINER_MIN_HEIGHT,
+        paddingBottom: PRICE_CONTAINER_BOTTOM_PADDING,
+      },
+      web: {},
+    }),
+  },
+  priceMainRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+    gap: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  priceAndAthAtlRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+    flex: 1,
+  },
+  priceTextContainer: {
+    paddingRight: PRICE_COLUMN_RIGHT_PADDING,
+  },
+  athAtlColumn: {
+    gap: Spacing.xs,
+    justifyContent: 'center',
+  },
+  changeFromColumn: {
+    gap: Spacing.xs,
+    justifyContent: 'center',
+  },
+  athAtlRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  athAtlBold: {
+    fontWeight: 'bold',
+  },
+  athAtlMobile: {
+    position: 'absolute',
+    bottom: ATH_ATL_MOBILE_BOTTOM_OFFSET,
+    right: 0,
+    alignItems: "flex-end",
+    gap: Spacing.xs,
+  },
+  athAtlMobileText: {
+    fontSize: 12,
+    lineHeight: 16,
   },
   dataRow: {
     flexDirection: "row",
@@ -351,6 +546,22 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     borderWidth: 1,
     borderRadius: 8,
+  },
+  priceChangeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  priceChangeText: {
+    flex: 1,
+  },
+  rangeBarMobile: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  rangeBarWeb: {
+    width: "100%",
+    marginTop: Spacing.sm,
   },
 });
 

@@ -55,21 +55,27 @@ export default function SettingsScreen() {
   // Font scale logic
   const displayFontScale = tempFontScale ?? preferences.fontScale;
   const previewScaleFactor = displayFontScale / preferences.fontScale;
+  
+  // To prevent font scaling on the settings page itself, we need to cancel out
+  // the base fontScale by using its inverse. The preview area will use
+  // previewScaleFactor to show the effect of the font scale change.
+  const inverseFontScale = 1.0 / preferences.fontScale;
 
   return (
     <SafeAreaView style={[styles.container, { flex: 1 }]} edges={["top"]}>
       <ScreenContainer>
-        <ThemedText type="large" style={styles.title}>
+        <ThemedText type="large" style={styles.title} propFontScale={inverseFontScale}>
           Settings
         </ThemedText>
 
         {/* Appearance */}
         <SectionContainer>
-          <ThemedText type="subtitle">Appearance</ThemedText>
+          <ThemedText type="subtitle" propFontScale={inverseFontScale}>Appearance</ThemedText>
           <ThemedText
             variant="secondary"
             type="small"
             style={styles.sectionDescription}
+            propFontScale={inverseFontScale}
           >
             Choose your preferred theme
           </ThemedText>
@@ -99,6 +105,7 @@ export default function SettingsScreen() {
                         ? "default"
                         : "secondary"
                     }
+                    propFontScale={inverseFontScale}
                   >
                     {option.charAt(0).toUpperCase() + option.slice(1)}
                   </ThemedText>
@@ -111,7 +118,7 @@ export default function SettingsScreen() {
         {/* Font Scale */}
         <SectionContainer>
           <View style={styles.fontSizeTitleRow}>
-            <ThemedText type="subtitle">Font Size</ThemedText>
+            <ThemedText type="subtitle" propFontScale={inverseFontScale}>Font Size</ThemedText>
             <Pressable
               onPress={() => {
                 setTempFontScale(null);
@@ -127,7 +134,7 @@ export default function SettingsScreen() {
                   preferences.fontScale === 1.0 && styles.resetButtonDisabled,
                 ]}
               >
-                <ThemedText type="small" variant="link">
+                <ThemedText type="small" variant="link" propFontScale={inverseFontScale}>
                   Reset
                 </ThemedText>
               </ThemedView>
@@ -137,12 +144,13 @@ export default function SettingsScreen() {
             variant="secondary"
             type="small"
             style={styles.sectionDescription}
+            propFontScale={inverseFontScale}
           >
             Current size: {displayFontScale.toFixed(1)}x
           </ThemedText>
 
           <ThemedView style={styles.sliderContainer}>
-            <ThemedText type="small" variant="secondary">
+            <ThemedText type="small" variant="secondary" propFontScale={inverseFontScale}>
               {FONT_SCALE_MIN}×
             </ThemedText>
             <Slider
@@ -166,7 +174,7 @@ export default function SettingsScreen() {
               maximumTrackTintColor={sliderMaxColor}
               thumbTintColor={sliderThumbColor}
             />
-            <ThemedText type="small" variant="secondary">
+            <ThemedText type="small" variant="secondary" propFontScale={inverseFontScale}>
               {FONT_SCALE_MAX}×
             </ThemedText>
           </ThemedView>
@@ -201,11 +209,12 @@ export default function SettingsScreen() {
 
         {/* Currency Selection */}
         <SectionContainer>
-          <ThemedText type="subtitle">Preferred Currency</ThemedText>
+          <ThemedText type="subtitle" propFontScale={inverseFontScale}>Preferred Currency</ThemedText>
           <ThemedText
             variant="secondary"
             type="small"
             style={styles.sectionDescription}
+            propFontScale={inverseFontScale}
           >
             Used for displaying monetary values.
           </ThemedText>
@@ -236,10 +245,11 @@ export default function SettingsScreen() {
                         ? "default"
                         : "secondary"
                     }
+                    propFontScale={inverseFontScale}
                   >
                     {currencyCode.toUpperCase()}
                   </ThemedText>
-                  <ThemedText type="caption" variant="secondary">
+                  <ThemedText type="caption" variant="secondary" propFontScale={inverseFontScale}>
                     {CURRENCY_DISPLAY_NAMES[currencyCode]}
                   </ThemedText>
                 </ThemedView>
