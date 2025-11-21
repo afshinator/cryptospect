@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   listItemHome: {
-    padding: Spacing.md,
+    padding: Spacing.sm,
     marginBottom: Spacing.sm,
   },
   listItemLists: {

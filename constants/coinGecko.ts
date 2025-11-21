@@ -18,7 +18,7 @@ export const COINGECKO_COINS_MARKETS_ENDPOINT = `${COINGECKO_BASE_URL}${COINGECK
 
 // API Parameters for /coins/markets
 export const MARKET_DATA_PER_PAGE = 250; // Free tier max
-export const MARKET_DATA_PAGES_TO_FETCH = 5; // Number of pages to fetch (3 pages = 750 coins)
+export const MARKET_DATA_PAGES_TO_FETCH = 5; // Number of pages to fetch (1 pages = 250 coins)
 export const MARKET_DATA_ORDER = 'market_cap_desc';
 export const MARKET_DATA_SPARKLINE = false;
 
