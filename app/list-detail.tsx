@@ -519,6 +519,7 @@ export default function ListDetailScreen() {
             matches={filteredMatches}
             activeFilterIds={activeFilterIds}
             defaultOpen={true}
+            isLoading={!cryptoMarket?.data}
           />
             )}
           </ThemedView>

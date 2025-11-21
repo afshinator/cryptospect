@@ -101,6 +101,7 @@ export default function HomeScreen() {
           <FilteredCoinsResults
             matches={filteredMatches}
             activeFilterIds={activeFilterIds}
+            isLoading={!cryptoMarket?.data}
           />
         )}
 

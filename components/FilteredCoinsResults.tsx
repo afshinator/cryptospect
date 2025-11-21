@@ -2,7 +2,7 @@
 // Displays the results of filtered coin analysis
 
 import { useRouter } from "expo-router";
-import { Pressable, StyleSheet } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet } from "react-native";
 
 import { SectionContainer } from "@/components/SectionContainer";
 import { ThemedText } from "@/components/themed-text";
@@ -20,12 +20,14 @@ interface FilteredCoinsResultsProps {
   matches: FilteredCoinMatch[] | { [filterId: string]: FilteredCoinMatch[] };
   activeFilterIds: string[];
   defaultOpen?: boolean; // If true, Collapsibles start open by default
+  isLoading?: boolean; // If true, show loading spinner instead of results
 }
 
 export function FilteredCoinsResults({
   matches,
   activeFilterIds,
   defaultOpen = false,
+  isLoading = false,
 }: FilteredCoinsResultsProps) {
   const router = useRouter();
   const borderColor = useThemeColor({}, "border");
@@ -49,6 +51,23 @@ export function FilteredCoinsResults({
 
   if (activeFilterIds.length === 0) {
     return null;
+  }
+
+  // Show loading spinner if data is not ready
+  if (isLoading) {
+    return (
+      <SectionContainer marginBottom={Spacing.md}>
+        <ThemedText type="subtitle" style={styles.title}>
+          Filter Results
+        </ThemedText>
+        <ThemedView style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={tintColor} />
+          <ThemedText type="body" variant="secondary" style={styles.loadingText}>
+            Loading market data...
+          </ThemedText>
+        </ThemedView>
+      </SectionContainer>
+    );
   }
 
   // Check if matches is unified (array) or separated by filter (object)
@@ -260,6 +279,15 @@ const styles = StyleSheet.create({
   emptyMessage: {
     textAlign: "center",
     paddingVertical: Spacing.md,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.xl,
+    gap: Spacing.md,
+  },
+  loadingText: {
+    textAlign: "center",
   },
   resultsContainer: {
     gap: Spacing.sm,
