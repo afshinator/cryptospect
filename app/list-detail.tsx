@@ -393,29 +393,29 @@ export default function ListDetailScreen() {
                         </ThemedView>
                       ) : (
                         // Display mode
-                        <Pressable
-                          onPress={() => handleCoinPress(coin.coinId)}
+                    <Pressable
+                      onPress={() => handleCoinPress(coin.coinId)}
                           style={styles.coinItemPressable}
-                        >
-                          {/* Use the retrieved image from the global snapshot or legacy apiData */}
-                          {displayImage && (
-                            <Image
-                              source={{ uri: displayImage }}
-                              style={styles.coinImage}
-                            />
-                          )}
-                          <ThemedView style={styles.coinInfo}>
-                            <ThemedText type="bodySemibold">{displayName}</ThemedText>
-                            <ThemedText type="small" variant="secondary">
-                              {displaySymbol.toUpperCase()}
-                            </ThemedText>
-                            {coin.notes && (
+                    >
+                      {/* Use the retrieved image from the global snapshot or legacy apiData */}
+                      {displayImage && (
+                        <Image
+                          source={{ uri: displayImage }}
+                          style={styles.coinImage}
+                        />
+                      )}
+                      <ThemedView style={styles.coinInfo}>
+                        <ThemedText type="bodySemibold">{displayName}</ThemedText>
+                        <ThemedText type="small" variant="secondary">
+                          {displaySymbol.toUpperCase()}
+                        </ThemedText>
+                        {coin.notes && (
                               <ThemedText type="small" variant="secondary" style={styles.coinNotesText}>
-                                {coin.notes}
-                              </ThemedText>
-                            )}
-                          </ThemedView>
-                          
+                            {coin.notes}
+                          </ThemedText>
+                        )}
+                      </ThemedView>
+                      
                           {/* Action Buttons Container */}
                           <ThemedView style={styles.coinActionsContainer}>
                             <Pressable
@@ -432,19 +432,19 @@ export default function ListDetailScreen() {
                                 color={tintColor} 
                               />
                             </Pressable>
-                            <Pressable
-                              onPress={(e) => {
-                                console.log('Remove coin handler called - stopping propagation'); 
-                                e.stopPropagation(); 
-                                handleRemoveCoin(coin.coinId);
-                              }}
-                              style={styles.removeButton}
-                              accessibilityRole="button"
-                            >
-                              <IconSymbol name="trash.fill" size={30} color={tintColor} />
-                            </Pressable>
-                          </ThemedView>
+                        <Pressable
+                          onPress={(e) => {
+                            console.log('Remove coin handler called - stopping propagation'); 
+                            e.stopPropagation(); 
+                            handleRemoveCoin(coin.coinId);
+                          }}
+                          style={styles.removeButton}
+                          accessibilityRole="button"
+                        >
+                          <IconSymbol name="trash.fill" size={30} color={tintColor} />
                         </Pressable>
+                      </ThemedView>
+                    </Pressable>
                       )}
                     </ThemedView>
                   );

@@ -194,8 +194,8 @@ export default function CoinDetailScreen() {
             {/* Price Section */}
             <ThemedView style={[styles.section, { borderColor }]}>
               <View style={styles.priceSectionHeader}>
-                <ThemedText type="subtitle" style={styles.sectionTitle}>
-                  Price
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                Price
                 </ThemedText>
                 {dataAge && (
                   <ThemedText type="small" variant="secondary" style={styles.dataAgeTopRight}>
@@ -265,18 +265,18 @@ export default function CoinDetailScreen() {
                     )}
                   </View>
                 </View>
-                {coin.price_change_percentage_24h !== null && (
+              {coin.price_change_percentage_24h !== null && (
                   <View style={Platform.OS === 'web' ? undefined : styles.priceChangeRow}>
-                    <ThemedText
-                      type="body"
-                      variant={
-                        (coin.price_change_percentage_24h || 0) >= 0
-                          ? "success"
-                          : "error"
-                      }
+                <ThemedText
+                  type="body"
+                  variant={
+                    (coin.price_change_percentage_24h || 0) >= 0
+                      ? "success"
+                      : "error"
+                  }
                       style={Platform.OS === 'web' ? undefined : styles.priceChangeText}
-                    >
-                      {`${formatPercentage(coin.price_change_percentage_24h)} (24h)`}
+                >
+                  {`${formatPercentage(coin.price_change_percentage_24h)} (24h)`}
                     </ThemedText>
                     {Platform.OS !== 'web' && (
                       <View style={styles.rangeBarMobile}>
@@ -442,8 +442,8 @@ export default function CoinDetailScreen() {
 
             {/* Lists with Notes for This Coin */}
             {listsWithNotes.length > 0 && (
-              <ThemedView style={[styles.section, { borderColor }]}>
-                <ThemedText type="subtitle" style={styles.sectionTitle}>
+            <ThemedView style={[styles.section, { borderColor }]}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
                   Notes from Lists ({listsWithNotes.length})
                 </ThemedText>
                 {listsWithNotes.map(({ list, notes }) => (
@@ -458,12 +458,12 @@ export default function CoinDetailScreen() {
                       <ThemedText type="bodySemibold">{list.name}</ThemedText>
                       <ThemedText type="body" variant="secondary" style={styles.listNoteText}>
                         {notes}
-                      </ThemedText>
+              </ThemedText>
                     </ThemedView>
                     <IconSymbol name="chevron.right" size={20} color={tintColor} />
                   </Pressable>
                 ))}
-              </ThemedView>
+            </ThemedView>
             )}
 
             {/* Lists Containing This Coin */}

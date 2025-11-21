@@ -193,7 +193,7 @@ export default function SettingsScreen() {
             <ThemedText type="small" variant="secondary" propFontScale={inverseFontScale}>
               {FONT_SCALE_MAX}×
             </ThemedText>
-          </ThemedView>
+        </ThemedView>
 
           {/* Divider */}
           <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -319,19 +319,19 @@ export default function SettingsScreen() {
             >
               <ThemedText type="bodySemibold" propFontScale={inverseFontScale}>
                 Save
-              </ThemedText>
+          </ThemedText>
             </Pressable>
           </View>
 
           {preferences.defaultImportExportDirectory && (
-            <ThemedText
-              type="small"
-              variant="secondary"
+          <ThemedText
+            type="small"
+            variant="secondary"
               style={styles.currentDirectory}
               propFontScale={inverseFontScale}
-            >
+          >
               Current: {preferences.defaultImportExportDirectory}
-            </ThemedText>
+          </ThemedText>
           )}
         </SectionContainer>
       </ScreenContainer>

@@ -1,9 +1,11 @@
+import { useState, useMemo } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-
 import { CurrencyBanner } from "@/components/CurrencyBanner";
 import { CoinListItem } from "@/components/CoinListItem";
+import { CoinFilters } from "@/components/CoinFilters";
+import { FilteredCoinsResults } from "@/components/FilteredCoinsResults";
 import { DominanceMomentumWidget } from "@/components/DominanceMomentumWidget";
 import { DominanceSection } from "@/components/DominanceSection";
 import { HelloWave } from "@/components/hello-wave";
@@ -11,14 +13,41 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
 import { useCoinLists } from "@/hooks/use-coin-lists";
+import { useAppInitialization } from "@/hooks/use-app-initializations";
+import {
+  applyFilters,
+  createMarketDataMap,
+} from "@/utils/coinFilters";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { data: lists, isLoading } = useCoinLists();
+  const { cryptoMarket } = useAppInitialization();
+  const [activeFilterIds, setActiveFilterIds] = useState<string[]>([]);
 
   const handleListPress = (listId: string) => {
     router.push(`/list-detail?id=${listId}`);
   };
+
+  const handleFilterToggle = (filterId: string) => {
+    setActiveFilterIds((prev) => {
+      if (prev.includes(filterId)) {
+        return prev.filter((id) => id !== filterId);
+      } else {
+        return [...prev, filterId];
+      }
+    });
+  };
+
+  // Apply filters to get matching coins
+  const filteredMatches = useMemo(() => {
+    if (!lists || activeFilterIds.length === 0 || !cryptoMarket?.data) {
+      return [];
+    }
+
+    const marketDataMap = createMarketDataMap(cryptoMarket.data);
+    return applyFilters(lists, marketDataMap, activeFilterIds);
+  }, [lists, cryptoMarket, activeFilterIds]);
 
   return (
     <SafeAreaView style={{ flex: 1 }}> 
@@ -45,6 +74,20 @@ export default function HomeScreen() {
 
         {/* Dominance Momentum Widget */}
         <DominanceMomentumWidget />
+
+        {/* Filters and Analysis Section */}
+        <CoinFilters
+          activeFilterIds={activeFilterIds}
+          onFilterToggle={handleFilterToggle}
+        />
+
+        {/* Filter Results */}
+        {activeFilterIds.length > 0 && (
+          <FilteredCoinsResults
+            matches={filteredMatches}
+            activeFilterIds={activeFilterIds}
+          />
+        )}
 
         {/* Coin Lists Section */}
         <ThemedView style={styles.listsSection}>
