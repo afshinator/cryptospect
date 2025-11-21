@@ -10,7 +10,18 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Set up environment variables
+
+   Create a `.env` file in the root directory with your backend API key:
+
+   ```bash
+   EXPO_PUBLIC_BACKEND_API_KEY=your_backend_api_key_here
+   ```
+
+   **Important:** The `.env` file is gitignored and will not be committed to version control. 
+   See `.env.example` for a template (create it if it doesn't exist).
+
+3. Start the app
 
    ```bash
    npx expo start
