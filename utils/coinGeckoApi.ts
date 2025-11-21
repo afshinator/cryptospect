@@ -16,16 +16,60 @@ import {
 } from '@/constants/misc';
 import { getJSONObject, setJSONObject } from '@/utils/asyncStorage';
 
+// --- Constants ---
+const DELAY_BETWEEN_PAGES_MS = 1200; // 1.2 seconds between requests (safer for free tier)
+const DELAY_AFTER_EVERY_N_PAGES_MS = 10000; // 10 seconds delay after every N pages
+const PAGES_BEFORE_LONG_DELAY = 3; // Number of pages to fetch before applying longer delay
+const MAX_RETRIES = 3;
+const BASE_RETRY_DELAY_MS = 60000; // 60 seconds base retry delay
+
+/**
+ * Logs rate limit information from response headers
+ */
+function logRateLimitInfo(response: Response, page: number): void {
+  const limit = response.headers.get('x-ratelimit-limit');
+  const remaining = response.headers.get('x-ratelimit-remaining');
+  const retryAfter = response.headers.get('retry-after');
+  
+  // Check if any rate limit info is available
+  if (limit || remaining || retryAfter) {
+    console.log(`📊 Rate Limit Info (Page ${page}):`);
+    
+    if (limit) {
+      console.log(`   Limit: ${limit}`);
+    }
+    
+    if (remaining) {
+      console.log(`   Remaining: ${remaining}`);
+    }
+    
+    if (retryAfter) {
+      console.log(`   ⚠️ Retry-After: ${retryAfter} seconds`);
+    }
+    
+    // Warn if getting close to limit
+    if (remaining && limit) {
+      const remainingNum = parseInt(remaining);
+      const limitNum = parseInt(limit);
+      const percentRemaining = (remainingNum / limitNum) * 100;
+      
+      if (percentRemaining < 20) {
+        console.warn(`   ⚠️ WARNING: Only ${percentRemaining.toFixed(0)}% of rate limit remaining!`);
+      }
+    }
+  } else {
+    console.log(`📊 Rate Limit Info (Page ${page}): No rate-limiting info received from API`);
+  }
+}
+
 /**
  * 1. Loads the cached crypto market data from AsyncStorage.
  */
 export async function loadCachedCryptoMarket(): Promise<CryptoMarketSnapshot | null> {
   try {
-    // 💡 Using getJSONObject to handle retrieval and JSON parsing
     const data = await getJSONObject<CryptoMarketSnapshot>(CRYPTO_MARKET_CACHE_KEY);
     return data;
   } catch (e) {
-    // getJSONObject already logs the error, just return null for graceful failure
     return null;
   }
 }
@@ -52,17 +96,20 @@ async function fetchCryptoMarketPage(
 
   const response = await fetch(url.toString());
 
+  // Log rate limit info for all responses
+  logRateLimitInfo(response, page);
+
   // Handle rate limiting (HTTP 429)
   if (response.status === 429) {
     const retryAfter = response.headers.get('Retry-After');
-    const waitTime = retryAfter ? parseInt(retryAfter, 10) * 1000 : 60000; // Default to 60 seconds
+    const waitTime = retryAfter ? parseInt(retryAfter, 10) * 1000 : BASE_RETRY_DELAY_MS;
     
-    if (retryCount < 3) {
-      console.warn(`⚠️ Rate limited on page ${page}. Waiting ${waitTime / 1000} seconds before retry ${retryCount + 1}/3...`);
+    if (retryCount < MAX_RETRIES) {
+      console.warn(`⚠️ Rate limited on page ${page}. Waiting ${waitTime / 1000} seconds before retry ${retryCount + 1}/${MAX_RETRIES}...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
       return fetchCryptoMarketPage(currency, page, retryCount + 1);
     } else {
-      throw new Error(`❌ CoinGecko API rate limit exceeded after 3 retries for page ${page}`);
+      throw new Error(`❌ CoinGecko API rate limit exceeded after ${MAX_RETRIES} retries for page ${page}`);
     }
   }
 
@@ -88,9 +135,11 @@ export async function fetchAndPersistCryptoMarket(
   currency: SupportedCurrency
 ): Promise<CryptoMarketSnapshot> {
   console.log(`⚡ Fetching crypto market data from CoinGecko for currency: ${currency} (${MARKET_DATA_PAGES_TO_FETCH} pages)...`);
+  console.log(`⏱️  Using ${DELAY_BETWEEN_PAGES_MS}ms delay between requests to respect rate limits`);
 
   try {
     const allData: CoinGeckoMarketData[] = [];
+    let pagesFetched = 0;
 
     // Fetch pages sequentially to avoid rate limiting
     for (let page = 1; page <= MARKET_DATA_PAGES_TO_FETCH; page++) {
@@ -105,17 +154,25 @@ export async function fetchAndPersistCryptoMarket(
         }
         
         allData.push(...pageData);
+        pagesFetched++;
         console.log(`✅ Page ${page} fetched: ${pageData.length} coins (total: ${allData.length})`);
         
-        // Small delay between pages to be respectful of rate limits
+        // Delay between pages to respect rate limits
         if (page < MARKET_DATA_PAGES_TO_FETCH) {
-          await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay between pages
+          // After every N pages, use a longer delay
+          if (pagesFetched % PAGES_BEFORE_LONG_DELAY === 0) {
+            console.log(`⏸️  Fetched ${PAGES_BEFORE_LONG_DELAY} pages. Waiting ${DELAY_AFTER_EVERY_N_PAGES_MS}ms before next page...`);
+            await new Promise(resolve => setTimeout(resolve, DELAY_AFTER_EVERY_N_PAGES_MS));
+          } else {
+            console.log(`⏸️  Waiting ${DELAY_BETWEEN_PAGES_MS}ms before next page...`);
+            await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_PAGES_MS));
+          }
         }
       } catch (error) {
         console.error(`❌ Error fetching page ${page}:`, error);
         // If we have some data, continue with what we have
         if (allData.length > 0) {
-          console.warn(`⚠️ Continuing with partial data (${allData.length} coins from ${page - 1} pages)`);
+          console.warn(`⚠️ Continuing with partial data (${allData.length} coins from ${pagesFetched} pages)`);
           break;
         }
         // If first page fails, throw the error
@@ -133,9 +190,8 @@ export async function fetchAndPersistCryptoMarket(
       currency,
     };
 
-    // 💡 Using setJSONObject to handle JSON stringification and storage
     await setJSONObject(CRYPTO_MARKET_CACHE_KEY, newSnapshot);
-    console.log(`✅ Successfully fetched and persisted crypto market data (${allData.length} coins from ${MARKET_DATA_PAGES_TO_FETCH} pages).`);
+    console.log(`✅ Successfully fetched and persisted crypto market data (${allData.length} coins from ${pagesFetched} pages).`);
 
     return newSnapshot;
   } catch (e) {
@@ -160,17 +216,20 @@ export async function getCryptoMarket(
     cachedData.currency === currency &&
     now - cachedData.timestamp < CRYPTO_MARKET_REFRESH_INTERVAL_MS
   ) {
-    console.log('💾 Using cached crypto market data (still fresh, no refetch needed).');
+    console.log(`💾 Using cached crypto market data (${cachedData.data?.length || 0} coins, still fresh, no refetch needed).`);
     return cachedData;
   }
 
   // Cache is missing, stale, or currency changed - attempt to fetch and persist new data
+  console.log(`🔄 Cache ${!cachedData ? 'missing' : cachedData.currency !== currency ? 'currency mismatch' : 'stale'}. Fetching fresh data...`);
+  
   try {
     const freshData = await fetchAndPersistCryptoMarket(currency);
     return freshData;
   } catch (error) {
     console.warn('❌ Failed to fetch fresh crypto market data. Falling back to stale cache if available.');
     if (cachedData) {
+      console.log(`💾 Using stale cache (${cachedData.data?.length || 0} coins) as fallback`);
       // Return stale cache if fetching failed (graceful degradation)
       return cachedData;
     }
