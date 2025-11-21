@@ -340,6 +340,7 @@ export default function CoinDetailScreen() {
                 barHeight={Platform.OS === 'web' ? 8 : 6}
                 showLabels={true}
                 showCurrentPrice={false}
+                showLogMarkers={true}
                 formatPrice={formatPrice}
                 formatDate={formatDate}
               />

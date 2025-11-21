@@ -9,7 +9,6 @@ import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
 import { useThemeColor } from "@/hooks/use-theme-color";
 
-// Magic numbers - all constants at top
 const LOG_BASE = 10; // Base for logarithm calculation
 const INDICATOR_SIZE = 12;
 const BAR_INDICATOR_WIDTH = 5;
@@ -32,6 +31,8 @@ export interface AthAtlLogScaleBarProps {
   barHeight?: number;
   showLabels?: boolean;
   showCurrentPrice?: boolean;
+  showLogMarkers?: boolean; // Optional: show logarithmic midpoint (50% position)
+  showPowerOfTenMarkers?: boolean; // Optional: show power-of-ten markers (×10, ×100, etc.)
   formatPrice?: (price: number) => string;
   formatDate?: (dateString: string | null | undefined) => string;
 }
@@ -48,6 +49,8 @@ export function AthAtlLogScaleBar({
   barHeight = DEFAULT_BAR_HEIGHT,
   showLabels = true,
   showCurrentPrice = true,
+  showLogMarkers = false,
+  showPowerOfTenMarkers = false,
   formatPrice,
   formatDate,
 }: AthAtlLogScaleBarProps) {
@@ -71,6 +74,35 @@ export function AthAtlLogScaleBar({
 
   const priceFormatter = formatPrice || defaultFormatPrice;
   const dateFormatter = formatDate || defaultFormatDate;
+
+  // Formatter for midpoint that rounds to reasonable precision
+  const formatMidpointPrice = (price: number): string => {
+    if (price >= 1000) {
+      // For large numbers, use 2 decimal places
+      return `${currencySymbol}${price.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    } else if (price >= 1) {
+      // For medium numbers, use 2-4 decimal places
+      return `${currencySymbol}${price.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 4,
+      })}`;
+    } else if (price >= 0.01) {
+      // For small numbers, use 4-6 decimal places
+      return `${currencySymbol}${price.toLocaleString(undefined, {
+        minimumFractionDigits: 4,
+        maximumFractionDigits: 6,
+      })}`;
+    } else {
+      // For very small numbers, use scientific notation or more decimals
+      return `${currencySymbol}${price.toLocaleString(undefined, {
+        minimumFractionDigits: 6,
+        maximumFractionDigits: 8,
+      })}`;
+    }
+  };
 
   // Calculate dynamic height based on platform if not provided
   const dynamicHeight = useMemo(() => {
@@ -102,6 +134,53 @@ export function AthAtlLogScaleBar({
     return logPositionPercentage;
   }, [logPositionPercentage]);
 
+  // Calculate logarithmic midpoint price and position
+  const logMidpoint = useMemo(() => {
+    if (!showLogMarkers || ath <= 0 || atl <= 0 || ath === atl) return null;
+    const logAth = Math.log10(ath);
+    const logAtl = Math.log10(atl);
+    const logMid = (logAth + logAtl) / 2;
+    const midpointPrice = Math.pow(10, logMid);
+    const midpointPosition = ((logMid - logAtl) / (logAth - logAtl)) * 100;
+    return { price: midpointPrice, position: Math.max(0, Math.min(100, midpointPosition)) };
+  }, [showLogMarkers, ath, atl]);
+
+  // Calculate power-of-ten markers from ATL
+  const powerOfTenMarkers = useMemo(() => {
+    if (!showPowerOfTenMarkers || ath <= 0 || atl <= 0 || ath === atl) return [];
+    const logAth = Math.log10(ath);
+    const logAtl = Math.log10(atl);
+    const logRange = logAth - logAtl;
+    
+    if (Math.abs(logRange) < MIN_LOG_DISTANCE) return [];
+    
+    const markers = [];
+    let multiplier = 10; // Start with ×10
+    
+    // Generate markers: ATL × 10, ATL × 100, ATL × 1000, etc., up to ATH
+    while (true) {
+      const markerPrice = atl * multiplier;
+      if (markerPrice > ath) break;
+      
+      const logMarker = Math.log10(markerPrice);
+      const markerPosition = ((logMarker - logAtl) / logRange) * 100;
+      
+      if (markerPosition >= 0 && markerPosition <= 100) {
+        markers.push({
+          price: markerPrice,
+          position: markerPosition,
+          multiplier: multiplier,
+        });
+      }
+      
+      multiplier *= 10;
+      // Safety check to avoid infinite loop
+      if (multiplier > 1e12) break;
+    }
+    
+    return markers;
+  }, [showPowerOfTenMarkers, ath, atl]);
+
   // Calculate dynamic height based on whether labels are shown
   const containerHeight = showLabels ? dynamicHeight : undefined;
 
@@ -123,17 +202,60 @@ export function AthAtlLogScaleBar({
         </View>
       )}
 
-      {/* Log Scale Label */}
-      {showLabels && (
-        <View style={styles.logScaleLabelContainer}>
-          <ThemedText type="xsmall" variant="secondary" style={styles.logScaleLabel}>
-            Log Scale
-          </ThemedText>
-        </View>
-      )}
 
       {/* Range Bar Container */}
       <View style={styles.barContainer}>
+        {/* Logarithmic Markers (if enabled) */}
+        {(showLogMarkers || showPowerOfTenMarkers) && (
+          <>
+            {/* Logarithmic Midpoint Marker */}
+            {showLogMarkers && logMidpoint && (
+              <View
+                style={[
+                  styles.logMarker,
+                  {
+                    left: `${logMidpoint.position}%`,
+                    marginLeft: -1,
+                  },
+                ]}
+              >
+                <View style={[styles.markerTick, { backgroundColor: textSecondaryColor }]} />
+                <View style={styles.markerLabelContainer}>
+                  <ThemedText type="xsmall" variant="secondary" style={styles.markerLabel}>
+                    {formatMidpointPrice(logMidpoint.price)}
+                  </ThemedText>
+                  <ThemedText type="xsmall" variant="secondary" style={styles.markerSubLabel}>
+                    50%
+                  </ThemedText>
+                </View>
+              </View>
+            )}
+            
+            {/* Power-of-Ten Markers */}
+            {showPowerOfTenMarkers && powerOfTenMarkers.map((marker, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.logMarker,
+                  {
+                    left: `${marker.position}%`,
+                    marginLeft: -1,
+                  },
+                ]}
+              >
+                <View style={[styles.markerTick, { backgroundColor: textSecondaryColor, opacity: 0.7 }]} />
+                <View style={styles.markerLabelContainer}>
+                  <ThemedText type="xsmall" variant="secondary" style={styles.markerLabel}>
+                    {priceFormatter(marker.price)}
+                  </ThemedText>
+                  <ThemedText type="xsmall" variant="secondary" style={styles.markerSubLabel}>
+                    ×{marker.multiplier}
+                  </ThemedText>
+                </View>
+              </View>
+            ))}
+          </>
+        )}
         {/* Gradient Bar using SVG */}
         <View style={[styles.barWrapper, { height: barHeight }]}>
           <Svg height={barHeight} width="100%" style={StyleSheet.absoluteFill}>
@@ -197,14 +319,6 @@ const styles = StyleSheet.create({
   labelRight: {
     textAlign: "right",
   },
-  logScaleLabelContainer: {
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  logScaleLabel: {
-    fontWeight: "500",
-    fontStyle: "italic",
-  },
   barContainer: {
     position: "relative",
     width: "100%",
@@ -231,6 +345,35 @@ const styles = StyleSheet.create({
   },
   currentPriceLabel: {
     fontWeight: "600",
+  },
+  logMarker: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    alignItems: "center",
+    zIndex: 1,
+    pointerEvents: "none",
+  },
+  markerTick: {
+    width: 2,
+    height: "100%",
+    position: "absolute",
+    top: 0,
+  },
+  markerLabelContainer: {
+    position: "absolute",
+    top: -24,
+    alignItems: "center",
+    minWidth: 60,
+  },
+  markerLabel: {
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  markerSubLabel: {
+    fontSize: 10,
+    marginTop: 2,
+    textAlign: "center",
   },
 });
 
