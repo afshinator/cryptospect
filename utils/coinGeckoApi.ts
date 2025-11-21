@@ -5,6 +5,7 @@ import {
   CoinGeckoMarketData,
   CryptoMarketSnapshot,
   MARKET_DATA_ORDER,
+  MARKET_DATA_PAGES_TO_FETCH,
   MARKET_DATA_PER_PAGE,
   MARKET_DATA_SPARKLINE,
 } from '@/constants/coinGecko';
@@ -30,44 +31,111 @@ export async function loadCachedCryptoMarket(): Promise<CryptoMarketSnapshot | n
 }
 
 /**
- * 2. Fetches fresh crypto market data from CoinGecko API and persists it to AsyncStorage.
+ * Fetches a single page of crypto market data from CoinGecko API.
+ * @param currency - The currency to fetch prices in
+ * @param page - The page number to fetch (1-indexed)
+ * @param retryCount - Number of retries attempted (for rate limiting)
+ * @returns The market data array for that page
+ * @throws {Error} if the API call fails after retries
+ */
+async function fetchCryptoMarketPage(
+  currency: SupportedCurrency,
+  page: number,
+  retryCount: number = 0
+): Promise<CoinGeckoMarketData[]> {
+  const url = new URL(COINGECKO_COINS_MARKETS_ENDPOINT);
+  url.searchParams.append('vs_currency', currency);
+  url.searchParams.append('order', MARKET_DATA_ORDER);
+  url.searchParams.append('per_page', MARKET_DATA_PER_PAGE.toString());
+  url.searchParams.append('page', page.toString());
+  url.searchParams.append('sparkline', MARKET_DATA_SPARKLINE.toString());
+
+  const response = await fetch(url.toString());
+
+  // Handle rate limiting (HTTP 429)
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('Retry-After');
+    const waitTime = retryAfter ? parseInt(retryAfter, 10) * 1000 : 60000; // Default to 60 seconds
+    
+    if (retryCount < 3) {
+      console.warn(`⚠️ Rate limited on page ${page}. Waiting ${waitTime / 1000} seconds before retry ${retryCount + 1}/3...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      return fetchCryptoMarketPage(currency, page, retryCount + 1);
+    } else {
+      throw new Error(`❌ CoinGecko API rate limit exceeded after 3 retries for page ${page}`);
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(`❌ CoinGecko API returned status ${response.status} for page ${page}`);
+  }
+
+  const data: CoinGeckoMarketData[] = await response.json();
+
+  if (!Array.isArray(data)) {
+    throw new Error(`❌ CoinGecko API response was malformed for page ${page}`);
+  }
+
+  return data;
+}
+
+/**
+ * 2. Fetches fresh crypto market data from CoinGecko API (multiple pages) and persists it to AsyncStorage.
  * @param currency - The currency to fetch prices in
  * @throws {Error} if the API call fails
  */
 export async function fetchAndPersistCryptoMarket(
   currency: SupportedCurrency
 ): Promise<CryptoMarketSnapshot> {
-  console.log(`⚡ Fetching crypto market data from CoinGecko for currency: ${currency}...`);
+  console.log(`⚡ Fetching crypto market data from CoinGecko for currency: ${currency} (${MARKET_DATA_PAGES_TO_FETCH} pages)...`);
 
   try {
-    const url = new URL(COINGECKO_COINS_MARKETS_ENDPOINT);
-    url.searchParams.append('vs_currency', currency);
-    url.searchParams.append('order', MARKET_DATA_ORDER);
-    url.searchParams.append('per_page', MARKET_DATA_PER_PAGE.toString());
-    url.searchParams.append('page', '1');
-    url.searchParams.append('sparkline', MARKET_DATA_SPARKLINE.toString());
+    const allData: CoinGeckoMarketData[] = [];
 
-    const response = await fetch(url.toString());
-
-    if (!response.ok) {
-      throw new Error(`❌ CoinGecko API returned status ${response.status}`);
+    // Fetch pages sequentially to avoid rate limiting
+    for (let page = 1; page <= MARKET_DATA_PAGES_TO_FETCH; page++) {
+      console.log(`📄 Fetching page ${page}/${MARKET_DATA_PAGES_TO_FETCH}...`);
+      
+      try {
+        const pageData = await fetchCryptoMarketPage(currency, page);
+        
+        if (pageData.length === 0) {
+          console.log(`⚠️ Page ${page} returned no data. Stopping pagination.`);
+          break; // No more data available
+        }
+        
+        allData.push(...pageData);
+        console.log(`✅ Page ${page} fetched: ${pageData.length} coins (total: ${allData.length})`);
+        
+        // Small delay between pages to be respectful of rate limits
+        if (page < MARKET_DATA_PAGES_TO_FETCH) {
+          await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay between pages
+        }
+      } catch (error) {
+        console.error(`❌ Error fetching page ${page}:`, error);
+        // If we have some data, continue with what we have
+        if (allData.length > 0) {
+          console.warn(`⚠️ Continuing with partial data (${allData.length} coins from ${page - 1} pages)`);
+          break;
+        }
+        // If first page fails, throw the error
+        throw error;
+      }
     }
 
-    const data: CoinGeckoMarketData[] = await response.json();
-
-    if (!Array.isArray(data) || data.length === 0) {
-      throw new Error('❌ CoinGecko API response was empty or malformed.');
+    if (allData.length === 0) {
+      throw new Error('❌ CoinGecko API returned no data for any page.');
     }
 
     const newSnapshot: CryptoMarketSnapshot = {
-      data,
+      data: allData,
       timestamp: Date.now(),
       currency,
     };
 
     // 💡 Using setJSONObject to handle JSON stringification and storage
     await setJSONObject(CRYPTO_MARKET_CACHE_KEY, newSnapshot);
-    console.log('✅ Successfully fetched and persisted crypto market data.');
+    console.log(`✅ Successfully fetched and persisted crypto market data (${allData.length} coins from ${MARKET_DATA_PAGES_TO_FETCH} pages).`);
 
     return newSnapshot;
   } catch (e) {

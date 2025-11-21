@@ -97,14 +97,14 @@ The app makes API calls to four different endpoints to retrieve market data, exc
 **Query Parameters:**
 - `vs_currency`: User's selected currency (e.g., USD, EUR, NGN)
 - `order`: `market_cap_desc`
-- `per_page`: `250` (free tier maximum)
-- `page`: `1`
+- `per_page`: `250` (free tier maximum per page)
+- `page`: `1`, `2`, `3` (fetches 3 pages sequentially)
 - `sparkline`: `false`
 
 **Cache Duration:** 5 minutes (client-side AsyncStorage)
 
 **Data Retrieved:**
-- Array of up to 250 cryptocurrencies with comprehensive market data:
+- Array of up to 750 cryptocurrencies (3 pages × 250 per page) with comprehensive market data:
   - Basic info: `id`, `symbol`, `name`, `image` (coin icon URL)
   - Pricing: `current_price`, `price_change_24h`, `price_change_percentage_24h`
   - Market metrics: `market_cap`, `market_cap_rank`, `total_volume`
