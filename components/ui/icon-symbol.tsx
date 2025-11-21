@@ -37,6 +37,8 @@ const MAPPING = {
 
   // Dominance/Value/Growth: SF Symbol 'chart.line.uptrend.xyaxis' mapped to Material Icon 'trending-up'
   "chart.line.uptrend.xyaxis": "trending-up",
+  // Trending Down: SF Symbol 'chart.line.downtrend.xyaxis' mapped to Material Icon 'trending-down'
+  "chart.line.downtrend.xyaxis": "trending-down",
 
   // Dominance/Analysis: SF Symbol 'chart.bar.fill' mapped to Material Icon 'bar-chart',
   "chart.bar.fill": "bar-chart",

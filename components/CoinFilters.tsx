@@ -12,11 +12,15 @@ import { Pressable, StyleSheet } from "react-native";
 interface CoinFiltersProps {
   activeFilterIds: string[];
   onFilterToggle: (filterId: string) => void;
+  andFilterIds?: string[]; // Filters that should use AND logic
+  onAndToggle?: (filterId: string) => void; // Toggle AND logic for a filter
 }
 
 export function CoinFilters({
   activeFilterIds,
   onFilterToggle,
+  andFilterIds = [],
+  onAndToggle,
 }: CoinFiltersProps) {
   const tintColor = useThemeColor({}, "tint");
   const borderColor = useThemeColor({}, "border");
@@ -36,10 +40,10 @@ export function CoinFilters({
       <ThemedView style={styles.filtersContainer}>
         {AVAILABLE_FILTERS.map((filter) => {
           const isActive = activeFilterIds.includes(filter.id);
+          const isAndEnabled = andFilterIds.includes(filter.id);
           return (
-            <Pressable
+            <ThemedView
               key={filter.id}
-              onPress={() => onFilterToggle(filter.id)}
               style={[
                 styles.filterButton,
                 {
@@ -48,7 +52,10 @@ export function CoinFilters({
                 },
               ]}
             >
-              <ThemedView style={styles.filterContent}>
+              <Pressable
+                onPress={() => onFilterToggle(filter.id)}
+                style={styles.filterContent}
+              >
                 <ThemedView
                   style={[
                     styles.checkbox,
@@ -78,8 +85,36 @@ export function CoinFilters({
                     {filter.description}
                   </ThemedText>
                 </ThemedView>
-              </ThemedView>
-            </Pressable>
+              </Pressable>
+              {isActive && onAndToggle && activeFilterIds.length > 1 && (
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onAndToggle(filter.id);
+                  }}
+                  style={[styles.andToggleContainer, { borderTopColor: borderColor }]}
+                >
+                  <ThemedView
+                    style={[
+                      styles.andCheckbox,
+                      {
+                        borderColor: isAndEnabled ? tintColor : borderColor,
+                        backgroundColor: isAndEnabled ? tintColor : "transparent",
+                      },
+                    ]}
+                  >
+                    {isAndEnabled && (
+                      <ThemedText style={styles.checkmark} type="xsmall">
+                        &
+                      </ThemedText>
+                    )}
+                  </ThemedView>
+                  <ThemedText type="xsmall" variant="secondary" style={styles.andLabel}>
+                    AND
+                  </ThemedText>
+                </Pressable>
+              )}
+            </ThemedView>
           );
         })}
       </ThemedView>
@@ -124,6 +159,25 @@ const styles = StyleSheet.create({
   },
   filterName: {
     marginBottom: Spacing.xs / 2,
+  },
+  andToggleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
+    paddingTop: Spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  andCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  andLabel: {
+    marginLeft: Spacing.xs / 2,
   },
 });
 

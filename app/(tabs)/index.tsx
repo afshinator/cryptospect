@@ -24,6 +24,7 @@ export default function HomeScreen() {
   const { data: lists, isLoading } = useCoinLists();
   const { cryptoMarket } = useAppInitialization();
   const [activeFilterIds, setActiveFilterIds] = useState<string[]>([]);
+  const [andFilterIds, setAndFilterIds] = useState<string[]>([]);
 
   const handleListPress = (listId: string) => {
     router.push(`/list-detail?id=${listId}`);
@@ -31,6 +32,18 @@ export default function HomeScreen() {
 
   const handleFilterToggle = (filterId: string) => {
     setActiveFilterIds((prev) => {
+      if (prev.includes(filterId)) {
+        // Remove from active, also remove from AND if it was there
+        setAndFilterIds((andPrev) => andPrev.filter((id) => id !== filterId));
+        return prev.filter((id) => id !== filterId);
+      } else {
+        return [...prev, filterId];
+      }
+    });
+  };
+
+  const handleAndToggle = (filterId: string) => {
+    setAndFilterIds((prev) => {
       if (prev.includes(filterId)) {
         return prev.filter((id) => id !== filterId);
       } else {
@@ -42,12 +55,12 @@ export default function HomeScreen() {
   // Apply filters to get matching coins
   const filteredMatches = useMemo(() => {
     if (!lists || activeFilterIds.length === 0 || !cryptoMarket?.data) {
-      return [];
+      return {};
     }
 
     const marketDataMap = createMarketDataMap(cryptoMarket.data);
-    return applyFilters(lists, marketDataMap, activeFilterIds);
-  }, [lists, cryptoMarket, activeFilterIds]);
+    return applyFilters(lists, marketDataMap, activeFilterIds, andFilterIds);
+  }, [lists, cryptoMarket, activeFilterIds, andFilterIds]);
 
   return (
     <SafeAreaView style={{ flex: 1 }}> 
@@ -79,6 +92,8 @@ export default function HomeScreen() {
         <CoinFilters
           activeFilterIds={activeFilterIds}
           onFilterToggle={handleFilterToggle}
+          andFilterIds={andFilterIds}
+          onAndToggle={handleAndToggle}
         />
 
         {/* Filter Results */}

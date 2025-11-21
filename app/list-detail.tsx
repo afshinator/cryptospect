@@ -1,7 +1,7 @@
 // app/list-detail.tsx
 
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -14,7 +14,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CoinAutocomplete } from "@/components/CoinAutocomplete";
+import { CoinFilters } from "@/components/CoinFilters";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
+import { FilteredCoinsResults } from "@/components/FilteredCoinsResults";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -32,6 +34,7 @@ import {
 } from "@/hooks/use-coin-lists";
 import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { applyFilters, createMarketDataMap, FilteredCoinMatch } from "@/utils/coinFilters";
 
 // --- Main Screen Component ---
 export default function ListDetailScreen() {
@@ -57,6 +60,10 @@ export default function ListDetailScreen() {
   // State for Custom Confirmation Modal
   const [isConfirmingRemoval, setIsConfirmingRemoval] = useState(false);
   const [coinToRemoveId, setCoinToRemoveId] = useState<string | null>(null);
+  
+  // State for Filters
+  const [activeFilterIds, setActiveFilterIds] = useState<string[]>([]);
+  const [andFilterIds, setAndFilterIds] = useState<string[]>([]);
 
   const textColor = useThemeColor({}, "text");
   const backgroundColor = useThemeColor({}, "background");
@@ -226,6 +233,44 @@ export default function ListDetailScreen() {
   }, []);
 
   const excludeCoinIds = list.coins.map((c) => c.coinId);
+
+  // Filter coins in this list only
+  const filteredMatches = useMemo(() => {
+    if (!globalMarketSnapshot || activeFilterIds.length === 0) {
+      return {};
+    }
+
+    // Create a single-item list array for this list only
+    const singleListArray = [list];
+    
+    // Create a map for efficient market data lookup
+    const marketDataMap = createMarketDataMap(globalMarketSnapshot);
+
+    // Use the applyFilters function with the new logic
+    return applyFilters(singleListArray, marketDataMap, activeFilterIds, andFilterIds);
+  }, [list, globalMarketSnapshot, activeFilterIds, andFilterIds]);
+
+  const handleFilterToggle = (filterId: string) => {
+    setActiveFilterIds((prev) => {
+      if (prev.includes(filterId)) {
+        // Remove from active, also remove from AND if it was there
+        setAndFilterIds((andPrev) => andPrev.filter((id) => id !== filterId));
+        return prev.filter((id) => id !== filterId);
+      } else {
+        return [...prev, filterId];
+      }
+    });
+  };
+
+  const handleAndToggle = (filterId: string) => {
+    setAndFilterIds((prev) => {
+      if (prev.includes(filterId)) {
+        return prev.filter((id) => id !== filterId);
+      } else {
+        return [...prev, filterId];
+      }
+    });
+  };
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -458,6 +503,24 @@ export default function ListDetailScreen() {
               )}
             </ScrollView>
           </ThemedView>
+
+          {/* Filters and Analysis Section */}
+          <ThemedView style={styles.filtersContainer}>
+            <CoinFilters
+              activeFilterIds={activeFilterIds}
+              onFilterToggle={handleFilterToggle}
+              andFilterIds={andFilterIds}
+              onAndToggle={handleAndToggle}
+            />
+
+            {/* Filter Results */}
+            {activeFilterIds.length > 0 && (
+              <FilteredCoinsResults
+                matches={filteredMatches}
+                activeFilterIds={activeFilterIds}
+              />
+            )}
+          </ThemedView>
         </ThemedView>
       </ScreenContainer>
 
@@ -594,5 +657,9 @@ const styles = StyleSheet.create({
   emptyContainer: {
     padding: Spacing.xl,
     alignItems: "center",
+  },
+  filtersContainer: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.md,
   },
 });

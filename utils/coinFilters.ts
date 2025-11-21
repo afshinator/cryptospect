@@ -75,18 +75,21 @@ export function getFilterById(filterId: string): CoinFilter | undefined {
 
 /**
  * Apply filters to all coins across all lists
+ * Returns separate results for each filter, or unified results when AND logic is enabled
  * @param lists - All coin lists
  * @param marketDataMap - Map of coinId -> CoinGeckoMarketData
  * @param activeFilterIds - Array of filter IDs to apply
- * @returns Array of matching coins with their list context
+ * @param andFilterIds - Array of filter IDs that should use AND logic (unified results)
+ * @returns Object with filterId -> FilteredCoinMatch[] mapping, or unified results
  */
 export function applyFilters(
   lists: CoinList[],
   marketDataMap: Map<string, CoinGeckoMarketData>,
-  activeFilterIds: string[]
-): FilteredCoinMatch[] {
+  activeFilterIds: string[],
+  andFilterIds: string[] = []
+): { [filterId: string]: FilteredCoinMatch[] } | FilteredCoinMatch[] {
   if (activeFilterIds.length === 0) {
-    return [];
+    return {};
   }
 
   const filters = activeFilterIds
@@ -94,67 +97,148 @@ export function applyFilters(
     .filter((f): f is CoinFilter => f !== undefined);
 
   if (filters.length === 0) {
-    return [];
+    return {};
   }
 
-  // Use a Map to group coins by coinId and collect all lists they appear in
-  const coinMatchesMap = new Map<
-    string,
-    {
-      coin: CoinListItem;
-      marketData: CoinGeckoMarketData;
-      lists: CoinListInfo[];
-    }
-  >();
-
-  // Iterate through all lists and all coins
-  for (const list of lists) {
-    for (const coin of list.coins) {
-      const marketData = marketDataMap.get(coin.coinId);
-      if (!marketData) {
-        continue; // Skip coins without market data
+  // If AND logic is enabled for any filters, return unified results
+  const hasAndLogic = andFilterIds.length > 0 && andFilterIds.some(id => activeFilterIds.includes(id));
+  
+  if (hasAndLogic) {
+    // Get filters that have AND enabled
+    const andFilters = filters.filter(f => andFilterIds.includes(f.id));
+    const otherFilters = filters.filter(f => !andFilterIds.includes(f.id));
+    
+    // Use a Map to group coins by coinId and collect all lists they appear in
+    const coinMatchesMap = new Map<
+      string,
+      {
+        coin: CoinListItem;
+        marketData: CoinGeckoMarketData;
+        lists: CoinListInfo[];
       }
+    >();
 
-      // Check if coin matches ALL active filters (AND logic)
-      const matchesAllFilters = filters.every((filter) =>
-        filter.matches(marketData)
-      );
+    // Iterate through all lists and all coins
+    for (const list of lists) {
+      for (const coin of list.coins) {
+        const marketData = marketDataMap.get(coin.coinId);
+        if (!marketData) {
+          continue; // Skip coins without market data
+        }
 
-      if (matchesAllFilters) {
-        const existing = coinMatchesMap.get(coin.coinId);
-        if (existing) {
-          // Coin already found, just add this list to the lists array
-          existing.lists.push({
-            listId: list.id,
-            listName: list.name,
-          });
-        } else {
-          // First time seeing this coin, create new entry
-          coinMatchesMap.set(coin.coinId, {
-            coin,
-            marketData,
-            lists: [
-              {
-                listId: list.id,
-                listName: list.name,
-              },
-            ],
-          });
+        // Check if coin matches ALL AND filters
+        const matchesAndFilters = andFilters.length === 0 || andFilters.every((filter) =>
+          filter.matches(marketData)
+        );
+
+        // Check if coin matches ANY of the other filters (OR logic)
+        const matchesOtherFilters = otherFilters.length === 0 || otherFilters.some((filter) =>
+          filter.matches(marketData)
+        );
+
+        // If we have both AND and other filters, coin must match AND filters AND at least one other filter
+        // If we only have AND filters, coin must match all of them
+        // If we only have other filters, coin must match at least one
+        const shouldInclude = 
+          (andFilters.length > 0 && otherFilters.length > 0 && matchesAndFilters && matchesOtherFilters) ||
+          (andFilters.length > 0 && otherFilters.length === 0 && matchesAndFilters) ||
+          (andFilters.length === 0 && otherFilters.length > 0 && matchesOtherFilters);
+
+        if (shouldInclude) {
+          const existing = coinMatchesMap.get(coin.coinId);
+          if (existing) {
+            // Coin already found, just add this list to the lists array
+            existing.lists.push({
+              listId: list.id,
+              listName: list.name,
+            });
+          } else {
+            // First time seeing this coin, create new entry
+            coinMatchesMap.set(coin.coinId, {
+              coin,
+              marketData,
+              lists: [
+                {
+                  listId: list.id,
+                  listName: list.name,
+                },
+              ],
+            });
+          }
         }
       }
     }
+
+    // Convert map to array for unified results
+    const matches: FilteredCoinMatch[] = Array.from(coinMatchesMap.values()).map(
+      (entry) => ({
+        coin: entry.coin,
+        lists: entry.lists,
+        marketData: entry.marketData,
+      })
+    );
+
+    return matches;
   }
 
-  // Convert map to array
-  const matches: FilteredCoinMatch[] = Array.from(coinMatchesMap.values()).map(
-    (entry) => ({
-      coin: entry.coin,
-      lists: entry.lists,
-      marketData: entry.marketData,
-    })
-  );
+  // Default: Return separate results for each filter (OR logic)
+  const results: { [filterId: string]: FilteredCoinMatch[] } = {};
 
-  return matches;
+  for (const filter of filters) {
+    const coinMatchesMap = new Map<
+      string,
+      {
+        coin: CoinListItem;
+        marketData: CoinGeckoMarketData;
+        lists: CoinListInfo[];
+      }
+    >();
+
+    // Iterate through all lists and all coins
+    for (const list of lists) {
+      for (const coin of list.coins) {
+        const marketData = marketDataMap.get(coin.coinId);
+        if (!marketData) {
+          continue; // Skip coins without market data
+        }
+
+        // Check if coin matches this specific filter
+        if (filter.matches(marketData)) {
+          const existing = coinMatchesMap.get(coin.coinId);
+          if (existing) {
+            // Coin already found, just add this list to the lists array
+            existing.lists.push({
+              listId: list.id,
+              listName: list.name,
+            });
+          } else {
+            // First time seeing this coin, create new entry
+            coinMatchesMap.set(coin.coinId, {
+              coin,
+              marketData,
+              lists: [
+                {
+                  listId: list.id,
+                  listName: list.name,
+                },
+              ],
+            });
+          }
+        }
+      }
+    }
+
+    // Convert map to array for this filter
+    results[filter.id] = Array.from(coinMatchesMap.values()).map(
+      (entry) => ({
+        coin: entry.coin,
+        lists: entry.lists,
+        marketData: entry.marketData,
+      })
+    );
+  }
+
+  return results;
 }
 
 /**
