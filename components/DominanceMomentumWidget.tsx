@@ -73,7 +73,7 @@ export function DominanceMomentumWidget() {
       </ThemedText>
       <ThemedView style={styles.valueContainer}>
         <ThemedText
-          type="large"
+          type="title"
           style={[styles.value, { color: changeColor }]}
         >
           {sign}
