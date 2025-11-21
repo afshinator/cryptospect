@@ -304,13 +304,13 @@ export default function ListDetailScreen() {
               </Pressable>
             </ThemedView>
           ) : (
-              <Pressable
-                onPress={() => {
-                  setEditedNotes(list.notes);
-                  setIsEditingNotes(true);
-                }}
-                style={styles.notesContainer}
-              >
+            <Pressable
+              onPress={() => {
+                setEditedNotes(list.notes);
+                setIsEditingNotes(true);
+              }}
+              style={styles.notesContainer}
+            >
               <ThemedText type="small" variant="secondary">
                 {list.notes || "Tap to add notes"}
               </ThemedText>
@@ -398,22 +398,22 @@ export default function ListDetailScreen() {
                           style={styles.coinItemPressable}
                     >
                       {/* Use the retrieved image from the global snapshot or legacy apiData */}
-                      {displayImage && (
+                      {displayImage ? (
                         <Image
                           source={{ uri: displayImage }}
                           style={styles.coinImage}
                         />
-                      )}
+                      ) : null}
                       <ThemedView style={styles.coinInfo}>
                         <ThemedText type="bodySemibold">{displayName}</ThemedText>
                         <ThemedText type="small" variant="secondary">
                           {displaySymbol.toUpperCase()}
                         </ThemedText>
-                        {coin.notes && (
-                              <ThemedText type="small" variant="secondary" style={styles.coinNotesText}>
+                        {coin.notes && coin.notes.trim() ? (
+                          <ThemedText type="small" variant="secondary" style={styles.coinNotesText}>
                             {coin.notes}
                           </ThemedText>
-                        )}
+                        ) : null}
                       </ThemedView>
                       
                           {/* Action Buttons Container */}
