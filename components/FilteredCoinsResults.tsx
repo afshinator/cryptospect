@@ -142,7 +142,7 @@ export function FilteredCoinsResults({
           </ThemedView>
           {priceChange24h !== null && (
             <ThemedText
-              type="bodySemibold"
+              type="subtitle"
               style={[
                 styles.priceChange,
                 {
@@ -151,8 +151,7 @@ export function FilteredCoinsResults({
                 },
               ]}
             >
-              {priceChange24h >= 0 ? "+" : ""}
-              {formatPercentage(priceChange24h)}%
+              {formatPercentage(priceChange24h)}
             </ThemedText>
           )}
         </ThemedView>
