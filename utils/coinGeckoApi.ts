@@ -128,6 +128,7 @@ async function fetchCryptoMarketPage(
 
 /**
  * 2. Fetches fresh crypto market data from CoinGecko API (multiple pages) and persists it to AsyncStorage.
+ * Preserves old data until new data is complete and validated.
  * @param currency - The currency to fetch prices in
  * @throws {Error} if the API call fails
  */
@@ -137,9 +138,18 @@ export async function fetchAndPersistCryptoMarket(
   console.log(`⚡ Fetching crypto market data from CoinGecko for currency: ${currency} (${MARKET_DATA_PAGES_TO_FETCH} pages)...`);
   console.log(`⏱️  Using ${DELAY_BETWEEN_PAGES_MS}ms delay between requests to respect rate limits`);
 
+  // Load existing cached data to preserve it if new fetch fails or is incomplete
+  const existingData = await loadCachedCryptoMarket();
+  const existingCoinCount = existingData?.data?.length || 0;
+  
+  if (existingData) {
+    console.log(`💾 Preserving existing cache (${existingCoinCount} coins) until new data is validated...`);
+  }
+
   try {
     const allData: CoinGeckoMarketData[] = [];
     let pagesFetched = 0;
+    let fetchFailed = false;
 
     // Fetch pages sequentially to avoid rate limiting
     for (let page = 1; page <= MARKET_DATA_PAGES_TO_FETCH; page++) {
@@ -170,6 +180,8 @@ export async function fetchAndPersistCryptoMarket(
         }
       } catch (error) {
         console.error(`❌ Error fetching page ${page}:`, error);
+        fetchFailed = true;
+        
         // If we have some data, continue with what we have
         if (allData.length > 0) {
           console.warn(`⚠️ Continuing with partial data (${allData.length} coins from ${pagesFetched} pages)`);
@@ -184,18 +196,47 @@ export async function fetchAndPersistCryptoMarket(
       throw new Error('❌ CoinGecko API returned no data for any page.');
     }
 
+    // Validate new data: only persist if it's complete (all pages fetched) OR better than existing
+    const isComplete = pagesFetched === MARKET_DATA_PAGES_TO_FETCH && !fetchFailed;
+    const isBetterThanExisting = allData.length >= existingCoinCount;
+    
+    if (!isComplete && !isBetterThanExisting) {
+      console.warn(`⚠️ New data is incomplete (${allData.length} coins from ${pagesFetched}/${MARKET_DATA_PAGES_TO_FETCH} pages) and has fewer coins than existing cache (${existingCoinCount}). Preserving existing data.`);
+      if (existingData) {
+        return existingData;
+      }
+      // If no existing data, use what we have (better than nothing)
+      console.warn(`⚠️ No existing cache available. Using partial data (${allData.length} coins).`);
+    }
+
     const newSnapshot: CryptoMarketSnapshot = {
       data: allData,
       timestamp: Date.now(),
       currency,
     };
 
-    await setJSONObject(CRYPTO_MARKET_CACHE_KEY, newSnapshot);
-    console.log(`✅ Successfully fetched and persisted crypto market data (${allData.length} coins from ${pagesFetched} pages).`);
+    // Only persist if data is complete or better than existing
+    if (isComplete || isBetterThanExisting) {
+      await setJSONObject(CRYPTO_MARKET_CACHE_KEY, newSnapshot);
+      console.log(`✅ Successfully fetched and persisted crypto market data (${allData.length} coins from ${pagesFetched} pages).`);
+    } else {
+      console.warn(`⚠️ Not persisting incomplete data. Existing cache preserved.`);
+      if (existingData) {
+        return existingData;
+      }
+    }
 
     return newSnapshot;
   } catch (e) {
     console.error('❌ Error fetching/persisting crypto market data:', e);
+    
+    // If we have existing data, preserve it and return it instead of throwing
+    if (existingData) {
+      console.warn(`💾 Fetch failed. Preserving existing cache (${existingCoinCount} coins) as fallback.`);
+      return existingData;
+    }
+    
+    // Only throw if there's no existing data to fall back to
     throw e;
   }
 }
