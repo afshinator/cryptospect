@@ -6,10 +6,12 @@ import {
   ActivityIndicator,
   Image,
   Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -17,11 +19,14 @@ import { CoinAutocomplete } from "@/components/CoinAutocomplete";
 import { CoinFilters } from "@/components/CoinFilters";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { FilteredCoinsResults } from "@/components/FilteredCoinsResults";
+import { StablecoinBadge } from "@/components/list-detail/StablecoinBadge";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { CoinGeckoMarketData } from "@/constants/coinGecko";
 import { CoinListItem } from "@/constants/coinLists";
+import { isStablecoin } from "@/constants/coinTypes";
 import { SupportedCurrency } from "@/constants/currency";
 import { Spacing } from "@/constants/theme";
 import { useAppInitialization } from "@/hooks/use-app-initializations";
@@ -34,7 +39,13 @@ import {
 } from "@/hooks/use-coin-lists";
 import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import { applyFilters, createMarketDataMap, FilteredCoinMatch } from "@/utils/coinFilters";
+import { applyFilters, createMarketDataMap } from "@/utils/coinFilters";
+
+// --- Constants ---
+const STABLECOIN_BADGE_OPACITY = 0.45; // Transparency for mobile badge to respect text underneath
+const STABLECOIN_BADGE_ROTATION = 0; // Rotation in degrees (clockwise) for mobile badge
+const STABLECOIN_BADGE_TOP_OFFSET = 0; // Top offset for mobile badge positioning
+const STABLECOIN_BADGE_LEFT_OFFSET = 0; // Left offset for mobile badge positioning
 
 // --- Main Screen Component ---
 export default function ListDetailScreen() {
@@ -442,6 +453,17 @@ export default function ListDetailScreen() {
                       onPress={() => handleCoinPress(coin.coinId)}
                           style={styles.coinItemPressable}
                     >
+                      {/* Mobile: Stablecoin Badge - absolutely positioned relative to list item container */}
+                      {Platform.OS !== 'web' && isStablecoin(displaySymbol) && (
+                        <View style={styles.stablecoinBadgeContainerMobile}>
+                          <StablecoinBadge 
+                            backgroundColor={tintColor} 
+                            opacity={STABLECOIN_BADGE_OPACITY}
+                            rotation={STABLECOIN_BADGE_ROTATION}
+                          />
+                        </View>
+                      )}
+                      
                       {/* Use the retrieved image from the global snapshot or legacy apiData */}
                       {displayImage ? (
                         <Image
@@ -449,17 +471,42 @@ export default function ListDetailScreen() {
                           style={styles.coinImage}
                         />
                       ) : null}
-                      <ThemedView style={styles.coinInfo}>
-                        <ThemedText type="bodySemibold">{displayName}</ThemedText>
-                        <ThemedText type="small" variant="secondary">
-                          {displaySymbol.toUpperCase()}
-                        </ThemedText>
-                        {coin.notes && coin.notes.trim() ? (
-                          <ThemedText type="small" variant="secondary" style={styles.coinNotesText}>
-                            {coin.notes}
+                      {Platform.OS === 'web' ? (
+                        // Web: Badge in its own column, flushed left, vertically centered
+                        <View style={styles.coinInfoContainer}>
+                          <ThemedView style={styles.coinInfo}>
+                            <ThemedText type="bodySemibold">{displayName}</ThemedText>
+                            <ThemedText type="small" variant="secondary">
+                              {displaySymbol.toUpperCase()}
+                            </ThemedText>
+                            {coin.notes && coin.notes.trim() ? (
+                              <ThemedText type="small" variant="secondary" style={styles.coinNotesText}>
+                                {coin.notes}
+                              </ThemedText>
+                            ) : null}
+                          </ThemedView>
+                          
+                          {/* Stablecoin Badge - in its own column, flushed left */}
+                          <View style={styles.stablecoinColumn}>
+                            {isStablecoin(displaySymbol) && (
+                              <StablecoinBadge backgroundColor={tintColor} />
+                            )}
+                          </View>
+                        </View>
+                      ) : (
+                        // Mobile: Coin info without badge (badge is positioned relative to container)
+                        <ThemedView style={styles.coinInfo}>
+                          <ThemedText type="bodySemibold">{displayName}</ThemedText>
+                          <ThemedText type="small" variant="secondary">
+                            {displaySymbol.toUpperCase()}
                           </ThemedText>
-                        ) : null}
-                      </ThemedView>
+                          {coin.notes && coin.notes.trim() ? (
+                            <ThemedText type="small" variant="secondary" style={styles.coinNotesText}>
+                              {coin.notes}
+                            </ThemedText>
+                          ) : null}
+                        </ThemedView>
+                      )}
                       
                           {/* Action Buttons Container */}
                           <ThemedView style={styles.coinActionsContainer}>
@@ -617,6 +664,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: Spacing.md,
+    ...Platform.select({
+      default: {
+        position: "relative", // Mobile: Enable absolute positioning for badge
+      },
+      web: {},
+    }),
   },
   coinNotesEditContainer: {
     padding: Spacing.md,
@@ -646,8 +699,28 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
     borderRadius: 20,
   },
+  // Web: Badge in column layout
+  coinInfoContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
   coinInfo: {
     flex: 1,
+  },
+  stablecoinColumn: {
+    width: 100,
+    justifyContent: "center",
+    alignItems: "flex-start",
+    marginLeft: Spacing.md,
+  },
+  
+  // Mobile: Badge absolutely positioned at upper left corner of list item container
+  stablecoinBadgeContainerMobile: {
+    position: "absolute",
+    top: STABLECOIN_BADGE_TOP_OFFSET,
+    left: STABLECOIN_BADGE_LEFT_OFFSET,
+    zIndex: 1,
   },
   removeButtonContainer: {
     paddingLeft: Spacing.sm,
