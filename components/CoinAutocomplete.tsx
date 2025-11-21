@@ -43,6 +43,27 @@ export function CoinAutocomplete({
   const placeholderColor = useThemeColor({}, "textSecondary");
   const tintColor = useThemeColor({}, "tint");
 
+  // Check if there's an exact match in the excluded coins (already in list)
+  const exactMatchInList = useMemo(() => {
+    if (!cryptoMarket?.data || !searchQuery.trim()) return null;
+
+    const query = searchQuery.toLowerCase().trim();
+    
+    // Find coins that are excluded (already in list)
+    const excludedCoins = cryptoMarket.data.filter((coin) =>
+      excludeCoinIds.includes(coin.id)
+    );
+
+    // Check for exact match by symbol or name
+    const match = excludedCoins.find(
+      (coin) =>
+        coin.symbol.toLowerCase() === query ||
+        coin.name.toLowerCase() === query
+    );
+
+    return match || null;
+  }, [searchQuery, cryptoMarket?.data, excludeCoinIds]);
+
   // Filter and search coins - prioritize coins that start with the query
   const filteredCoins = useMemo(() => {
     if (!cryptoMarket?.data) return [];
@@ -187,6 +208,19 @@ export function CoinAutocomplete({
                 returnKeyType="search"
               />
 
+              {/* Exact Match Warning */}
+              {exactMatchInList && (
+                <ThemedView style={[styles.exactMatchWarning, { borderColor, backgroundColor: tintColor + "20" }]}>
+                  <IconSymbol name="checkmark.circle.fill" size={20} color={tintColor} />
+                  <ThemedText type="small" style={{ marginLeft: Spacing.xs, flex: 1 }}>
+                    <ThemedText type="small" style={{ fontWeight: "600" }}>
+                      {exactMatchInList.name}
+                    </ThemedText>
+                    {" "}({exactMatchInList.symbol.toUpperCase()}) is already in your list
+                  </ThemedText>
+                </ThemedView>
+              )}
+
               {/* Results List */}
               {filteredCoins.length > 0 ? (
                 <ScrollView
@@ -326,6 +360,14 @@ const styles = StyleSheet.create({
     padding: Spacing.xl,
     alignItems: "center",
     justifyContent: "center",
+  },
+  exactMatchWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: Spacing.md,
   },
 });
 
