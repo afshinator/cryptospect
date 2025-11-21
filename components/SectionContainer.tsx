@@ -20,7 +20,7 @@ interface SectionContainerProps {
  * - Border (using theme colors)
  * - Optional margin bottom
  * 
- * Used for sections like DominanceSection, settings sections, etc.
+ * Used for sections like LatestDominancePercentages, settings sections, etc.
  */
 export function SectionContainer({ 
   children, 

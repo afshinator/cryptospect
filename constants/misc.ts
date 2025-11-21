@@ -43,3 +43,7 @@ export const COIN_LISTS_QUERY_KEY = ['coinLists'];
 // Exchange Rates
 export const EXCHANGE_RATE_CACHE_KEY = 'ExchangeRates';
 export const EXCHANGE_RATES_QUERY_KEY = ['exchangeRates'];
+
+// Stablecoin Data
+export const STABLECOIN_DATA_CACHE_KEY = 'StablecoinData';
+export const STABLECOIN_DATA_QUERY_KEY = ['stablecoinData'];

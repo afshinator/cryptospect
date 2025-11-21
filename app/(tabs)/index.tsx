@@ -2,7 +2,7 @@ import { CoinFilters } from "@/components/CoinFilters";
 import { CoinListItem } from "@/components/CoinListItem";
 import { CurrencyBanner } from "@/components/CurrencyBanner";
 import { DominanceMomentumWidget } from "@/components/DominanceMomentumWidget";
-import { DominanceSection } from "@/components/DominanceSection";
+import { LatestDominancePercentages } from "@/components/dominance/LatestDominancePercentages";
 import { FilteredCoinsResults } from "@/components/FilteredCoinsResults";
 import { HelloWave } from "@/components/hello-wave";
 import { ThemedText } from "@/components/themed-text";
@@ -83,7 +83,7 @@ export default function HomeScreen() {
         </ThemedView>
 
         {/* Dominance Section */}
-        <DominanceSection showAllFour={true}/>
+        <LatestDominancePercentages showAllFour={true}/>
 
         {/* Dominance Momentum Widget */}
         <DominanceMomentumWidget />

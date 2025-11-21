@@ -13,11 +13,11 @@ import { Spacing } from "@/constants/theme";
 import { useQuery } from "@tanstack/react-query";
 
 // Import the new components
+import { LatestDominancePercentages } from "@/components/dominance/LatestDominancePercentages";
 import DominanceChartWrapper from "@/components/DominanceChartWrapper";
 import DominancePercentageChangeChart from "@/components/DominancePercentageChangeChart";
 import DominanceRatioChart from "@/components/DominanceRatioChart";
 import DominanceRatioHistogram from "@/components/DominanceRatioHistogram";
-import { DominanceSection } from "@/components/DominanceSection";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { Collapsible } from "@/components/ui/collapsible";
 
@@ -102,7 +102,7 @@ export default function DominanceScreen() {
 
           {/* LATEST SNAPSHOT CARD (Live Data) - Uses real-time data from CoinGecko /global endpoint */}
           <View style={styles.dominanceNumbersWrapper}>
-            <DominanceSection
+            <LatestDominancePercentages
               showAllFour={true}
             />
           </View>
