@@ -5,10 +5,12 @@ import { useMemo } from "react";
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AthAtlLogScaleBar } from "@/components/AthAtlLogScaleBar";
 import { AthAtlRangeBar } from "@/components/AthAtlRangeBar";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { Collapsible } from "@/components/ui/collapsible";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { CURRENCY_SYMBOLS } from "@/constants/currency";
 import { Spacing } from "@/constants/theme";
@@ -322,6 +324,45 @@ export default function CoinDetailScreen() {
               </View>
             </ThemedView>
 
+            {/* Log Scale Section */}
+            <ThemedView style={[styles.section, { borderColor }]}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                ATH/ATL Log Scale
+              </ThemedText>
+              <AthAtlLogScaleBar
+                currentPrice={coin.current_price || 0}
+                ath={coin.ath || 0}
+                atl={coin.atl || 0}
+                athDate={coin.ath_date}
+                atlDate={coin.atl_date}
+                currencySymbol={currencySymbol}
+                width="100%"
+                barHeight={Platform.OS === 'web' ? 8 : 6}
+                showLabels={true}
+                showCurrentPrice={false}
+                formatPrice={formatPrice}
+                formatDate={formatDate}
+              />
+
+              <Collapsible title="more info...">
+                <ThemedText type="body" variant="secondary" style={styles.detailsText}>
+                  The difference between ATL and ATH can span multiple orders of magnitude (e.g., $0.001 to $10).
+                </ThemedText>
+                <ThemedText type="body" variant="secondary" style={styles.detailsText}>
+                  The linear scaler above can make the current price look practically at the ATL if the ATH is huge.
+                  A logarithmic scale normalizes the extreme values and makes the current price look more realistic.
+                </ThemedText>
+                <ThemedText type="body" variant="secondary" style={styles.detailsText}>
+                  The indicator's position reflects how close the price is to the next power of ten or the midpoint in terms of
+                  growth potential.
+                </ThemedText>
+
+                <ThemedText type="body" variant="secondary" style={styles.detailsText}>
+                  This helps sense if the coin is closer to recovering the "mental mile-markers" in the logarithmic journey towards a new ATH.
+                </ThemedText>
+              </Collapsible>
+            </ThemedView>
+
             {/* Market Data */}
             <ThemedView style={[styles.section, { borderColor }]}>
               <ThemedText type="subtitle" style={styles.sectionTitle}>
@@ -562,6 +603,9 @@ const styles = StyleSheet.create({
   rangeBarWeb: {
     width: "100%",
     marginTop: Spacing.sm,
+  },
+  detailsText: {
+    marginBottom: Spacing.sm,
   },
 });
 
