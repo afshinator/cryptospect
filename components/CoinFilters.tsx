@@ -1,13 +1,13 @@
 // components/CoinFilters.tsx
 // UI component for selecting and activating coin filters
 
+import { SectionContainer } from "@/components/SectionContainer";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { SectionContainer } from "@/components/SectionContainer";
-import { AVAILABLE_FILTERS } from "@/utils/coinFilters";
 import { Spacing } from "@/constants/theme";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import { StyleSheet, Pressable } from "react-native";
+import { AVAILABLE_FILTERS } from "@/utils/coinFilters";
+import { Pressable, StyleSheet } from "react-native";
 
 interface CoinFiltersProps {
   activeFilterIds: string[];
@@ -74,7 +74,7 @@ export function CoinFilters({
                   >
                     {filter.name}
                   </ThemedText>
-                  <ThemedText type="small" variant="secondary" style={styles.filterDescription}>
+                  <ThemedText type="body" variant="secondary">
                     {filter.description}
                   </ThemedText>
                 </ThemedView>
@@ -124,9 +124,6 @@ const styles = StyleSheet.create({
   },
   filterName: {
     marginBottom: Spacing.xs / 2,
-  },
-  filterDescription: {
-    fontSize: 12,
   },
 });
 

@@ -43,7 +43,7 @@ export const AVAILABLE_FILTERS: CoinFilter[] = [
   {
     id: "discounted",
     name: "Discounted",
-    description: "Coins trading more than 70% below ATH",
+    description: "Coins trading > than 70% below ATH",
     matches: (marketData) => {
       // ath_change_percentage is negative when below ATH
       // -70% means 70% below ATH
