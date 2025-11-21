@@ -1,23 +1,23 @@
-import { useState, useMemo } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { CurrencyBanner } from "@/components/CurrencyBanner";
-import { CoinListItem } from "@/components/CoinListItem";
 import { CoinFilters } from "@/components/CoinFilters";
-import { FilteredCoinsResults } from "@/components/FilteredCoinsResults";
+import { CoinListItem } from "@/components/CoinListItem";
+import { CurrencyBanner } from "@/components/CurrencyBanner";
 import { DominanceMomentumWidget } from "@/components/DominanceMomentumWidget";
 import { DominanceSection } from "@/components/DominanceSection";
+import { FilteredCoinsResults } from "@/components/FilteredCoinsResults";
 import { HelloWave } from "@/components/hello-wave";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
-import { useCoinLists } from "@/hooks/use-coin-lists";
 import { useAppInitialization } from "@/hooks/use-app-initializations";
+import { useCoinLists } from "@/hooks/use-coin-lists";
 import {
   applyFilters,
   createMarketDataMap,
 } from "@/utils/coinFilters";
+import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
+import { Platform, ScrollView, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -106,7 +106,7 @@ export default function HomeScreen() {
         )}
 
         {/* Coin Lists Section */}
-        <ThemedView style={styles.listsSection}>
+        <ThemedView style={styles.listsSection} lightColor="transparent" darkColor="transparent">
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Coin Lists
           </ThemedText>

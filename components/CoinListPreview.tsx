@@ -75,6 +75,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.xs,
+    backgroundColor: "transparent",
   },
   iconsContainer: {
     flexDirection: "row",

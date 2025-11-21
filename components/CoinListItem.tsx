@@ -118,6 +118,7 @@ const styles = StyleSheet.create({
   },
   listItemContent: {
     flex: 1,
+    backgroundColor: "transparent",
   },
   listItemContentHome: {
     // No additional padding needed for home variant
