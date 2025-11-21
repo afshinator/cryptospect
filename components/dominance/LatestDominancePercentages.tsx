@@ -19,6 +19,11 @@ const TIME_FORMAT_OPTIONS = {
   second: '2-digit' as const,
 } as const;
 
+const TIME_FORMAT_OPTIONS_MOBILE = {
+  hour: '2-digit' as const,
+  minute: '2-digit' as const,
+} as const;
+
 const CARD_BORDER_RADIUS = 8;
 const CARD_MIN_WIDTH = '45%';
 const ROW_ITEM_MIN_WIDTH = '20%';
@@ -30,7 +35,7 @@ import { Colors, Spacing } from "@/constants/theme";
 import { useAppInitialization } from "@/hooks/use-app-initializations";
 import { useTextWrappingDetection } from "@/hooks/use-text-wrapping-detection";
 import { calculateDominance } from "@/utils/cryptoDominance";
-import { StyleSheet, useColorScheme, View } from "react-native";
+import { Platform, StyleSheet, useColorScheme, View } from "react-native";
 import { DominanceNumberDisplay } from "./DominanceNumberDisplay";
 
 interface LatestDominancePercentagesProps {
@@ -80,8 +85,12 @@ export function LatestDominancePercentages({
     if (date) return date;
     if (!cryptoOverview?.timestamp) return null;
     const timestamp = new Date(cryptoOverview.timestamp);
-    return timestamp.toLocaleTimeString([], TIME_FORMAT_OPTIONS);
+    const isMobile = Platform.OS !== 'web';
+    const formatOptions = isMobile ? TIME_FORMAT_OPTIONS_MOBILE : TIME_FORMAT_OPTIONS;
+    return timestamp.toLocaleTimeString([], formatOptions);
   };
+
+  const isMobile = Platform.OS !== 'web';
 
   if (!dominance) {
     return (
@@ -92,7 +101,7 @@ export function LatestDominancePercentages({
           </ThemedText>
           {getLastUpdated() && (
             <ThemedText type="xsmall" variant="secondary">
-              Updated: {getLastUpdated()}
+              {isMobile ? getLastUpdated() : `Updated: ${getLastUpdated()}`}
             </ThemedText>
           )}
         </View>
@@ -119,7 +128,7 @@ export function LatestDominancePercentages({
             </ThemedText>
             {getLastUpdated() && (
               <ThemedText type="xsmall" variant="secondary">
-                Updated: {getLastUpdated()}
+                {isMobile ? getLastUpdated() : `Updated: ${getLastUpdated()}`}
               </ThemedText>
             )}
           </View>
@@ -162,7 +171,7 @@ export function LatestDominancePercentages({
           </ThemedText>
           {getLastUpdated() && (
             <ThemedText type="xsmall" variant="secondary">
-              Updated: {getLastUpdated()}
+              {isMobile ? getLastUpdated() : `Updated: ${getLastUpdated()}`}
             </ThemedText>
           )}
         </View>

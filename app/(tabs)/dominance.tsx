@@ -13,8 +13,8 @@ import { Spacing } from "@/constants/theme";
 import { useQuery } from "@tanstack/react-query";
 
 // Import the new components
+import BtcAndEthDominanceChartWrapper from "@/components/dominance/BtcAndEthDominanceChartWrapper";
 import { LatestDominancePercentages } from "@/components/dominance/LatestDominancePercentages";
-import DominanceChartWrapper from "@/components/DominanceChartWrapper";
 import DominancePercentageChangeChart from "@/components/DominancePercentageChangeChart";
 import DominanceRatioChart from "@/components/DominanceRatioChart";
 import DominanceRatioHistogram from "@/components/DominanceRatioHistogram";
@@ -26,6 +26,36 @@ import { Collapsible } from "@/components/ui/collapsible";
 // Timing
 const STALE_TIME_HOURS = 24;
 const STALE_TIME_MS = STALE_TIME_HOURS * 60 * 60 * 1000;
+
+interface HistoricalDataStatusProps {
+  isPending: boolean;
+  error: Error | null;
+}
+
+function HistoricalDataStatus({ isPending, error }: HistoricalDataStatusProps) {
+  return (
+    <>
+      {/* Loading message for backend data */}
+      {isPending && (
+        <ThemedView style={styles.loadingContainer}>
+          <ActivityIndicator size="small" />
+          <ThemedText type="small" variant="secondary" style={styles.loadingText}>
+            Loading historical data...
+          </ThemedText>
+        </ThemedView>
+      )}
+
+      {/* Error message for backend data */}
+      {error && !isPending && (
+        <ThemedView style={styles.errorContainer}>
+          <ThemedText type="small" variant="error">
+            ⚠️ Error loading historical data: {error.message}
+          </ThemedText>
+        </ThemedView>
+      )}
+    </>
+  );
+}
 
 export default function DominanceScreen() {
   // 1. Data Fetch
@@ -101,39 +131,21 @@ export default function DominanceScreen() {
           </ThemedText>
 
           {/* LATEST SNAPSHOT CARD (Live Data) - Uses real-time data from CoinGecko /global endpoint */}
-          <View style={styles.dominanceNumbersWrapper}>
+          <View style={styles.spacingWrapper}>
             <LatestDominancePercentages
               showAllFour={true}
             />
           </View>
 
-          {/* Loading message for backend data */}
-          {isPending && (
-            <ThemedView style={styles.loadingContainer}>
-              <ActivityIndicator size="small" />
-              <ThemedText type="small" variant="secondary" style={styles.loadingText}>
-                Loading historical data...
-              </ThemedText>
-            </ThemedView>
-          )}
-
-          {/* Error message for backend data */}
-          {error && !isPending && (
-            <ThemedView style={styles.errorContainer}>
-              <ThemedText type="small" variant="error">
-                ⚠️ Error loading historical data: {(error as Error).message}
-              </ThemedText>
-            </ThemedView>
-          )}
+          <HistoricalDataStatus isPending={isPending} error={error as Error | null} />
 
           {/* BTC/ETH Historical Line Chart (Main View) - Only show when data is available */}
           {dominanceData && dominanceData.length > 0 && (
-            <ThemedView>
-              <ThemedText type="subtitle" style={{ marginLeft: Spacing.lg }}>
-                Graph for {monthLabel}
-              </ThemedText>
-              <DominanceChartWrapper dominanceData={dominanceData} />
-            </ThemedView>
+            <View style={styles.spacingWrapper}>
+              <BtcAndEthDominanceChartWrapper
+                dominanceData={dominanceData}
+                monthLabel={monthLabel}
+              /></View>
           )}
 
 
@@ -222,9 +234,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: Spacing.md,
   },
-  dominanceNumbersWrapper: {
-    marginBottom: Spacing.xl,
-    paddingHorizontal: Spacing.lg
+  spacingWrapper: {
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.md
   },
   chartWrapper: {
     // paddingHorizontal: Spacing.lg,

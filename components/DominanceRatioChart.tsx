@@ -6,7 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from "@/constants/theme";
 
 // Import the generic chart renderer
-import RnChartKitLineChart from './charts/RnChartKitLineChart';
+import BtcAndEthDominanceChartRnChart from '@/components/dominance/BtcAndEthDominanceChartRnChart';
 
 // --- CONFIGURATION CONSTANTS (Visuals & Data Prep) ---
 
@@ -16,15 +16,15 @@ const LINE_STROKE_WIDTH = 2;
 // Defined Colors (Ratio-specific colors)
 const RATIO_COLOR = "#fde047"; // Yellow (for the ratio line)
 const AVERAGE_COLOR = "#ef4444"; // Red (for the baseline)
-const TRANSPARENT_COLOR = "#00000000"; 
+const TRANSPARENT_COLOR = "#00000000";
 
 // --- Component Props and Definition ---
 
 // Re-defining the required type for clarity
 interface HistoricalDominanceSnapshot {
-    date: number; // UNIX timestamp
-    btcDominance: number;
-    ethDominance: number;
+  date: number; // UNIX timestamp
+  btcDominance: number;
+  ethDominance: number;
 }
 
 interface DominanceRatioChartProps {
@@ -35,7 +35,7 @@ interface DominanceRatioChartProps {
 const formatRatio = (value: number) => value.toFixed(2);
 
 export default function DominanceRatioChart({ historicalData }: DominanceRatioChartProps) {
-  
+
   const colorScheme = useColorScheme();
 
   // Dynamic Axis Color based on Theme
@@ -43,7 +43,7 @@ export default function DominanceRatioChart({ historicalData }: DominanceRatioCh
     colorScheme === "dark"
       ? Colors.dark.textSecondary
       : Colors.light.textSecondary;
-  
+
   // 1. Data Calculation and Baseline Determination
   const { chartData, averageRatio, currentRatio } = useMemo(() => {
     if (!historicalData || historicalData.length === 0) {
@@ -53,8 +53,8 @@ export default function DominanceRatioChart({ historicalData }: DominanceRatioCh
     // Calculate the BTC/ETH Ratio for every day
     const ratioData = historicalData.map(item => {
       // BTC.D / ETH.D = Ratio (Avoid division by zero)
-      return item.ethDominance > 0 
-        ? item.btcDominance / item.ethDominance 
+      return item.ethDominance > 0
+        ? item.btcDominance / item.ethDominance
         : 0;
     });
 
@@ -67,31 +67,31 @@ export default function DominanceRatioChart({ historicalData }: DominanceRatioCh
 
     // Prepare chart data for react-native-chart-kit
     const dataForChart = {
-        // Labels are not strictly needed for this chart, but kept for consistency
-        labels: historicalData.map(() => ""), 
-        datasets: [
-            {
-                // The actual Ratio Line
-                data: ratioData,
-                color: () => RATIO_COLOR,
-                strokeWidth: LINE_STROKE_WIDTH,
-                withDots: false,
-            },
-            {
-                // The Average Reference Line (Flat)
-                data: averageLineData,
-                color: () => AVERAGE_COLOR,
-                strokeWidth: 1, // Thinner dashed line
-                strokeDasharray: [4, 4],
-                withDots: false,
-            }
-        ],
+      // Labels are not strictly needed for this chart, but kept for consistency
+      labels: historicalData.map(() => ""),
+      datasets: [
+        {
+          // The actual Ratio Line
+          data: ratioData,
+          color: () => RATIO_COLOR,
+          strokeWidth: LINE_STROKE_WIDTH,
+          withDots: false,
+        },
+        {
+          // The Average Reference Line (Flat)
+          data: averageLineData,
+          color: () => AVERAGE_COLOR,
+          strokeWidth: 1, // Thinner dashed line
+          strokeDasharray: [4, 4],
+          withDots: false,
+        }
+      ],
     };
 
-    return { 
-        chartData: dataForChart, 
-        averageRatio: avgRatio,
-        currentRatio: ratioData[ratioData.length - 1],
+    return {
+      chartData: dataForChart,
+      averageRatio: avgRatio,
+      currentRatio: ratioData[ratioData.length - 1],
     };
   }, [historicalData]);
 
@@ -130,15 +130,15 @@ export default function DominanceRatioChart({ historicalData }: DominanceRatioCh
       <ThemedText type="subtitle" style={styles.chartTitle}>
         BTC/ETH Dominance Rotation Signal
       </ThemedText>
-      
+
       <ThemedText type="body" variant="secondary" style={styles.ratioDisplay}>
-        Current: <ThemedText style={{ color: RATIO_COLOR, fontWeight: 'bold' }}>{formatRatio(currentRatio)}</ThemedText> | 
+        Current: <ThemedText style={{ color: RATIO_COLOR, fontWeight: 'bold' }}>{formatRatio(currentRatio)}</ThemedText> |
         180D Avg: <ThemedText style={{ color: AVERAGE_COLOR, fontWeight: 'bold' }}>{formatRatio(averageRatio)}</ThemedText>
       </ThemedText>
 
 
       {/* RENDER THE CHART USING THE GENERIC RN RENDERER */}
-      <RnChartKitLineChart
+      <BtcAndEthDominanceChartRnChart
         chartData={chartData}
         chartConfig={chartConfig}
         chartHeight={CHART_HEIGHT}

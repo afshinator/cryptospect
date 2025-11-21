@@ -6,22 +6,24 @@ import { LineChart } from "react-native-chart-kit";
 const SCREEN_WIDTH = Dimensions.get("window").width;
 // Add extra width to account for chart-kit's internal padding and prevent label cutoff
 // The chart-kit library needs extra space for labels, especially on the right side
-const CHART_WIDTH_PADDING = 40; // Extra pixels to add for label space
+const CHART_WIDTH_PADDING = -40; // Extra pixels to add for label space
 const CHART_WIDTH = SCREEN_WIDTH + CHART_WIDTH_PADDING;
+const PULL_CHART_LEFT = -20;
 
-interface RnChartKitLineChartProps {
+
+interface BtcAndEthDominanceChartRnChartProps {
   chartData: any; // react-native-chart-kit data structure
   chartConfig: any; // react-native-chart-kit config structure
   chartHeight: number;
   yAxisSuffix: string;
 }
 
-export default function RnChartKitLineChart({
+export default function BtcAndEthDominanceChartRnChart({
   chartData,
   chartConfig,
   chartHeight,
   yAxisSuffix,
-}: RnChartKitLineChartProps) {
+}: BtcAndEthDominanceChartRnChartProps) {
   return (
     <View style={styles.chartContainer}>
       <LineChart
@@ -49,7 +51,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   chart: {
-    // Additional chart styling - negative margin to shift left and reduce excessive left padding
-    marginLeft: -20,
+    marginLeft: PULL_CHART_LEFT,
   },
 });
+

@@ -1,13 +1,14 @@
 import React from "react";
 import { StyleSheet, useColorScheme } from "react-native";
 
+import { SectionContainer } from "@/components/SectionContainer";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Spacing } from "@/constants/theme";
-import RnChartKitLineChart from "./charts/RnChartKitLineChart";
+import BtcAndEthDominanceChartRnChart from "./BtcAndEthDominanceChartRnChart";
 
 // Chart Dimensions & Metrics
-const CHART_HEIGHT = 200;
+const CHART_HEIGHT = 300;
 
 const LINE_STROKE_WIDTH_MAJOR = 2;
 const LINE_STROKE_WIDTH_MINOR = 0.5;
@@ -31,13 +32,15 @@ interface HistoricalDominanceSnapshot {
   // ... other dominance fields
 }
 
-interface DominanceChartWrapperProps {
+interface BtcAndEthDominanceChartWrapperProps {
   dominanceData: HistoricalDominanceSnapshot[];
+  monthLabel?: string;
 }
 
-export default function DominanceChartWrapper({
+export default function BtcAndEthDominanceChartWrapper({
   dominanceData,
-}: DominanceChartWrapperProps) {
+  monthLabel,
+}: BtcAndEthDominanceChartWrapperProps) {
   const colorScheme = useColorScheme();
 
   // Dynamic Axis Color based on Theme (Uses theme secondary text for contrast)
@@ -116,8 +119,13 @@ export default function DominanceChartWrapper({
   // --- End Data preparation ---
 
   return (
-    <>
-      <RnChartKitLineChart
+    <SectionContainer>
+      {monthLabel && (
+        <ThemedText type="subtitle" style={styles.subtitle}>
+          BTC vs ETH Dominance for {monthLabel}
+        </ThemedText>
+      )}
+      <BtcAndEthDominanceChartRnChart
         chartData={chartData}
         chartConfig={chartConfig}
         chartHeight={CHART_HEIGHT}
@@ -139,16 +147,19 @@ export default function DominanceChartWrapper({
           <ThemedText type="small">ETH.D</ThemedText>
         </ThemedView>
       </ThemedView>
-    </>
+    </SectionContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  subtitle: {
+    marginBottom: Spacing.sm,
+  },
   legend: {
     flexDirection: "row",
     justifyContent: "center",
     gap: Spacing.md,
-    marginBottom: Spacing.md,
+    // marginBottom: Spacing.md,
     flexWrap: "wrap",
   },
   legendItem: {
@@ -161,3 +172,4 @@ const styles = StyleSheet.create({
     height: LEGEND_COLOR_HEIGHT,
   },
 });
+

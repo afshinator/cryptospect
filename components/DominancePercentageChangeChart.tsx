@@ -9,7 +9,7 @@ import { Colors, Spacing } from "@/constants/theme";
 
 // Import the generic chart renderer
 import { useCalculatePercentageChange } from '@/hooks/use-dominance-calculations';
-import RnChartKitLineChart from './charts/RnChartKitLineChart';
+import BtcAndEthDominanceChartRnChart from '@/components/dominance/BtcAndEthDominanceChartRnChart';
 
 // --- CONFIGURATION CONSTANTS (Visuals) ---
 const CHART_HEIGHT = 180; 
@@ -104,7 +104,7 @@ export default function DominancePercentageChangeChart({ historicalData }: Domin
 
 
       {/* RENDER THE CHART USING THE GENERIC RN RENDERER */}
-      <RnChartKitLineChart
+      <BtcAndEthDominanceChartRnChart
         chartData={chartData}
         chartConfig={chartConfig}
         chartHeight={CHART_HEIGHT}

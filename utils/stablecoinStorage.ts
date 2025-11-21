@@ -1,5 +1,24 @@
 // utils/stablecoinStorage.ts
 
+/*
+StablecoinData interface - Stores individual stablecoin information (symbol, name, market cap, price, etc.)
+
+StablecoinSnapshot interface - Complete snapshot with:
+    timestamp - When the data was saved
+    totalMarketCap - Total crypto market cap
+    totalMarketCapPercentage - Stablecoin dominance percentage
+    foundStablecoins - Array of symbols found
+    missingStablecoins - Array of symbols not found
+    stablecoins - Full array of all stablecoin data from CryptoMarketSnapshot
+    calculationMethod - Whether using 'market_data' or 'overview_data' 
+
+Functions:
+    loadCachedStablecoinData() - Loads data from storage
+    saveStablecoinData() - Saves data to storage
+    extractAndSaveStablecoinData() - Extracts stablecoins from CryptoMarketSnapshot and saves
+    getStablecoinData() - Convenience function to get latest data
+*/
+
 import { CoinGeckoMarketData } from '@/constants/coinGecko';
 import { STABLECOIN_DATA_CACHE_KEY } from '@/constants/misc';
 import { getJSONObject, setJSONObject } from '@/utils/asyncStorage';
