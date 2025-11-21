@@ -5,7 +5,7 @@ import { SectionContainer } from "@/components/SectionContainer";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Spacing } from "@/constants/theme";
-import BtcAndEthDominanceChartRnChart from "./BtcAndEthDominanceChartRnChart";
+import GenericRnChart from "./GenericRnChart";
 
 // Chart Dimensions & Metrics
 const CHART_HEIGHT = 300;
@@ -125,7 +125,7 @@ export default function BtcAndEthDominanceChartWrapper({
           BTC vs ETH Dominance for {monthLabel}
         </ThemedText>
       )}
-      <BtcAndEthDominanceChartRnChart
+      <GenericRnChart
         chartData={chartData}
         chartConfig={chartConfig}
         chartHeight={CHART_HEIGHT}

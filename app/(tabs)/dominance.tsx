@@ -152,32 +152,11 @@ export default function DominanceScreen() {
           {/* Charts and details - Only show when data is available */}
           {dominanceData && dominanceData.length > 0 && (
             <>
-              {/* === CHART 1: RATIO LINE CHART === */}
-              <Collapsible title="Ratio Chart Details">
-                <ThemedText type="body" style={styles.explanatoryText}>
-                  This chart plots the BTC/ETH Dominance Ratio over time, providing
-                  a clear visual signal for whether market leadership is
-                  consolidation into Bitcoin or rotating toward Ethereum and the
-                  wider altcoin market.
-                </ThemedText>
 
-                <ThemedText type="body" style={styles.explanatoryText}>
-                  Rising Ratio (Moving Up): This means BTC.D is gaining strength
-                  faster than ETH.D, or ETH.D is weakening faster than BTC.D. This
-                  signals a consolidation of capital into Bitcoin, which is
-                  typically a defensive or &quot;risk-off&quot; move within the crypto space.
-                </ThemedText>
-
-                <ThemedText type="body" style={styles.explanatoryText}>
-                  Falling Ratio (Moving Down): This means ETH.D is gaining strength
-                  relative to BTC.D. This signals a rotation of capital into
-                  Ethereum and often serves as a lead indicator for the wider
-                  altcoin rally (the &quot;altcoin season&quot;).
-                </ThemedText>
-              </Collapsible>
-              <ThemedView style={styles.chartWrapper}>
-                <DominanceRatioChart historicalData={dominanceData} />
-              </ThemedView>
+              <View style={styles.spacingWrapper}>
+                <ThemedView style={styles.chartWrapper}>
+                  <DominanceRatioChart historicalData={dominanceData} />
+                </ThemedView></View>
 
               {/* === CHART 2: RATIO HISTOGRAM === */}
               <Collapsible title="Ratio Distribution Details">

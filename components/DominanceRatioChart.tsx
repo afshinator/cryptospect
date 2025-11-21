@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, useColorScheme } from "react-native";
 
+import { SectionContainer } from '@/components/SectionContainer';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from "@/constants/theme";
 
 // Import the generic chart renderer
-import BtcAndEthDominanceChartRnChart from '@/components/dominance/BtcAndEthDominanceChartRnChart';
+import GenericRnChart from '@/components/dominance/GenericRnChart';
+import { Collapsible } from './ui/collapsible';
 
 // --- CONFIGURATION CONSTANTS (Visuals & Data Prep) ---
 
@@ -15,7 +16,7 @@ const LINE_STROKE_WIDTH = 2;
 
 // Defined Colors (Ratio-specific colors)
 const RATIO_COLOR = "#fde047"; // Yellow (for the ratio line)
-const AVERAGE_COLOR = "#ef4444"; // Red (for the baseline)
+const AVERAGE_COLOR = "#999"; // Red (for the baseline)
 const TRANSPARENT_COLOR = "#00000000";
 
 // --- Component Props and Definition ---
@@ -126,11 +127,30 @@ export default function DominanceRatioChart({ historicalData }: DominanceRatioCh
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <SectionContainer>
       <ThemedText type="subtitle" style={styles.chartTitle}>
-        BTC/ETH Dominance Rotation Signal
+        BTC/ETH Dominance Ratio as rotation signal
       </ThemedText>
+      <Collapsible title="Details" >
+        <ThemedText type="body" style={styles.explanatoryText}>
+          This chart plots the BTC/ETH Dominance Ratio over time, giving you an idea of 
+          whether the market is consolidating into BTC or rotating toward ETH and the alt-coins.
+          consolidation into BTC or rotating toward ETH and the alt-coins.
+        </ThemedText>
 
+        <ThemedText type="body" style={styles.explanatoryText}>
+        <ThemedText type="bodySemibold" >Rising Ratio (Moving Up)</ThemedText>: This means BTC.D is gaining strength
+          faster than ETH.D, or ETH.D is weakening faster than BTC.D. 
+          Typically a defensive or &quot;risk-off&quot; move.
+        </ThemedText>
+
+        <ThemedText type="body" style={styles.explanatoryText}>
+        <ThemedText type="bodySemibold" >Falling Ratio (Moving Down)</ThemedText>: 
+         ETH.D is gaining strength relative to BTC.D. 
+         Capital rotation into
+          ETH and often a lead indicator for wider altcoin rally.
+        </ThemedText>
+      </Collapsible>
       <ThemedText type="body" variant="secondary" style={styles.ratioDisplay}>
         Current: <ThemedText style={{ color: RATIO_COLOR, fontWeight: 'bold' }}>{formatRatio(currentRatio)}</ThemedText> |
         180D Avg: <ThemedText style={{ color: AVERAGE_COLOR, fontWeight: 'bold' }}>{formatRatio(averageRatio)}</ThemedText>
@@ -138,25 +158,22 @@ export default function DominanceRatioChart({ historicalData }: DominanceRatioCh
 
 
       {/* RENDER THE CHART USING THE GENERIC RN RENDERER */}
-      <BtcAndEthDominanceChartRnChart
+      <GenericRnChart
         chartData={chartData}
         chartConfig={chartConfig}
         chartHeight={CHART_HEIGHT}
         yAxisSuffix="" // No suffix needed since the ratio is unitless
+        fromZero={false} // Don't start from zero to make the data range stand out more
       />
 
       <ThemedText type="small" variant="secondary" style={styles.caption}>
-        The red dashed line is the 180-day average. Above the red line indicates BTC over-dominance.
+        The grey line is the 180-day average. Above the grey line indicates BTC over-dominance.
       </ThemedText>
-    </ThemedView>
+    </SectionContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: Spacing.md,
-    // Add border/styling to make it look like a distinct card/component
-  },
   chartTitle: {
     marginBottom: Spacing.xs,
   },
@@ -171,5 +188,7 @@ const styles = StyleSheet.create({
   loadingText: {
     padding: Spacing.xl,
     textAlign: 'center',
-  }
+  }, explanatoryText: {
+    marginBottom: Spacing.sm,
+  },
 });

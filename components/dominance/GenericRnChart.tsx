@@ -11,19 +11,21 @@ const CHART_WIDTH = SCREEN_WIDTH + CHART_WIDTH_PADDING;
 const PULL_CHART_LEFT = -20;
 
 
-interface BtcAndEthDominanceChartRnChartProps {
+interface GenericRnChartProps {
   chartData: any; // react-native-chart-kit data structure
   chartConfig: any; // react-native-chart-kit config structure
   chartHeight: number;
   yAxisSuffix: string;
+  fromZero?: boolean; // Whether to start y-axis from zero (default: true)
 }
 
-export default function BtcAndEthDominanceChartRnChart({
+export default function GenericRnChart({
   chartData,
   chartConfig,
   chartHeight,
   yAxisSuffix,
-}: BtcAndEthDominanceChartRnChartProps) {
+  fromZero = true,
+}: GenericRnChartProps) {
   return (
     <View style={styles.chartContainer}>
       <LineChart
@@ -35,7 +37,7 @@ export default function BtcAndEthDominanceChartRnChart({
         withShadow={false}
         withInnerLines={false}
         withOuterLines={false}
-        fromZero={true}
+        fromZero={fromZero}
         yAxisSuffix={yAxisSuffix}
         // Use background color as dot color for transparency
         getDotColor={() => chartConfig.backgroundGradientFrom}
