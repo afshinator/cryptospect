@@ -372,7 +372,6 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   rateText: {
-    fontSize: 18,
     marginTop: 2,
   }
 });

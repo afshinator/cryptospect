@@ -111,7 +111,7 @@ export default function DominancePercentageChangeChart({ historicalData }: Domin
         yAxisSuffix="%" 
       />
 
-      <ThemedText style={styles.caption} variant="secondary">
+      <ThemedText type="small" variant="secondary" style={styles.caption}>
         Positive velocity (above 0%) indicates recent rotation into BTC; negative velocity indicates rotation into ETH.
       </ThemedText>
     </ThemedView>
@@ -136,7 +136,6 @@ const styles = StyleSheet.create({
   },
   caption: {
     marginTop: Spacing.sm,
-    fontSize: 14,
     textAlign: 'center',
     paddingHorizontal: Spacing.lg,
   },

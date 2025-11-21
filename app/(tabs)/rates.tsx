@@ -93,7 +93,7 @@ export default function RatesScreen() {
                 {CURRENCY_DISPLAY_NAMES[selectedCurrency]}
               </ThemedText>
             </ThemedView>
-            <ThemedText type="small" variant="secondary" style={styles.dropdownArrow}>
+            <ThemedText type="xsmall" variant="secondary" style={styles.dropdownArrow}>
               ▼
             </ThemedText>
           </Pressable>
@@ -213,7 +213,6 @@ const styles = StyleSheet.create({
   },
   dropdownArrow: {
     marginLeft: Spacing.xs,
-    fontSize: 10,
   },
   precisionToggle: {
     flex: 1,

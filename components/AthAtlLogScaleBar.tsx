@@ -371,7 +371,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   markerSubLabel: {
-    fontSize: 10,
     marginTop: 2,
     textAlign: "center",
   },

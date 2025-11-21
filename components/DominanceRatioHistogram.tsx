@@ -221,13 +221,13 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
         </ThemedView>
       )}
 
-      <ThemedText style={styles.caption} variant="secondary">
+      <ThemedText type="small" variant="secondary" style={styles.caption}>
         Bars show the number of days spent in that ratio range. The tall bars are the &quot;fair value&quot; zone.
       </ThemedText>
       
-      <ThemedText style={styles.currentRatioMarker}>
+      <ThemedText type="xsmall" style={styles.currentRatioMarker}>
         Current ratio {' '}
-        <ThemedText style={{ color: CURRENT_RATIO_COLOR, fontWeight: 'bold' }}>
+        <ThemedText type="xsmall" style={{ color: CURRENT_RATIO_COLOR, fontWeight: 'bold' }}>
           {formatRatio(currentRatio)}
         </ThemedText> falls near the {currentBinLabel} range.
       </ThemedText>
@@ -262,12 +262,10 @@ const styles = StyleSheet.create({
   },
   caption: {
     marginTop: Spacing.sm,
-    fontSize: 14,
     textAlign: 'center',
   },
   currentRatioMarker: {
     marginTop: Spacing.xs,
-    fontSize: 12,
     textAlign: 'center',
   },
   loadingText: {

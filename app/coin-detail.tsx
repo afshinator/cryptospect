@@ -318,24 +318,24 @@ export default function CoinDetailScreen() {
                 )}
                 {Platform.OS !== 'web' && (
                   <View style={styles.athAtlMobile}>
-                    <Text style={[styles.athAtlMobileText, { color: textSecondaryColor }]}>
-                      <Text style={styles.athAtlBold}>ATH:</Text> <Text style={styles.athAtlBold}>{formatPrice(coin.ath)}</Text>
+                    <ThemedText type="xsmall" variant="secondary" style={styles.athAtlMobileText}>
+                      <ThemedText type="xsmall" style={styles.athAtlBold}>ATH:</ThemedText> <ThemedText type="xsmall" style={styles.athAtlBold}>{formatPrice(coin.ath)}</ThemedText>
                       {coin.ath_date && ` ${formatDate(coin.ath_date)}`}
                       {changeFromAth !== null && (
-                        <Text style={{ color: textSecondaryColor }}>
-                          {' '}(<Text style={{ color: errorColor }}>{formatPercentage(changeFromAth)}</Text>)
-                        </Text>
+                        <ThemedText type="xsmall" variant="secondary">
+                          {' '}(<ThemedText type="xsmall" style={{ color: errorColor }}>{formatPercentage(changeFromAth)}</ThemedText>)
+                        </ThemedText>
                       )}
-                    </Text>
-                    <Text style={[styles.athAtlMobileText, { color: textSecondaryColor }]}>
-                      <Text style={styles.athAtlBold}>ATL:</Text> <Text style={styles.athAtlBold}>{formatPrice(coin.atl)}</Text>
+                    </ThemedText>
+                    <ThemedText type="xsmall" variant="secondary" style={styles.athAtlMobileText}>
+                      <ThemedText type="xsmall" style={styles.athAtlBold}>ATL:</ThemedText> <ThemedText type="xsmall" style={styles.athAtlBold}>{formatPrice(coin.atl)}</ThemedText>
                       {coin.atl_date && ` ${formatDate(coin.atl_date)}`}
                       {changeFromAtl !== null && (
-                        <Text style={{ color: textSecondaryColor }}>
-                          {' '}(<Text style={{ color: successColor }}>{formatPercentage(changeFromAtl)}</Text>)
-                        </Text>
+                        <ThemedText type="xsmall" variant="secondary">
+                          {' '}(<ThemedText type="xsmall" style={{ color: successColor }}>{formatPercentage(changeFromAtl)}</ThemedText>)
+                        </ThemedText>
                       )}
-                    </Text>
+                    </ThemedText>
                   </View>
                 )}
               </View>
@@ -613,7 +613,6 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   athAtlMobileText: {
-    fontSize: 12,
     lineHeight: 16,
   },
   dataRow: {

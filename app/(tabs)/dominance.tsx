@@ -264,8 +264,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   explanatoryText: {
-    fontSize: 15,
-    lineHeight: 22,
     marginBottom: Spacing.sm,
   },
 });

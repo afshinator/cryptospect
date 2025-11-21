@@ -145,7 +145,7 @@ export default function DominanceRatioChart({ historicalData }: DominanceRatioCh
         yAxisSuffix="" // No suffix needed since the ratio is unitless
       />
 
-      <ThemedText style={styles.caption} variant="secondary">
+      <ThemedText type="small" variant="secondary" style={styles.caption}>
         The red dashed line is the 180-day average. Above the red line indicates BTC over-dominance.
       </ThemedText>
     </ThemedView>
@@ -166,7 +166,6 @@ const styles = StyleSheet.create({
   },
   caption: {
     marginTop: Spacing.sm,
-    fontSize: 14,
     textAlign: 'center',
   },
   loadingText: {

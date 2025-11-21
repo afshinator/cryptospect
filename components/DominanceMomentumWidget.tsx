@@ -3,9 +3,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { ActivityIndicator, StyleSheet } from "react-native";
 
+import { SectionContainer } from "@/components/SectionContainer";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { SectionContainer } from "@/components/SectionContainer";
 import { BACKEND_DOMINANCE_QUERY_KEY } from "@/constants/misc";
 import { Spacing } from "@/constants/theme";
 import { useCalculatePercentageChange } from "@/hooks/use-dominance-calculations";
@@ -88,7 +88,7 @@ export function DominanceMomentumWidget() {
           {interpretation}
         </ThemedText>
       </ThemedView>
-      <ThemedText type="xsmall" variant="secondary" style={styles.description}>
+      <ThemedText type="small" variant="secondary" style={styles.description}>
         {isPositive
           ? "BTC/ETH ratio accelerating toward BTC"
           : "BTC/ETH ratio accelerating toward ETH"}
@@ -103,11 +103,9 @@ const styles = StyleSheet.create({
   },
   valueContainer: {
     alignItems: "center",
-    marginVertical: Spacing.md,
+    // marginVertical: Spacing.md,
   },
   value: {
-    fontSize: 32,
-    fontWeight: "bold",
     marginBottom: Spacing.xs,
   },
   label: {
@@ -123,7 +121,7 @@ const styles = StyleSheet.create({
   },
   description: {
     textAlign: "center",
-    marginTop: Spacing.xs,
+    // marginTop: Spacing.xs,
   },
   loadingText: {
     marginTop: Spacing.sm,
