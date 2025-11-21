@@ -210,3 +210,46 @@ export function useRemoveCoinFromList() {
     },
   });
 }
+
+/**
+ * Hook to update coin notes in a list
+ */
+export function useUpdateCoinNotes() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      listId,
+      coinId,
+      notes,
+    }: {
+      listId: string;
+      coinId: string;
+      notes: string;
+    }) => {
+      const existingLists = await getCoinLists();
+      const updatedLists = existingLists.map((list) => {
+        if (list.id === listId) {
+          return {
+            ...list,
+            coins: list.coins.map((coin) =>
+              coin.coinId === coinId ? { ...coin, notes: notes.trim() } : coin
+            ),
+            updatedAt: Date.now(),
+          };
+        }
+        return list;
+      });
+      await saveCoinLists(updatedLists);
+      
+      // Optimistically update the cache immediately
+      queryClient.setQueryData(COIN_LISTS_QUERY_KEY, updatedLists);
+      
+      return updatedLists.find((list) => list.id === listId)!;
+    },
+    onSuccess: async () => {
+      // Refetch to ensure consistency with storage
+      await queryClient.refetchQueries({ queryKey: COIN_LISTS_QUERY_KEY });
+    },
+  });
+}

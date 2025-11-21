@@ -28,6 +28,7 @@ import {
   useCoinLists,
   useRemoveCoinFromList,
   useUpdateCoinList,
+  useUpdateCoinNotes,
 } from "@/hooks/use-coin-lists";
 import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
@@ -41,12 +42,17 @@ export default function ListDetailScreen() {
   const addCoin = useAddCoinToList();
   const removeCoin = useRemoveCoinFromList();
   const updateList = useUpdateCoinList();
+  const updateCoinNotes = useUpdateCoinNotes();
   
   // State for List Editing
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedNotes, setEditedNotes] = useState("");
+  
+  // State for Coin Notes Editing
+  const [editingCoinId, setEditingCoinId] = useState<string | null>(null);
+  const [editedCoinNotes, setEditedCoinNotes] = useState("");
   
   // State for Custom Confirmation Modal
   const [isConfirmingRemoval, setIsConfirmingRemoval] = useState(false);
@@ -184,9 +190,40 @@ export default function ListDetailScreen() {
     );
   };
 
-  const handleCoinPress = (coinId: string) => {
+  const handleCoinPress = useCallback((coinId: string) => {
     router.push(`/coin-detail?id=${coinId}`);
-  };
+  }, [router]);
+
+  const handleStartEditingCoinNotes = useCallback((coinId: string, currentNotes: string) => {
+    setEditingCoinId(coinId);
+    setEditedCoinNotes(currentNotes || "");
+  }, []);
+
+  const handleSaveCoinNotes = useCallback(() => {
+    if (!editingCoinId || !list) return;
+    
+    updateCoinNotes.mutate(
+      {
+        listId: list.id,
+        coinId: editingCoinId,
+        notes: editedCoinNotes,
+      },
+      {
+        onSuccess: () => {
+          setEditingCoinId(null);
+          setEditedCoinNotes("");
+        },
+        onError: (error) => {
+          console.error("Failed to update coin notes:", error);
+        },
+      }
+    );
+  }, [editingCoinId, editedCoinNotes, list, updateCoinNotes]);
+
+  const handleCancelEditingCoinNotes = useCallback(() => {
+    setEditingCoinId(null);
+    setEditedCoinNotes("");
+  }, []);
 
   const excludeCoinIds = list.coins.map((c) => c.coinId);
 
@@ -311,47 +348,105 @@ export default function ListDetailScreen() {
                   // Fallback to legacy coin.apiData.image if global snapshot isn't loaded (for existing items)
                   const displayImage = marketData?.image || coin.apiData?.image; 
 
+                  const isEditingThisCoin = editingCoinId === coin.coinId;
+
                   return (
-                    <Pressable
-                      key={coin.coinId}
-                      onPress={() => handleCoinPress(coin.coinId)}
-                      style={[styles.coinItem, { borderColor }]}
-                    >
-                      {/* Use the retrieved image from the global snapshot or legacy apiData */}
-                      {displayImage && (
-                        <Image
-                          source={{ uri: displayImage }}
-                          style={styles.coinImage}
-                        />
-                      )}
-                      <ThemedView style={styles.coinInfo}>
-                        <ThemedText type="bodySemibold">{displayName}</ThemedText>
-                        <ThemedText type="small" variant="secondary">
-                          {displaySymbol.toUpperCase()}
-                        </ThemedText>
-                        {coin.notes && (
-                          <ThemedText type="small" variant="secondary">
-                            {coin.notes}
-                          </ThemedText>
-                        )}
-                      </ThemedView>
-                      
-                      {/* Trash Button Container */}
-                      <ThemedView style={styles.removeButtonContainer}>
+                    <ThemedView key={coin.coinId} style={[styles.coinItem, { borderColor }]}>
+                      {isEditingThisCoin ? (
+                        // Editing mode for coin notes
+                        <ThemedView style={styles.coinNotesEditContainer}>
+                          <ThemedView style={styles.coinNotesHeader}>
+                            <ThemedText type="bodySemibold">{displayName}</ThemedText>
+                            <ThemedText type="small" variant="secondary">
+                              {displaySymbol.toUpperCase()}
+                            </ThemedText>
+                          </ThemedView>
+                          <TextInput
+                            style={[
+                              styles.textArea,
+                              { color: textColor, backgroundColor, borderColor },
+                            ]}
+                            placeholder="Add notes for this coin..."
+                            placeholderTextColor={placeholderColor}
+                            value={editedCoinNotes}
+                            onChangeText={setEditedCoinNotes}
+                            multiline
+                            autoFocus
+                          />
+                          <ThemedView style={styles.coinNotesButtonRow}>
+                            <Pressable
+                              onPress={handleSaveCoinNotes}
+                              style={styles.saveButton}
+                              disabled={updateCoinNotes.isPending}
+                            >
+                              <ThemedText type="bodySemibold">Save</ThemedText>
+                            </Pressable>
+                            <Pressable
+                              onPress={handleCancelEditingCoinNotes}
+                              style={styles.cancelButton}
+                            >
+                              <ThemedText type="body" variant="secondary">
+                                Cancel
+                              </ThemedText>
+                            </Pressable>
+                          </ThemedView>
+                        </ThemedView>
+                      ) : (
+                        // Display mode
                         <Pressable
-                          onPress={(e) => {
-                            console.log('Remove coin handler called - stopping propagation'); 
-                            // Standard synthetic event propagation stop (still necessary!)
-                            e.stopPropagation(); 
-                            handleRemoveCoin(coin.coinId);
-                          }}
-                          style={styles.removeButton}
-                          accessibilityRole="button"
+                          onPress={() => handleCoinPress(coin.coinId)}
+                          style={styles.coinItemPressable}
                         >
-                          <IconSymbol name="trash.fill" size={30} color={tintColor} />
+                          {/* Use the retrieved image from the global snapshot or legacy apiData */}
+                          {displayImage && (
+                            <Image
+                              source={{ uri: displayImage }}
+                              style={styles.coinImage}
+                            />
+                          )}
+                          <ThemedView style={styles.coinInfo}>
+                            <ThemedText type="bodySemibold">{displayName}</ThemedText>
+                            <ThemedText type="small" variant="secondary">
+                              {displaySymbol.toUpperCase()}
+                            </ThemedText>
+                            {coin.notes && (
+                              <ThemedText type="small" variant="secondary" style={styles.coinNotesText}>
+                                {coin.notes}
+                              </ThemedText>
+                            )}
+                          </ThemedView>
+                          
+                          {/* Action Buttons Container */}
+                          <ThemedView style={styles.coinActionsContainer}>
+                            <Pressable
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleStartEditingCoinNotes(coin.coinId, coin.notes || "");
+                              }}
+                              style={styles.coinActionButton}
+                              accessibilityRole="button"
+                            >
+                              <IconSymbol 
+                                name="pencil" 
+                                size={24} 
+                                color={tintColor} 
+                              />
+                            </Pressable>
+                            <Pressable
+                              onPress={(e) => {
+                                console.log('Remove coin handler called - stopping propagation'); 
+                                e.stopPropagation(); 
+                                handleRemoveCoin(coin.coinId);
+                              }}
+                              style={styles.removeButton}
+                              accessibilityRole="button"
+                            >
+                              <IconSymbol name="trash.fill" size={30} color={tintColor} />
+                            </Pressable>
+                          </ThemedView>
                         </Pressable>
-                      </ThemedView>
-                    </Pressable>
+                      )}
+                    </ThemedView>
                   );
                 })
               ) : (
@@ -449,12 +544,36 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.lg,
   },
   coinItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: Spacing.md,
     marginBottom: Spacing.sm,
     borderWidth: 1,
     borderRadius: 8,
+  },
+  coinItemPressable: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.md,
+  },
+  coinNotesEditContainer: {
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  coinNotesHeader: {
+    marginBottom: Spacing.xs,
+  },
+  coinNotesText: {
+    marginTop: Spacing.xs,
+  },
+  coinNotesButtonRow: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+  },
+  coinActionsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  coinActionButton: {
+    padding: Spacing.xs,
   },
   coinImage: {
     width: 40,

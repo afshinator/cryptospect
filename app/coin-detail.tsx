@@ -55,6 +55,23 @@ export default function CoinDetailScreen() {
     );
   }, [lists, id]);
 
+  // Find all lists that contain this coin AND have notes for it
+  const listsWithNotes = useMemo(() => {
+    if (!lists || !id) return [];
+    return lists
+      .filter((list) => {
+        const coinInList = list.coins.find((coin) => coin.coinId === id);
+        return coinInList && coinInList.notes && coinInList.notes.trim() !== "";
+      })
+      .map((list) => {
+        const coinInList = list.coins.find((coin) => coin.coinId === id);
+        return {
+          list,
+          notes: coinInList!.notes,
+        };
+      });
+  }, [lists, id]);
+
   if (!coin) {
     return (
       <SafeAreaView style={{ flex: 1 }}>
@@ -423,6 +440,32 @@ export default function CoinDetailScreen() {
               />
             </ThemedView>
 
+            {/* Lists with Notes for This Coin */}
+            {listsWithNotes.length > 0 && (
+              <ThemedView style={[styles.section, { borderColor }]}>
+                <ThemedText type="subtitle" style={styles.sectionTitle}>
+                  Notes from Lists ({listsWithNotes.length})
+                </ThemedText>
+                {listsWithNotes.map(({ list, notes }) => (
+                  <Pressable
+                    key={list.id}
+                    onPress={() => router.push(`/list-detail?id=${list.id}`)}
+                    style={[styles.listItemWithNotes, { borderColor }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View list ${list.name}`}
+                  >
+                    <ThemedView style={styles.listItemWithNotesContent}>
+                      <ThemedText type="bodySemibold">{list.name}</ThemedText>
+                      <ThemedText type="body" variant="secondary" style={styles.listNoteText}>
+                        {notes}
+                      </ThemedText>
+                    </ThemedView>
+                    <IconSymbol name="chevron.right" size={20} color={tintColor} />
+                  </Pressable>
+                ))}
+              </ThemedView>
+            )}
+
             {/* Lists Containing This Coin */}
             {containingLists.length > 0 && (
               <ThemedView style={[styles.section, { borderColor }]}>
@@ -588,6 +631,22 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     borderWidth: 1,
     borderRadius: 8,
+  },
+  listItemWithNotes: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  listItemWithNotesContent: {
+    flex: 1,
+    marginRight: Spacing.sm,
+  },
+  listNoteText: {
+    marginTop: Spacing.xs,
   },
   priceChangeRow: {
     flexDirection: "row",
