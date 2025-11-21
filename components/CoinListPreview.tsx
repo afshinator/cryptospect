@@ -25,6 +25,8 @@ export function CoinListPreview({ list }: CoinListPreviewProps) {
   const marketData = cryptoMarket?.data;
   const borderColor = useThemeColor({}, "border");
 
+  const MAX_ICONS = 12;
+  
   // Get coin images from market data
   const coinImages = list.coins
     .map((coin) => {
@@ -32,9 +34,10 @@ export function CoinListPreview({ list }: CoinListPreviewProps) {
       return marketCoin?.image || coin.apiData?.image;
     })
     .filter((image): image is string => !!image)
-    .slice(0, 5); // Limit to first 5 coins for display
+    .slice(0, MAX_ICONS); // Limit to first 12 coins for display
 
   const coinCount = list.coins.length;
+  const hasMoreCoins = coinCount > MAX_ICONS;
 
   return (
     <ThemedView style={styles.container}>
@@ -53,6 +56,11 @@ export function CoinListPreview({ list }: CoinListPreviewProps) {
               ]}
             />
           ))}
+          {hasMoreCoins && (
+            <ThemedText type="xsmall" variant="secondary" style={styles.ellipsis}>
+              ...
+            </ThemedText>
+          )}
         </View>
       ) : null}
       <ThemedText type="small" variant="secondary">
@@ -77,6 +85,9 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 1,
+  },
+  ellipsis: {
+    marginLeft: ICON_OVERLAP,
   },
 });
 
