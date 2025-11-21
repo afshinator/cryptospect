@@ -26,7 +26,7 @@ export const PREFERENCES_QUERY_KEY = ['prefs'];
 // Crypto Market Data (CoinGecko /coins/markets)
 export const CRYPTO_MARKET_CACHE_KEY = 'CryptoMarketSnapshot';
 export const CRYPTO_MARKET_QUERY_KEY = ['cryptoMarket'];
-export const CRYPTO_MARKET_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+export const CRYPTO_MARKET_REFRESH_INTERVAL_MS = 6 * 60 * 1000; // 6 minutes
 
 // Crypto Overview Data (CoinGecko /global)
 export const CRYPTO_OVERVIEW_CACHE_KEY = 'CryptoOverviewSnapshot';

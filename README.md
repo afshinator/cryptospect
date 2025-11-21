@@ -98,13 +98,39 @@ The app makes API calls to four different endpoints to retrieve market data, exc
 - `vs_currency`: User's selected currency (e.g., USD, EUR, NGN)
 - `order`: `market_cap_desc`
 - `per_page`: `250` (free tier maximum per page)
-- `page`: `1`, `2`, `3` (fetches 3 pages sequentially)
+- `page`: `1`, `2`, `3`, `4`, `5` (fetches 5 pages sequentially)
 - `sparkline`: `false`
 
-**Cache Duration:** 5 minutes (client-side AsyncStorage)
+**Cache Duration:** 6 minutes (client-side AsyncStorage)
+
+**Fetching Algorithm:**
+
+The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per page) using a rate-limited sequential fetching strategy:
+
+1. **Sequential Page Fetching**: Pages are fetched one at a time (not in parallel) to respect CoinGecko's rate limits.
+
+2. **Rate Limiting Delays**:
+   - **Between pages**: 1.2 seconds delay between each page request
+   - **After every 3 pages**: 10 seconds longer delay before continuing
+   - **On rate limit (HTTP 429)**: Respects `Retry-After` header, with exponential backoff up to 3 retries
+
+3. **Data Preservation**:
+   - Existing cached data is preserved until new data is validated as complete
+   - New data is only persisted if:
+     - All 5 pages are successfully fetched, OR
+     - The new data has more coins than the existing cache
+   - If fetching fails or is incomplete, the old cache is preserved and returned (graceful degradation)
+
+4. **Refresh Triggers**:
+   - **At app startup**: If cache is missing or stale (older than 6 minutes)
+   - **Automatic**: Every 6 minutes via `refetchInterval`
+   - **On window focus**: When the app regains focus (`refetchOnWindowFocus`)
+   - **On access**: If cached data is older than 6 minutes when accessed
+
+5. **Timestamp Validation**: Each snapshot includes a `timestamp` field that tracks when the data was fetched. The cache is considered stale if `currentTime - timestamp > 6 minutes`.
 
 **Data Retrieved:**
-- Array of up to 750 cryptocurrencies (3 pages × 250 per page) with comprehensive market data:
+- Array of up to 1,250 cryptocurrencies (5 pages × 250 per page) with comprehensive market data:
   - Basic info: `id`, `symbol`, `name`, `image` (coin icon URL)
   - Pricing: `current_price`, `price_change_24h`, `price_change_percentage_24h`
   - Market metrics: `market_cap`, `market_cap_rank`, `total_volume`
@@ -113,7 +139,7 @@ The app makes API calls to four different endpoints to retrieve market data, exc
   - Historical extremes: `ath`, `ath_change_percentage`, `ath_date`, `atl`, `atl_change_percentage`, `atl_date`
   - Metadata: `last_updated`
 
-**Usage:** Provides current prices and market data for cryptocurrencies in the user's preferred currency.
+**Usage:** Provides current prices and market data for cryptocurrencies in the user's preferred currency. Used throughout the app for displaying coin information, filtering, and analysis.
 
 ---
 
@@ -123,7 +149,7 @@ The app makes API calls to four different endpoints to retrieve market data, exc
 
 **Method:** `GET`
 
-**Cache Duration:** 5 minutes (client-side AsyncStorage)
+**Cache Duration:** 6 minutes (client-side AsyncStorage)
 
 **Data Retrieved:**
 - Global market statistics object:
@@ -165,8 +191,8 @@ The app makes API calls to four different endpoints to retrieve market data, exc
 | API | Endpoint | Refresh Interval | Purpose |
 |-----|----------|------------------|---------|
 | Backend | `/api/dominance` | 24 hours | Historical dominance data (180 days) |
-| CoinGecko | `/coins/markets` | 5 minutes | Top 250 cryptocurrencies market data |
-| CoinGecko | `/global` | 5 minutes | Global crypto market overview |
+| CoinGecko | `/coins/markets` | 6 minutes | Top 1,250 cryptocurrencies market data (5 pages) |
+| CoinGecko | `/global` | 6 minutes | Global crypto market overview |
 | Exchange Rate API | `/v6/latest/USD` | 24 hours | Fiat currency exchange rates |
 
 **Note:** All APIs implement client-side caching using AsyncStorage with graceful fallback to stale cache if fresh data fails to fetch.
