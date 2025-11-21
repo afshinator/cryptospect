@@ -74,6 +74,7 @@ The app makes API calls to four different endpoints to retrieve market data, exc
 - `x-api-key: {BACKEND_API_KEY}` (configured via environment variable)
 
 **Cache Duration:** 24 hours (backend-side caching)
+- **Note:** Cache duration is configured on the backend (Vercel serverless function). Check backend code for `CACHE_LIFETIME_MS` constant.
 
 **Data Retrieved:**
 - Array of historical dominance snapshots (180 days)
@@ -102,17 +103,30 @@ The app makes API calls to four different endpoints to retrieve market data, exc
 - `sparkline`: `false`
 
 **Cache Duration:** 6 minutes (client-side AsyncStorage)
+- **Constant Location:** `constants/misc.ts` → `CRYPTO_MARKET_REFRESH_INTERVAL_MS = 6 * 60 * 1000`
 
 **Fetching Algorithm:**
 
 The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per page) using a rate-limited sequential fetching strategy:
 
 1. **Sequential Page Fetching**: Pages are fetched one at a time (not in parallel) to respect CoinGecko's rate limits.
+   - **Number of pages:** 5 pages
+   - **Coins per page:** 250 (free tier maximum)
+   - **Constant Locations:**
+     - `constants/coinGecko.ts` → `MARKET_DATA_PAGES_TO_FETCH = 5`
+     - `constants/coinGecko.ts` → `MARKET_DATA_PER_PAGE = 250`
 
 2. **Rate Limiting Delays**:
    - **Between pages**: 1.2 seconds delay between each page request
+     - **Constant Location:** `utils/coinGeckoApi.ts` → `DELAY_BETWEEN_PAGES_MS = 1200`
    - **After every 3 pages**: 10 seconds longer delay before continuing
+     - **Constant Locations:** 
+       - `utils/coinGeckoApi.ts` → `DELAY_AFTER_EVERY_N_PAGES_MS = 10000`
+       - `utils/coinGeckoApi.ts` → `PAGES_BEFORE_LONG_DELAY = 3`
    - **On rate limit (HTTP 429)**: Respects `Retry-After` header, with exponential backoff up to 3 retries
+     - **Constant Locations:**
+       - `utils/coinGeckoApi.ts` → `MAX_RETRIES = 3`
+       - `utils/coinGeckoApi.ts` → `BASE_RETRY_DELAY_MS = 60000` (60 seconds)
 
 3. **Data Preservation**:
    - Existing cached data is preserved until new data is validated as complete
@@ -120,14 +134,19 @@ The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per
      - All 5 pages are successfully fetched, OR
      - The new data has more coins than the existing cache
    - If fetching fails or is incomplete, the old cache is preserved and returned (graceful degradation)
+   - **Implementation:** `utils/coinGeckoApi.ts` → `fetchAndPersistCryptoMarket()`
 
 4. **Refresh Triggers**:
    - **At app startup**: If cache is missing or stale (older than 6 minutes)
    - **Automatic**: Every 6 minutes via `refetchInterval`
+     - **Constant Location:** `constants/misc.ts` → `CRYPTO_MARKET_REFRESH_INTERVAL_MS`
+     - **Usage:** `hooks/use-app-initializations.ts` → `useQuery` with `refetchInterval`
    - **On window focus**: When the app regains focus (`refetchOnWindowFocus`)
    - **On access**: If cached data is older than 6 minutes when accessed
+   - **Implementation:** `utils/coinGeckoApi.ts` → `getCryptoMarket()`
 
 5. **Timestamp Validation**: Each snapshot includes a `timestamp` field that tracks when the data was fetched. The cache is considered stale if `currentTime - timestamp > 6 minutes`.
+   - **Type Definition:** `constants/coinGecko.ts` → `CryptoMarketSnapshot.timestamp: number`
 
 **Data Retrieved:**
 - Array of up to 1,250 cryptocurrencies (5 pages × 250 per page) with comprehensive market data:
@@ -150,6 +169,7 @@ The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per
 **Method:** `GET`
 
 **Cache Duration:** 6 minutes (client-side AsyncStorage)
+- **Constant Location:** `constants/misc.ts` → `CRYPTO_OVERVIEW_REFRESH_INTERVAL_MS = 6 * 60 * 1000`
 
 **Data Retrieved:**
 - Global market statistics object:
@@ -172,6 +192,7 @@ The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per
 **Method:** `GET`
 
 **Cache Duration:** 24 hours (client-side AsyncStorage)
+- **Constant Location:** `constants/currency.ts` → `DAILY_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000`
 
 **Data Retrieved:**
 - Exchange rate response object:
