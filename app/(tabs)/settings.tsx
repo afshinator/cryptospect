@@ -1,8 +1,8 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import Slider from "@react-native-community/slider";
-import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Alert, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ScreenContainer } from "@/components/ScreenContainer";
@@ -35,9 +35,23 @@ export default function SettingsScreen() {
   const sliderMinColor = useThemeColor({}, "tint");
   const sliderMaxColor = useThemeColor({}, "border");
   const dividerColor = useThemeColor({}, "border");
+  const textColor = useThemeColor({}, "text");
+  const backgroundColor = useThemeColor({}, "background");
+  const borderColor = useThemeColor({}, "border");
+  const placeholderColor = useThemeColor({}, "textSecondary");
 
   // Local state for slider value during drag
   const [tempFontScale, setTempFontScale] = useState<number | null>(null);
+  
+  // Local state for directory input - sync with preferences
+  const [directoryInput, setDirectoryInput] = useState<string>("");
+  
+  // Update directory input when preferences load
+  useEffect(() => {
+    if (preferences?.defaultImportExportDirectory) {
+      setDirectoryInput(preferences.defaultImportExportDirectory);
+    }
+  }, [preferences?.defaultImportExportDirectory]);
 
   if (isLoading || !preferences) {
     return (
@@ -257,6 +271,63 @@ export default function SettingsScreen() {
             ))}
           </View>
         </SectionContainer>
+
+        {/* Import/Export Directory */}
+        <SectionContainer>
+          <ThemedText type="subtitle" propFontScale={inverseFontScale}>
+            Import/Export Directory
+          </ThemedText>
+          <ThemedText
+            variant="secondary"
+            type="small"
+            style={styles.sectionDescription}
+            propFontScale={inverseFontScale}
+          >
+            {Platform.OS === "web"
+              ? "Default directory path for CSV file operations (browser may override)"
+              : "Default directory path for CSV file operations"}
+          </ThemedText>
+
+          <View style={styles.directoryInputContainer}>
+            <TextInput
+              style={[
+                styles.directoryInput,
+                { color: textColor, backgroundColor, borderColor },
+              ]}
+              placeholder="Enter directory path (e.g., /Users/name/Documents)"
+              placeholderTextColor={placeholderColor}
+              value={directoryInput}
+              onChangeText={setDirectoryInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Pressable
+              onPress={() => {
+                const trimmed = directoryInput.trim();
+                updatePreferences.mutate({
+                  defaultImportExportDirectory: trimmed || undefined,
+                });
+                Alert.alert("Success", "Directory preference saved.");
+              }}
+              style={styles.saveDirectoryButton}
+            >
+              <ThemedText type="bodySemibold" propFontScale={inverseFontScale}>
+                Save
+              </ThemedText>
+            </Pressable>
+          </View>
+
+          {preferences.defaultImportExportDirectory && (
+            <ThemedText
+              type="small"
+              variant="secondary"
+              style={styles.currentDirectory}
+              propFontScale={inverseFontScale}
+            >
+              Current: {preferences.defaultImportExportDirectory}
+            </ThemedText>
+          )}
+        </SectionContainer>
       </ScreenContainer>
     </SafeAreaView>
   );
@@ -341,6 +412,32 @@ const styles = StyleSheet.create({
   },
   previewContent: {
     gap: Spacing.sm,
+  },
+  directoryInputContainer: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    alignItems: "center",
+  },
+  directoryInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.sm,
+    fontSize: 16,
+    minHeight: 44,
+  },
+  saveDirectoryButton: {
+    backgroundColor: "#0a7ea4",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+  },
+  currentDirectory: {
+    marginTop: Spacing.xs,
+    fontStyle: "italic",
   },
 });
 

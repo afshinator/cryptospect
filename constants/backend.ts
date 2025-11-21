@@ -28,20 +28,26 @@ function getBackendApiKey(): string {
 
 /**
  * Get backend base URL from environment variables
+ * For Expo, use EXPO_PUBLIC_ prefix for client-side variables
+ * Falls back to Constants.expoConfig.extra for native builds
  */
 function getBackendBaseUrl(): string {
+  // Try process.env first (works for web and when set via app.config.js)
   const envUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || process.env.BACKEND_BASE_URL;
   if (envUrl) {
     return envUrl;
   }
 
+  // Fallback to Constants.expoConfig.extra (for native builds)
   const extraUrl = Constants.expoConfig?.extra?.backendBaseUrl;
   if (extraUrl) {
     return extraUrl;
   }
 
-  // Default fallback
-  return 'https://cryptospect-backend.vercel.app';
+  // No fallback - require environment variable to be set
+  throw new Error(
+    'BACKEND_BASE_URL is not set. Please create a .env file with EXPO_PUBLIC_BACKEND_BASE_URL=your_backend_url'
+  );
 }
 
 export const BACKEND_BASE_URL = getBackendBaseUrl();

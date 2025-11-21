@@ -28,6 +28,7 @@ import {
   useDeleteCoinList,
   useUpdateCoinList,
 } from "@/hooks/use-coin-lists";
+import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import {
   downloadCsvFile,
@@ -39,6 +40,7 @@ import {
 export default function ListsScreen() {
   const router = useRouter();
   const { data: lists, isLoading } = useCoinLists();
+  const { data: preferences } = usePreferences();
   const createList = useCreateCoinList();
   const deleteList = useDeleteCoinList();
   const updateList = useUpdateCoinList();
@@ -125,18 +127,28 @@ export default function ListsScreen() {
     }
 
     if (Platform.OS === "web") {
-      // For web, prompt for filename
+      // For web, use default directory if set, otherwise prompt for filename
+      const defaultDirectory = preferences?.defaultImportExportDirectory;
       const defaultFilename = getDefaultExportFilename();
-      const filename = prompt("Enter filename for export:", defaultFilename) || defaultFilename;
       
-      if (filename) {
-        try {
-          const csvContent = exportCoinListsToCsv(lists);
-          downloadCsvFile(csvContent, filename);
-          Alert.alert("Success", "Lists exported successfully!");
-        } catch (error) {
-          Alert.alert("Error", `Failed to export lists: ${error instanceof Error ? error.message : "Unknown error"}`);
-        }
+      let filename = defaultFilename;
+      if (defaultDirectory) {
+        // If directory is set, prepend it to the filename
+        const separator = defaultDirectory.endsWith("/") ? "" : "/";
+        filename = `${defaultDirectory}${separator}${defaultFilename}`;
+      } else {
+        // Otherwise prompt for filename
+        const prompted = prompt("Enter filename for export:", defaultFilename);
+        if (!prompted) return; // User cancelled
+        filename = prompted;
+      }
+      
+      try {
+        const csvContent = exportCoinListsToCsv(lists);
+        downloadCsvFile(csvContent, filename);
+        Alert.alert("Success", "Lists exported successfully!");
+      } catch (error) {
+        Alert.alert("Error", `Failed to export lists: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
     } else {
       // For mobile, show a message (file system integration can be added later)
@@ -154,6 +166,15 @@ export default function ListsScreen() {
       const input = document.createElement("input");
       input.type = "file";
       input.accept = ".csv";
+      
+      // Set default directory if preference is set (browser may or may not honor this)
+      const defaultDirectory = preferences?.defaultImportExportDirectory;
+      if (defaultDirectory && 'webkitdirectory' in input === false) {
+        // Note: Browsers don't allow setting default directory for security reasons,
+        // but we can at least try to set a default filename pattern
+        // The browser will remember the last used directory
+      }
+      
       input.onchange = async (event) => {
         const file = (event.target as HTMLInputElement).files?.[0];
         if (!file) return;

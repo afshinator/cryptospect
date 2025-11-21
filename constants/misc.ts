@@ -9,12 +9,14 @@ export interface UserPreferences {
   fontScale: number;
   lightDarkMode: LightDarkMode;
   currency: SupportedCurrency;
+  defaultImportExportDirectory?: string; // Default directory path for CSV import/export
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   fontScale: 1.0,
   lightDarkMode: 'system',
   currency: DEFAULT_CURRENCY,
+  defaultImportExportDirectory: undefined, // No default, user must set
 };
 
 // User Preferences

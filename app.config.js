@@ -52,7 +52,7 @@ export default {
     extra: {
       // Expose environment variables to the app via Constants.expoConfig.extra
       backendApiKey: process.env.EXPO_PUBLIC_BACKEND_API_KEY || process.env.BACKEND_API_KEY,
-      backendBaseUrl: process.env.EXPO_PUBLIC_BACKEND_BASE_URL || process.env.BACKEND_BASE_URL || "https://cryptospect-backend.vercel.app",
+      backendBaseUrl: process.env.EXPO_PUBLIC_BACKEND_BASE_URL || process.env.BACKEND_BASE_URL,
     },
   },
 };

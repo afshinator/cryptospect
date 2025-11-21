@@ -12,14 +12,15 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
 2. Set up environment variables
 
-   Create a `.env` file in the root directory with your backend API key:
+   Create a `.env` file in the root directory with your backend configuration:
 
    ```bash
    EXPO_PUBLIC_BACKEND_API_KEY=your_backend_api_key_here
+   EXPO_PUBLIC_BACKEND_BASE_URL=https://your-backend-url.vercel.app
    ```
 
    **Important:** The `.env` file is gitignored and will not be committed to version control. 
-   See `.env.example` for a template (create it if it doesn't exist).
+   See `.env.example` for a template.
 
 3. Start the app
 
@@ -65,12 +66,12 @@ The app makes API calls to four different endpoints to retrieve market data, exc
 
 ### 1. Backend API - Historical Dominance Data
 
-**Endpoint:** `https://cryptospect-backend.vercel.app/api/dominance`
+**Endpoint:** `{BACKEND_BASE_URL}/api/dominance` (configured via environment variable)
 
 **Method:** `GET`
 
 **Headers:**
-- `x-api-key: crypto_spect_2024_abc123xyz789`
+- `x-api-key: {BACKEND_API_KEY}` (configured via environment variable)
 
 **Cache Duration:** 24 hours (backend-side caching)
 
