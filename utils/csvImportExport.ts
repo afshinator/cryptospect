@@ -1,6 +1,9 @@
 // utils/csvImportExport.ts
 
 import { CoinList, CoinListItem } from "@/constants/coinLists";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import { Platform } from "react-native";
 
 /**
  * CSV format:
@@ -199,6 +202,64 @@ export function downloadCsvFile(content: string, filename: string): void {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Exports CSV file on mobile (saves to device and opens share dialog)
+ */
+export async function exportCsvFileMobile(content: string, filename: string): Promise<void> {
+  // This function should only be called on mobile
+  if (Platform.OS === "web") {
+    throw new Error("exportCsvFileMobile should not be called on web. Use downloadCsvFile instead.");
+  }
+
+  // Ensure filename has .csv extension
+  const csvFilename = filename.endsWith(".csv") ? filename : `${filename}.csv`;
+  
+  // Get the document directory (use cacheDirectory as fallback)
+  // Use new API: Paths.document and Paths.cache return Directory objects
+  let directory = FileSystem.Paths?.document;
+  
+  // Fallback to cache directory if document directory is not available
+  if (!directory) {
+    directory = FileSystem.Paths?.cache;
+  }
+  
+  // If both are null, this is a platform issue
+  if (!directory) {
+    throw new Error("FileSystem directory is not available. Both document and cache directories are null. This may be a platform limitation. Try restarting the app or checking file system permissions.");
+  }
+  
+  try {
+    // Use new API: Create File object in the directory and write content
+    const file = new FileSystem.File(directory, csvFilename);
+    
+    // Write content - using writableStream API for the new filesystem
+    const writer = file.writableStream().getWriter();
+    const encoder = new TextEncoder();
+    await writer.write(encoder.encode(content));
+    await writer.close();
+
+    // Get the file URI for sharing
+    const fileUri = file.uri;
+
+    // Check if sharing is available and open share dialog
+    // Note: shareAsync returns void, so we can't detect if user cancelled
+    // The file is already saved at this point, so we return success
+    const isAvailable = await Sharing.isAvailableAsync();
+    if (isAvailable) {
+      // Share/open the file (user may cancel, but file is already saved)
+      await Sharing.shareAsync(fileUri, {
+        mimeType: "text/csv",
+        dialogTitle: "Export Coin Lists",
+      });
+    } else {
+      throw new Error("Sharing is not available on this device");
+    }
+  } catch (error) {
+    console.error("Error in exportCsvFileMobile:", error);
+    throw error;
+  }
 }
 
 /**

@@ -33,9 +33,12 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 import {
   downloadCsvFile,
   exportCoinListsToCsv,
+  exportCsvFileMobile,
   getDefaultExportFilename,
   importCoinListsFromCsv,
 } from "@/utils/csvImportExport";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
 
 export default function ListsScreen() {
   const router = useRouter();
@@ -120,16 +123,17 @@ export default function ListsScreen() {
     router.push(`/list-detail?id=${listId}`);
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!lists || lists.length === 0) {
       Alert.alert("No Lists", "There are no lists to export.");
       return;
     }
 
+    const defaultFilename = getDefaultExportFilename();
+
     if (Platform.OS === "web") {
       // For web, use default directory if set, otherwise prompt for filename
       const defaultDirectory = preferences?.defaultImportExportDirectory;
-      const defaultFilename = getDefaultExportFilename();
       
       let filename = defaultFilename;
       if (defaultDirectory) {
@@ -151,16 +155,19 @@ export default function ListsScreen() {
         Alert.alert("Error", `Failed to export lists: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
     } else {
-      // For mobile, show a message (file system integration can be added later)
-      Alert.alert(
-        "Export",
-        "Export functionality is currently available on web only. Mobile support coming soon.",
-        [{ text: "OK" }]
-      );
+      // For mobile, save to device and open share dialog
+      try {
+        const csvContent = exportCoinListsToCsv(lists);
+        await exportCsvFileMobile(csvContent, defaultFilename);
+        // Don't show success dialog - the share dialog opening is sufficient feedback
+        // The file is saved, and user can cancel the share if they want
+      } catch (error) {
+        Alert.alert("Error", `Failed to export lists: ${error instanceof Error ? error.message : "Unknown error"}`);
+      }
     }
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (Platform.OS === "web") {
       // Create file input element
       const input = document.createElement("input");
@@ -181,37 +188,7 @@ export default function ListsScreen() {
 
         try {
           const text = await file.text();
-          const importedLists = importCoinListsFromCsv(text);
-
-          if (importedLists.length === 0) {
-            Alert.alert("Error", "No valid lists found in the CSV file.");
-            return;
-          }
-
-          // Check for duplicate names
-          const existingListNames = new Set((lists || []).map((l) => l.name.toLowerCase()));
-          const duplicateNames = importedLists
-            .filter((list) => existingListNames.has(list.name.toLowerCase()))
-            .map((list) => list.name);
-
-          if (duplicateNames.length > 0) {
-            Alert.alert(
-              "Duplicate Lists Found",
-              `The following lists already exist: ${duplicateNames.join(", ")}\n\nDo you want to replace them?`,
-              [
-                {
-                  text: "Cancel",
-                  style: "cancel",
-                },
-                {
-                  text: "Replace",
-                  onPress: () => performImport(importedLists, duplicateNames),
-                },
-              ]
-            );
-          } else {
-            performImport(importedLists, []);
-          }
+          processImportedCsv(text);
         } catch (error) {
           Alert.alert(
             "Import Error",
@@ -221,11 +198,70 @@ export default function ListsScreen() {
       };
       input.click();
     } else {
-      // For mobile, show a message (file system integration can be added later)
+      // For mobile, use document picker
+      try {
+        const result = await DocumentPicker.getDocumentAsync({
+          type: "text/csv",
+          copyToCacheDirectory: true,
+        });
+
+        if (result.canceled) {
+          return; // User cancelled
+        }
+
+        const file = result.assets[0];
+        
+        // Read the file content using new File API
+        const fileObj = new FileSystem.File(file.uri);
+        const text = await fileObj.text();
+
+        processImportedCsv(text);
+      } catch (error) {
+        Alert.alert(
+          "Import Error",
+          `Failed to import lists: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+    }
+  };
+
+  const processImportedCsv = (text: string) => {
+    try {
+      const importedLists = importCoinListsFromCsv(text);
+
+      if (importedLists.length === 0) {
+        Alert.alert("Error", "No valid lists found in the CSV file.");
+        return;
+      }
+
+      // Check for duplicate names
+      const existingListNames = new Set((lists || []).map((l) => l.name.toLowerCase()));
+      const duplicateNames = importedLists
+        .filter((list) => existingListNames.has(list.name.toLowerCase()))
+        .map((list) => list.name);
+
+      if (duplicateNames.length > 0) {
+        Alert.alert(
+          "Duplicate Lists Found",
+          `The following lists already exist: ${duplicateNames.join(", ")}\n\nDo you want to replace them?`,
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+            },
+            {
+              text: "Replace",
+              onPress: () => performImport(importedLists, duplicateNames),
+            },
+          ]
+        );
+      } else {
+        performImport(importedLists, []);
+      }
+    } catch (error) {
       Alert.alert(
-        "Import",
-        "Import functionality is currently available on web only. Mobile support coming soon.",
-        [{ text: "OK" }]
+        "Import Error",
+        `Failed to import lists: ${error instanceof Error ? error.message : "Unknown error"}`
       );
     }
   };
