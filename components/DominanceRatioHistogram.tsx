@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
   caption: {
     marginTop: Spacing.sm,
-    fontSize: 10,
+    fontSize: 14,
     textAlign: 'center',
   },
   currentRatioMarker: {

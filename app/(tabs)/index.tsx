@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 
 import { CurrencyBanner } from "@/components/CurrencyBanner";
 import { CoinListItem } from "@/components/CoinListItem";
+import { DominanceMomentumWidget } from "@/components/DominanceMomentumWidget";
 import { DominanceSection } from "@/components/DominanceSection";
 import { HelloWave } from "@/components/hello-wave";
 import { ThemedText } from "@/components/themed-text";
@@ -41,6 +42,9 @@ export default function HomeScreen() {
 
         {/* Dominance Section */}
         <DominanceSection showAllFour={true}/>
+
+        {/* Dominance Momentum Widget */}
+        <DominanceMomentumWidget />
 
         {/* Coin Lists Section */}
         <ThemedView style={styles.listsSection}>

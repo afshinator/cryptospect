@@ -142,21 +142,21 @@ export default function DominanceScreen() {
             <>
               {/* === CHART 1: RATIO LINE CHART === */}
               <Collapsible title="Ratio Chart Details">
-                <ThemedText>
+                <ThemedText type="body" style={styles.explanatoryText}>
                   This chart plots the BTC/ETH Dominance Ratio over time, providing
                   a clear visual signal for whether market leadership is
                   consolidation into Bitcoin or rotating toward Ethereum and the
                   wider altcoin market.
                 </ThemedText>
 
-                <ThemedText>
+                <ThemedText type="body" style={styles.explanatoryText}>
                   Rising Ratio (Moving Up): This means BTC.D is gaining strength
                   faster than ETH.D, or ETH.D is weakening faster than BTC.D. This
                   signals a consolidation of capital into Bitcoin, which is
                   typically a defensive or &quot;risk-off&quot; move within the crypto space.
                 </ThemedText>
 
-                <ThemedText>
+                <ThemedText type="body" style={styles.explanatoryText}>
                   Falling Ratio (Moving Down): This means ETH.D is gaining strength
                   relative to BTC.D. This signals a rotation of capital into
                   Ethereum and often serves as a lead indicator for the wider
@@ -169,12 +169,12 @@ export default function DominanceScreen() {
 
               {/* === CHART 2: RATIO HISTOGRAM === */}
               <Collapsible title="Ratio Distribution Details">
-                <ThemedText>
+                <ThemedText type="body" style={styles.explanatoryText}>
                   The chart provides context for the current ratio by answering the
                   question: &quot;How often has the ratio been at this level in the
                   past?&quot;
                 </ThemedText>
-                <ThemedText>
+                <ThemedText type="body" style={styles.explanatoryText}>
                   The &quot;Fair Value Zone&quot; on this chart is simply the range of ratios
                   where the market has spent the most time. Tall Bars = Fair Value:
                   The tallest bars represent the most frequent ratios. This is the
@@ -184,7 +184,7 @@ export default function DominanceScreen() {
                   and ETH&apos;s dominance is stable, balanced, and historically common.
                   No significant, non-standard capital rotation is likely signaled.
                 </ThemedText>
-                <ThemedText>
+                <ThemedText type="body" style={styles.explanatoryText}>
                   If the current ratio falls into one of the short-bar extreme
                   zones, the chart is signaling an imbalance that often precedes a
                   market rotation or correction in dominance.
@@ -196,13 +196,13 @@ export default function DominanceScreen() {
 
               {/* === CHART 3: PERCENTAGE CHANGE INDICATOR */}
               <Collapsible title="Momentum Chart Details">
-                <ThemedText>
+                <ThemedText type="body" style={styles.explanatoryText}>
                   This chart filters out long-term trends to highlight short-term rotational velocity and momentum. It plots the 7-day percentage change of the BTC/ETH Dominance Ratio.
                 </ThemedText>
-                <ThemedText>
+                <ThemedText type="body" style={styles.explanatoryText}>
                   Sharp Spikes Above 0%: Indicates a sudden, strong rotational momentum into BTC within the last week. This is often a sign of market defensiveness or a flight to safety within the crypto market.
                 </ThemedText>
-                <ThemedText>
+                <ThemedText type="body" style={styles.explanatoryText}>
                   Sharp Dips Below 0%: Indicates a sudden, strong rotational momentum into ETH (and potentially wider altcoins) within the last week. This is often a sign of increasing risk appetite or rotation out of BTC.
                 </ThemedText>
               </Collapsible>
@@ -262,5 +262,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.md,
+  },
+  explanatoryText: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: Spacing.sm,
   },
 });
