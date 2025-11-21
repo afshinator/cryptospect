@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     // No additional padding needed for home variant
   },
   listItemContentLists: {
-    padding: Spacing.md,
+    padding: Spacing.sm,
   },
   listItemHeader: {
     flexDirection: "row",
