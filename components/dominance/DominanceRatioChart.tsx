@@ -7,7 +7,7 @@ import { Colors, Spacing } from "@/constants/theme";
 
 // Import the generic chart renderer
 import GenericRnChart from '@/components/dominance/GenericRnChart';
-import { Collapsible } from './ui/collapsible';
+import { Collapsible } from '../ui/collapsible';
 
 // --- CONFIGURATION CONSTANTS (Visuals & Data Prep) ---
 
@@ -133,21 +133,21 @@ export default function DominanceRatioChart({ historicalData }: DominanceRatioCh
       </ThemedText>
       <Collapsible title="Details" >
         <ThemedText type="body" style={styles.explanatoryText}>
-          This chart plots the BTC/ETH Dominance Ratio over time, giving you an idea of 
+          This chart plots the BTC/ETH Dominance Ratio over time, giving you an idea of
           whether the market is consolidating into BTC or rotating toward ETH and the alt-coins.
           consolidation into BTC or rotating toward ETH and the alt-coins.
         </ThemedText>
 
         <ThemedText type="body" style={styles.explanatoryText}>
-        <ThemedText type="bodySemibold" >Rising Ratio (Moving Up)</ThemedText>: This means BTC.D is gaining strength
-          faster than ETH.D, or ETH.D is weakening faster than BTC.D. 
+          <ThemedText type="bodySemibold" >Rising Ratio (Moving Up)</ThemedText>: This means BTC.D is gaining strength
+          faster than ETH.D, or ETH.D is weakening faster than BTC.D.
           Typically a defensive or &quot;risk-off&quot; move.
         </ThemedText>
 
         <ThemedText type="body" style={styles.explanatoryText}>
-        <ThemedText type="bodySemibold" >Falling Ratio (Moving Down)</ThemedText>: 
-         ETH.D is gaining strength relative to BTC.D. 
-         Capital rotation into
+          <ThemedText type="bodySemibold" >Falling Ratio (Moving Down)</ThemedText>:
+          ETH.D is gaining strength relative to BTC.D.
+          Capital rotation into
           ETH and often a lead indicator for wider altcoin rally.
         </ThemedText>
       </Collapsible>
@@ -188,7 +188,8 @@ const styles = StyleSheet.create({
   loadingText: {
     padding: Spacing.xl,
     textAlign: 'center',
-  }, explanatoryText: {
+  }, 
+  explanatoryText: {
     marginBottom: Spacing.sm,
   },
 });

@@ -116,3 +116,106 @@ export function useCalculatePercentageChange(
         rawChangeData: percentageChanges
     };
 }
+
+/**
+ * Calculates statistics for all 7-day ratio changes across the entire dataset.
+ * This function extracts all valid 7-day changes (excluding the first 7 days which are placeholders).
+ * 
+ * @param historicalData Array of historical dominance snapshots.
+ * @returns An object containing statistics about all 7-day changes: min, max, average, count, and all values.
+ */
+export function calculateAll7DayRatioChanges(
+    historicalData: HistoricalDominanceSnapshot[] | null | undefined
+): {
+    min: number;
+    max: number;
+    average: number;
+    count: number;
+    allChanges: number[];
+    validChanges: number[]; // Excludes the first 7 placeholder zeros
+    minDate: number | null; // Date when min occurred
+    maxDate: number | null; // Date when max occurred
+} {
+    // Default return if data is missing
+    if (!historicalData || historicalData.length < MOVING_AVERAGE_PERIOD) {
+        return {
+            min: 0,
+            max: 0,
+            average: 0,
+            count: 0,
+            allChanges: [],
+            validChanges: [],
+            minDate: null,
+            maxDate: null
+        };
+    }
+
+    // 1. Calculate the daily BTC/ETH Ratio
+    const ratios = historicalData.map(item => {
+        return item.ethDominance > 0
+            ? item.btcDominance / item.ethDominance
+            : 0;
+    });
+
+    // 2. Calculate all 7-day Percentage Changes with date tracking
+    const percentageChanges: number[] = [];
+    const changeDates: number[] = []; // Track dates for each change
+    for (let i = 0; i < ratios.length; i++) {
+        if (i < MOVING_AVERAGE_PERIOD) {
+            // Not enough history, use 0 as placeholder for the first 7 days
+            percentageChanges.push(0);
+            changeDates.push(historicalData[i].date);
+        } else {
+            const previousRatio = ratios[i - MOVING_AVERAGE_PERIOD];
+            const currentRatio = ratios[i];
+
+            let change = 0;
+            if (previousRatio > 0) {
+                // Formula: ((Current / Previous) - 1) * 100
+                change = ((currentRatio / previousRatio) - 1) * 100;
+            }
+            percentageChanges.push(change);
+            changeDates.push(historicalData[i].date);
+        }
+    }
+
+    // 3. Extract valid changes (skip the first 7 placeholder zeros)
+    const validChanges = percentageChanges.slice(MOVING_AVERAGE_PERIOD);
+    const validDates = changeDates.slice(MOVING_AVERAGE_PERIOD);
+
+    // 4. Calculate statistics
+    if (validChanges.length === 0) {
+        return {
+            min: 0,
+            max: 0,
+            average: 0,
+            count: 0,
+            allChanges: percentageChanges,
+            validChanges: [],
+            minDate: null,
+            maxDate: null
+        };
+    }
+
+    const min = Math.min(...validChanges);
+    const max = Math.max(...validChanges);
+    const sum = validChanges.reduce((acc, val) => acc + val, 0);
+    const average = sum / validChanges.length;
+
+    // Find dates for min and max
+    const minIndex = validChanges.indexOf(min);
+    const maxIndex = validChanges.indexOf(max);
+    const minDate = minIndex >= 0 ? validDates[minIndex] : null;
+    const maxDate = maxIndex >= 0 ? validDates[maxIndex] : null;
+
+    return {
+        min,
+        max,
+        average,
+        count: validChanges.length,
+        allChanges: percentageChanges,
+        validChanges,
+        minDate,
+        maxDate
+    };
+}

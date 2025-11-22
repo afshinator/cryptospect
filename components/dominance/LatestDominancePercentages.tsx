@@ -215,22 +215,22 @@ export function LatestDominancePercentages({
           </ThemedText>
         )}
       </View>
-      <View style={styles.grid}>
-        <ThemedView style={styles.card}>
+          <View style={styles.grid}>
+            <ThemedView style={styles.card}>
           <DominanceNumberDisplay
             type="btc"
             value={dominance.btc}
             color={btcColor}
           />
-        </ThemedView>
-        <ThemedView style={styles.card}>
+            </ThemedView>
+            <ThemedView style={styles.card}>
           <DominanceNumberDisplay
             type="eth"
             value={dominance.eth}
             color={ethColor}
           />
-        </ThemedView>
-      </View>
+            </ThemedView>
+          </View>
     </SectionContainer>
   );
 }

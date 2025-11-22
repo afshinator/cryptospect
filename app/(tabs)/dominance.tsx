@@ -14,12 +14,12 @@ import { useQuery } from "@tanstack/react-query";
 
 // Import the new components
 import BtcAndEthDominanceChartWrapper from "@/components/dominance/BtcAndEthDominanceChartWrapper";
+import { DominanceMomentumWidget } from "@/components/dominance/DominanceMomentumWidget";
+import DominancePercentageChangeChart from "@/components/dominance/DominancePercentageChangeChart";
+import DominanceRatioChart from "@/components/dominance/DominanceRatioChart";
+import DominanceRatioHistogram from "@/components/dominance/DominanceRatioHistogram";
 import { LatestDominancePercentages } from "@/components/dominance/LatestDominancePercentages";
-import DominancePercentageChangeChart from "@/components/DominancePercentageChangeChart";
-import DominanceRatioChart from "@/components/DominanceRatioChart";
-import DominanceRatioHistogram from "@/components/DominanceRatioHistogram";
 import { ScreenContainer } from "@/components/ScreenContainer";
-import { Collapsible } from "@/components/ui/collapsible";
 
 // --- CONFIGURATION CONSTANTS (Only timing left here) ---
 
@@ -137,67 +137,34 @@ export default function DominanceScreen() {
             />
           </View>
 
+          {/* Dominance Momentum Widget */}
+          <View style={styles.spacingWrapper}>
+            <DominanceMomentumWidget extendedInfo={true} />
+          </View>
+
           <HistoricalDataStatus isPending={isPending} error={error as Error | null} />
-
-          {/* BTC/ETH Historical Line Chart (Main View) - Only show when data is available */}
-          {dominanceData && dominanceData.length > 0 && (
-            <View style={styles.spacingWrapper}>
-              <BtcAndEthDominanceChartWrapper
-                dominanceData={dominanceData}
-                monthLabel={monthLabel}
-              /></View>
-          )}
-
 
           {/* Charts and details - Only show when data is available */}
           {dominanceData && dominanceData.length > 0 && (
             <>
+              {/* BTC/ETH Historical Line Chart (Main View) - Only show when data is available */}
 
               <View style={styles.spacingWrapper}>
-                <ThemedView style={styles.chartWrapper}>
-                  <DominanceRatioChart historicalData={dominanceData} />
-                </ThemedView></View>
+                <BtcAndEthDominanceChartWrapper
+                  dominanceData={dominanceData}
+                  monthLabel={monthLabel}
+                />
+              </View>
 
-              {/* === CHART 2: RATIO HISTOGRAM === */}
-              <Collapsible title="Ratio Distribution Details">
-                <ThemedText type="body" style={styles.explanatoryText}>
-                  The chart provides context for the current ratio by answering the
-                  question: &quot;How often has the ratio been at this level in the
-                  past?&quot;
-                </ThemedText>
-                <ThemedText type="body" style={styles.explanatoryText}>
-                  The &quot;Fair Value Zone&quot; on this chart is simply the range of ratios
-                  where the market has spent the most time. Tall Bars = Fair Value:
-                  The tallest bars represent the most frequent ratios. This is the
-                  statistical mean or mode of the data. The market generally
-                  gravitates toward this area. Meaning: When the ratio is inside
-                  this zone, it suggests the relationship between BTC&apos;s dominance
-                  and ETH&apos;s dominance is stable, balanced, and historically common.
-                  No significant, non-standard capital rotation is likely signaled.
-                </ThemedText>
-                <ThemedText type="body" style={styles.explanatoryText}>
-                  If the current ratio falls into one of the short-bar extreme
-                  zones, the chart is signaling an imbalance that often precedes a
-                  market rotation or correction in dominance.
-                </ThemedText>
-              </Collapsible>
-              <ThemedView style={styles.histogramWrapper}>
+              <View style={styles.spacingWrapper}>
+                <DominanceRatioChart historicalData={dominanceData} />
+              </View>
+
+              <View style={styles.spacingWrapper}>
                 <DominanceRatioHistogram historicalData={dominanceData} />
-              </ThemedView>
+              </View>
 
-              {/* === CHART 3: PERCENTAGE CHANGE INDICATOR */}
-              <Collapsible title="Momentum Chart Details">
-                <ThemedText type="body" style={styles.explanatoryText}>
-                  This chart filters out long-term trends to highlight short-term rotational velocity and momentum. It plots the 7-day percentage change of the BTC/ETH Dominance Ratio.
-                </ThemedText>
-                <ThemedText type="body" style={styles.explanatoryText}>
-                  Sharp Spikes Above 0%: Indicates a sudden, strong rotational momentum into BTC within the last week. This is often a sign of market defensiveness or a flight to safety within the crypto market.
-                </ThemedText>
-                <ThemedText type="body" style={styles.explanatoryText}>
-                  Sharp Dips Below 0%: Indicates a sudden, strong rotational momentum into ETH (and potentially wider altcoins) within the last week. This is often a sign of increasing risk appetite or rotation out of BTC.
-                </ThemedText>
-              </Collapsible>
-              <ThemedView style={styles.chartWrapper}>
+              <ThemedView style={styles.spacingWrapper}>
                 <DominancePercentageChangeChart historicalData={dominanceData} />
               </ThemedView>
             </>
@@ -217,14 +184,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     paddingHorizontal: Spacing.md
   },
-  chartWrapper: {
-    // paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
-  histogramWrapper: {
-    marginBottom: Spacing.xl,
-    marginLeft: -30,
-  },
+
   center: {
     justifyContent: "center",
     alignItems: "center",

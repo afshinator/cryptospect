@@ -1,7 +1,7 @@
 import { CoinFilters } from "@/components/CoinFilters";
 import { CoinListItem } from "@/components/CoinListItem";
 import { CurrencyBanner } from "@/components/CurrencyBanner";
-import { DominanceMomentumWidget } from "@/components/DominanceMomentumWidget";
+import { DominanceMomentumWidget } from "@/components/dominance/DominanceMomentumWidget";
 import { LatestDominancePercentages } from "@/components/dominance/LatestDominancePercentages";
 import { FilteredCoinsResults } from "@/components/FilteredCoinsResults";
 import { HelloWave } from "@/components/hello-wave";
