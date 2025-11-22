@@ -289,12 +289,12 @@ export async function fetchCoinDataFromBackend(
     // Debug: Log the mapped data
     logger(`✅ [Backend API] Successfully fetched coin data for ${coinId}`, 'log', 'info');
     logger(`   └─ Data source: BACKEND API`, 'log', 'info');
-    logger(`   └─ Name: ${mappedData.name}`, 'log', 'info');
-    logger(`   └─ Symbol: ${mappedData.symbol}`, 'log', 'info');
-    logger(`   └─ Current price: ${mappedData.current_price}`, 'log', 'info');
-    logger(`   └─ 24h change: ${mappedData.price_change_percentage_24h}`, 'log', 'info');
-    logger(`   └─ Market cap: ${mappedData.market_cap}`, 'log', 'info');
-    logger(`   └─ Full mapped data:`, 'log', 'info', mappedData);
+    // logger(`   └─ Name: ${mappedData.name}`, 'log', 'info');
+    // logger(`   └─ Symbol: ${mappedData.symbol}`, 'log', 'info');
+    // logger(`   └─ Current price: ${mappedData.current_price}`, 'log', 'info');
+    // logger(`   └─ 24h change: ${mappedData.price_change_percentage_24h}`, 'log', 'info');
+    // logger(`   └─ Market cap: ${mappedData.market_cap}`, 'log', 'info');
+    // logger(`   └─ Full mapped data:`, 'log', 'info', mappedData);
     
     return mappedData;
   } catch (error) {
