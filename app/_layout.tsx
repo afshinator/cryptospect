@@ -13,6 +13,7 @@ import "react-native-reanimated";
  
  
 import { useAppInitialization } from "@/hooks/use-app-initializations";
+import { useStartupCoinFetch } from "@/hooks/use-startup-coin-fetch";
 import { ActivityIndicator, Platform, View } from "react-native";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,8 @@ const LoadingGuard = () => {
 
 function RootLayoutContent() {
   const { isReady, resolvedColorScheme } = useAppInitialization();
+  // Start background fetching of coins not in main cache
+  useStartupCoinFetch();
 
   if (!isReady) {
     return <LoadingGuard />;

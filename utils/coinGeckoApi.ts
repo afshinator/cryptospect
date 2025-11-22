@@ -1,6 +1,7 @@
 // utils/coinGeckoApi.ts
 
 import {
+  COINGECKO_COIN_BY_ID_BASE_ENDPOINT,
   COINGECKO_COINS_MARKETS_ENDPOINT,
   COINGECKO_SEARCH_ENDPOINT,
   CoinGeckoMarketData,
@@ -240,6 +241,132 @@ export async function fetchAndPersistCryptoMarket(
     
     // Only throw if there's no existing data to fall back to
     throw e;
+  }
+}
+
+/**
+ * Fetches full market data for a specific coin using CoinGecko's /coins/{id} endpoint.
+ * This endpoint provides comprehensive market data that the search endpoint doesn't include.
+ * @param coinId - The CoinGecko coin ID (e.g., "bitcoin", "ethereum")
+ * @param currency - The currency to fetch prices in (defaults to "usd")
+ * @returns Full market data for the coin, mapped to CoinGeckoMarketData format
+ * @throws {Error} if the API call fails
+ */
+export async function fetchCoinMarketData(
+  coinId: string,
+  currency: SupportedCurrency = "usd"
+): Promise<CoinGeckoMarketData | null> {
+  if (!coinId || !coinId.trim()) {
+    return null;
+  }
+
+  const url = new URL(`${COINGECKO_COIN_BY_ID_BASE_ENDPOINT}/${coinId.trim()}`);
+  // Optimize response: only get market_data, skip localization, tickers, community_data, developer_data
+  url.searchParams.append('localization', 'false');
+  url.searchParams.append('tickers', 'false');
+  url.searchParams.append('market_data', 'true');
+  url.searchParams.append('community_data', 'false');
+  url.searchParams.append('developer_data', 'false');
+  url.searchParams.append('sparkline', 'false');
+
+  try {
+    const response = await fetch(url.toString());
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('retry-after');
+        const retrySeconds = retryAfter ? parseInt(retryAfter, 10) : 60;
+        console.warn(`⚠️ Rate limit exceeded for ${coinId}. Retry after ${retrySeconds} seconds.`);
+        // Return null instead of throwing - this allows the UI to continue showing partial data
+        return null;
+      }
+      if (response.status === 404) {
+        console.warn(`⚠️ Coin not found: ${coinId}`);
+        return null;
+      }
+      throw new Error(`❌ CoinGecko API returned status ${response.status} for coin ${coinId}`);
+    }
+
+    const data: any = await response.json();
+
+    if (!data || !data.market_data) {
+      console.warn(`⚠️ No market data available for coin: ${coinId}`, {
+        hasData: !!data,
+        hasMarketData: !!data?.market_data,
+        dataKeys: data ? Object.keys(data) : [],
+      });
+      return null;
+    }
+
+    const marketData = data.market_data;
+    const currentPrice = marketData.current_price?.[currency] ?? null;
+    const marketCap = marketData.market_cap?.[currency] ?? null;
+    const totalVolume = marketData.total_volume?.[currency] ?? null;
+    const high24h = marketData.high_24h?.[currency] ?? null;
+    const low24h = marketData.low_24h?.[currency] ?? null;
+    const priceChange24h = marketData.price_change_24h?.[currency] ?? null;
+    let priceChangePercentage24h = marketData.price_change_percentage_24h?.[currency] ?? null;
+    
+    // Fallback: Calculate 24h percentage change from price_change_24h and current_price if not provided
+    if (priceChangePercentage24h === null && priceChange24h !== null && currentPrice !== null && currentPrice !== 0) {
+      // price_change_24h = current_price - price_24h_ago
+      // So: price_24h_ago = current_price - price_change_24h
+      const price24hAgo = currentPrice - priceChange24h;
+      if (price24hAgo !== 0) {
+        priceChangePercentage24h = (priceChange24h / price24hAgo) * 100;
+        console.log(`📊 Calculated 24h % change from price_change_24h for ${coinId}:`, {
+          currentPrice,
+          priceChange24h,
+          price24hAgo,
+          calculatedPercentage: priceChangePercentage24h,
+        });
+      }
+    }
+    
+    console.log(`📊 Market data extracted for ${coinId}:`, {
+      currency,
+      currentPrice,
+      priceChangePercentage24h,
+      hasPriceChange: priceChangePercentage24h !== null && priceChangePercentage24h !== undefined,
+      marketDataKeys: Object.keys(marketData),
+    });
+    const marketCapChange24h = marketData.market_cap_change_24h?.[currency] ?? null;
+    const marketCapChangePercentage24h = marketData.market_cap_change_percentage_24h?.[currency] ?? null;
+
+    // Map to CoinGeckoMarketData format
+    const mappedData: CoinGeckoMarketData = {
+      id: data.id || coinId,
+      symbol: data.symbol || '',
+      name: data.name || '',
+      image: data.image?.large || data.image?.small || data.image?.thumb || '',
+      current_price: currentPrice,
+      market_cap: marketCap,
+      market_cap_rank: marketData.market_cap_rank ?? null,
+      fully_diluted_valuation: marketData.fully_diluted_valuation?.[currency] ?? null,
+      total_volume: totalVolume,
+      high_24h: high24h,
+      low_24h: low24h,
+      price_change_24h: priceChange24h,
+      price_change_percentage_24h: priceChangePercentage24h,
+      market_cap_change_24h: marketCapChange24h,
+      market_cap_change_percentage_24h: marketCapChangePercentage24h,
+      circulating_supply: marketData.circulating_supply ?? null,
+      total_supply: marketData.total_supply ?? null,
+      max_supply: marketData.max_supply ?? null,
+      ath: marketData.ath?.[currency] ?? null,
+      ath_change_percentage: marketData.ath_change_percentage?.[currency] ?? null,
+      ath_date: marketData.ath_date?.[currency] ?? null,
+      atl: marketData.atl?.[currency] ?? null,
+      atl_change_percentage: marketData.atl_change_percentage?.[currency] ?? null,
+      atl_date: marketData.atl_date?.[currency] ?? null,
+      roi: marketData.roi ?? null,
+      last_updated: marketData.last_updated ?? null,
+    };
+
+    return mappedData;
+  } catch (error) {
+    console.error(`❌ Error fetching market data for coin ${coinId}:`, error);
+    throw error;
   }
 }
 

@@ -10,6 +10,7 @@ export const COINGECKO_GLOBAL_PATH = "/global";
 export const COINGECKO_SIMPLE_PRICE_PATH = "/simple/price";
 export const COINGECKO_COINS_MARKETS_PATH = "/coins/markets"; // Use the path only
 export const COINGECKO_SEARCH_PATH = "/search"; // Use the path only
+export const COINGECKO_COIN_BY_ID_PATH = "/coins"; // Use the path only, append /{id}
 
 // Endpoint for global market data (Full URL is now easy to construct)
 export const COINGECKO_GLOBAL_DATA_ENDPOINT = `${COINGECKO_BASE_URL}${COINGECKO_GLOBAL_PATH}`;
@@ -19,6 +20,9 @@ export const COINGECKO_COINS_MARKETS_ENDPOINT = `${COINGECKO_BASE_URL}${COINGECK
 
 // Endpoint for searching coins
 export const COINGECKO_SEARCH_ENDPOINT = `${COINGECKO_BASE_URL}${COINGECKO_SEARCH_PATH}`;
+
+// Base endpoint for coin details by ID (append /{id} to get specific coin)
+export const COINGECKO_COIN_BY_ID_BASE_ENDPOINT = `${COINGECKO_BASE_URL}${COINGECKO_COIN_BY_ID_PATH}`;
 
 // API Parameters for /coins/markets
 export const MARKET_DATA_PER_PAGE = 250; // Free tier max

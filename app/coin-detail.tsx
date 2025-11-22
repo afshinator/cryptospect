@@ -2,7 +2,7 @@
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AthAtlLogScaleBar } from "@/components/AthAtlLogScaleBar";
@@ -19,7 +19,8 @@ import { useAppInitialization } from "@/hooks/use-app-initializations";
 import { useCoinLists } from "@/hooks/use-coin-lists";
 import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import { getSearchedCoin } from "@/utils/searchedCoinsStorage";
+import { useStartupCoinFetch } from "@/hooks/use-startup-coin-fetch";
+import { getSearchedCoin, loadSearchedCoins, SearchedCoinWithTimestamp } from "@/utils/searchedCoinsStorage";
 
 // Layout constants for alignment and spacing tweaks
 const PRICE_COLUMN_RIGHT_PADDING = 50; // Web: horizontal padding on right side of price column
@@ -33,6 +34,7 @@ export default function CoinDetailScreen() {
   const { cryptoMarket } = useAppInitialization();
   const { data: lists } = useCoinLists();
   const { data: preferences } = usePreferences();
+  const startupFetchState = useStartupCoinFetch();
 
   const borderColor = useThemeColor({}, "border");
   const textColor = useThemeColor({}, "text");
@@ -44,17 +46,56 @@ export default function CoinDetailScreen() {
   // Use smaller font for Market Data labels on mobile when font scaling is >= 1.3x
   const marketDataLabelType = Platform.OS !== 'web' && (preferences?.fontScale ?? 1.0) >= 1.3 ? "xsmall" : "body";
 
-  const [searchedCoin, setSearchedCoin] = useState<CoinGeckoMarketData | null>(null);
+  const [searchedCoin, setSearchedCoin] = useState<SearchedCoinWithTimestamp | null>(null);
 
   // Find the coin in the market data
   const coin = useMemo(() => {
-    return cryptoMarket?.data?.find((c) => c.id === id);
+    if (!id) return undefined;
+    // Normalize ID to lowercase for comparison (CoinGecko IDs are lowercase)
+    const normalizedId = id.toLowerCase();
+    return cryptoMarket?.data?.find((c) => c.id.toLowerCase() === normalizedId);
   }, [cryptoMarket?.data, id]);
 
   // If coin not in main cache, check searched coins storage
   useEffect(() => {
     if (!coin && id) {
-      getSearchedCoin(id).then(setSearchedCoin).catch(console.error);
+      // Normalize ID to lowercase for lookup
+      const normalizedId = id.toLowerCase();
+      console.log(`🔍 Looking up searched coin: ${normalizedId}`);
+      
+      getSearchedCoin(normalizedId)
+        .then((searched) => {
+          if (searched) {
+            console.log(`✅ Found searched coin: ${searched.name} (${searched.id})`);
+            console.log(`📊 Market data available:`, {
+              hasPrice: searched.current_price !== null,
+              hasMarketCap: searched.market_cap !== null,
+              hasVolume: searched.total_volume !== null,
+              has24hChange: searched.price_change_percentage_24h !== null,
+              hasATH: searched.ath !== null,
+              hasATL: searched.atl !== null,
+              currentPrice: searched.current_price,
+              marketCap: searched.market_cap,
+              priceChange24h: searched.price_change_percentage_24h,
+            });
+            setSearchedCoin(searched);
+          } else {
+            console.log(`⚠️ Searched coin not found in storage: ${normalizedId}`);
+            // Try loading all searched coins to see what's available
+            loadSearchedCoins().then((all) => {
+              const keys = Object.keys(all);
+              console.log(`📦 Total searched coins in storage: ${keys.length}`);
+              if (keys.length > 0) {
+                console.log(`📋 Available coin IDs:`, keys.slice(0, 5));
+              }
+            }).catch(console.error);
+            setSearchedCoin(null);
+          }
+        })
+        .catch((error) => {
+          console.error('❌ Error loading searched coin:', error);
+          setSearchedCoin(null);
+        });
     } else {
       setSearchedCoin(null);
     }
@@ -62,6 +103,21 @@ export default function CoinDetailScreen() {
 
   // Use coin from main cache, or fallback to searched coin
   const displayCoin = coin || searchedCoin;
+
+  // Debug: Log what data we have (must be before any conditional returns)
+  useEffect(() => {
+    if (displayCoin) {
+      console.log(`📱 Display coin data:`, {
+        id: displayCoin.id,
+        name: displayCoin.name,
+        source: coin ? 'main cache' : 'searched coins',
+        hasPrice: displayCoin.current_price !== null,
+        price: displayCoin.current_price,
+        hasMarketCap: displayCoin.market_cap !== null,
+        marketCap: displayCoin.market_cap,
+      });
+    }
+  }, [displayCoin, coin]);
 
   // Find all lists that contain this coin
   const containingLists = useMemo(() => {
@@ -105,6 +161,12 @@ export default function CoinDetailScreen() {
 
   // Check if this is a partial coin (from search, missing market data)
   const isPartialCoin = !coin && searchedCoin !== null;
+  
+  // Check if coin is waiting for startup fetch
+  const isWaitingForStartupFetch = 
+    !coin && 
+    !searchedCoin && 
+    startupFetchState.isFetching;
 
   const currencySymbol =
     CURRENCY_SYMBOLS[cryptoMarket?.currency || "usd"] || "$";
@@ -211,6 +273,14 @@ export default function CoinDetailScreen() {
                   <ThemedText type="xsmall" variant="secondary" style={{ marginTop: Spacing.xs }}>
                     Limited data available
                   </ThemedText>
+                )}
+                {isWaitingForStartupFetch && (
+                  <ThemedView style={[styles.waitingBanner, { borderColor, backgroundColor: tintColor + "20" }]}>
+                    <ActivityIndicator size="small" color={tintColor} style={{ marginRight: Spacing.xs }} />
+                    <ThemedText type="small" variant="secondary">
+                      Waiting on API for coin data...
+                    </ThemedText>
+                  </ThemedView>
                 )}
               </ThemedView>
             </ThemedView>
@@ -689,6 +759,14 @@ const styles = StyleSheet.create({
   },
   detailsText: {
     marginBottom: Spacing.sm,
+  },
+  waitingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.sm,
+    marginTop: Spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
   },
 });
 

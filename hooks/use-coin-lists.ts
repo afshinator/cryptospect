@@ -187,11 +187,12 @@ export function useRemoveCoinFromList() {
   return useMutation({
     mutationFn: async ({ listId, coinId }: { listId: string; coinId: string }) => {
       const existingLists = await getCoinLists();
+      const normalizedCoinId = coinId.toLowerCase();
       const updatedLists = existingLists.map((list) => {
         if (list.id === listId) {
           return {
             ...list,
-            coins: list.coins.filter((c) => c.coinId !== coinId),
+            coins: list.coins.filter((c) => c.coinId.toLowerCase() !== normalizedCoinId),
             updatedAt: Date.now(),
           };
         }

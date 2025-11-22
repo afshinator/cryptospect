@@ -4,10 +4,12 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { CoinGeckoMarketData } from "@/constants/coinGecko";
+import { SupportedCurrency } from "@/constants/currency";
 import { Spacing } from "@/constants/theme";
 import { useAppInitialization } from "@/hooks/use-app-initializations";
+import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import { searchCoins } from "@/utils/coinGeckoApi";
+import { fetchCoinMarketData, searchCoins } from "@/utils/coinGeckoApi";
 import { saveSearchedCoin } from "@/utils/searchedCoinsStorage";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -36,11 +38,13 @@ export function CoinAutocomplete({
   placeholder = "Search by name or symbol",
 }: CoinAutocompleteProps) {
   const { cryptoMarket } = useAppInitialization();
+  const { data: preferences } = usePreferences();
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [apiSearchResults, setApiSearchResults] = useState<CoinGeckoMarketData[]>([]);
   const [isSearchingApi, setIsSearchingApi] = useState(false);
   const [apiSearchError, setApiSearchError] = useState<string | null>(null);
+  const [isFetchingMarketData, setIsFetchingMarketData] = useState(false);
   const inputRef = React.useRef<TextInput>(null);
   
   const textColor = useThemeColor({}, "text");
@@ -143,19 +147,62 @@ export function CoinAutocomplete({
     const isInMainCache = cryptoMarket?.data?.some(c => c.id === coin.id);
     const isFromApiSearch = isInApiResults || (!isInMainCache && searchQuery.trim().length >= 2);
     
-    // If it's from API search, save it to searched coins storage
+    console.log(`🔍 Coin selection debug:`, {
+      coinId: coin.id,
+      coinName: coin.name,
+      isInApiResults,
+      isInMainCache,
+      isFromApiSearch,
+      searchQueryLength: searchQuery.trim().length,
+    });
+    
+    // If it's from API search, fetch full market data and save it
     if (isFromApiSearch) {
+      console.log(`📥 Fetching full market data for: ${coin.name} (${coin.id})`);
+      setIsFetchingMarketData(true);
       try {
-        await saveSearchedCoin(coin);
-        console.log(`✅ Saved searched coin to storage: ${coin.name} (${coin.id})`);
+        const currency = (preferences?.currency || "usd") as SupportedCurrency;
+        // Fetch full market data for this coin
+        const fullMarketData = await fetchCoinMarketData(coin.id, currency);
+        
+        if (fullMarketData) {
+          console.log(`✅ Fetched full market data, saving to storage...`);
+          // Use the full market data (with all fields populated)
+          await saveSearchedCoin(fullMarketData);
+          console.log(`✅✅ Saved searched coin with full market data: ${fullMarketData.name} (${fullMarketData.id})`);
+          // Verify it was saved
+          const { loadSearchedCoins } = await import('@/utils/searchedCoinsStorage');
+          const allCoins = await loadSearchedCoins();
+          console.log(`📦 Verification: ${Object.keys(allCoins).length} coins in storage, looking for: ${fullMarketData.id.toLowerCase()}`);
+          console.log(`📋 Available IDs:`, Object.keys(allCoins));
+          // Use the full data for selection
+          onSelect(fullMarketData);
+        } else {
+          console.log(`⚠️ Full fetch returned null, saving partial data...`);
+          // Fallback: save the partial data if full fetch fails
+          await saveSearchedCoin(coin);
+          console.log(`⚠️ Saved searched coin with partial data (full fetch failed): ${coin.name} (${coin.id})`);
+          onSelect(coin);
+        }
       } catch (error) {
-        console.error('Failed to save searched coin:', error);
-        // Continue anyway - don't block the selection
+        console.error('❌ Failed to fetch/save searched coin:', error);
+        // Fallback: save partial data and continue
+        try {
+          await saveSearchedCoin(coin);
+          console.log(`⚠️ Saved partial data as fallback: ${coin.name} (${coin.id})`);
+        } catch (saveError) {
+          console.error('❌ Failed to save partial coin data:', saveError);
+        }
+        onSelect(coin);
+      } finally {
+        setIsFetchingMarketData(false);
       }
+    } else {
+      console.log(`ℹ️ Coin is in main cache, not saving to searched coins storage`);
+      // Coin is in main cache, select immediately
+      onSelect(coin);
     }
     
-    // Select immediately
-    onSelect(coin);
     setSearchQuery("");
     setIsModalVisible(false);
     // Dismiss keyboard after closing modal

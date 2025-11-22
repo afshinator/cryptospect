@@ -92,7 +92,7 @@ export default function ListDetailScreen() {
     );
   }
 
-  const coinToRemove = list.coins.find(c => c.coinId === coinToRemoveId);
+  const coinToRemove = list.coins.find(c => c.coinId.toLowerCase() === coinToRemoveId?.toLowerCase());
 
   const handleAddCoin = (coin: CoinGeckoMarketData) => {
     const currency = (preferences?.currency || "usd") as SupportedCurrency;
@@ -388,6 +388,7 @@ export default function ListDetailScreen() {
             onNotesChange={setEditedCoinNotes}
             isCompactView={isCompactView}
             onCompactViewChange={setIsCompactView}
+            currency={(preferences?.currency || "usd") as SupportedCurrency}
           />
 
           {/* Filters and Analysis Section */}
