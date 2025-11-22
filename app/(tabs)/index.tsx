@@ -4,7 +4,6 @@ import { CurrencyBanner } from "@/components/CurrencyBanner";
 import { DominanceMomentumWidget } from "@/components/dominance/DominanceMomentumWidget";
 import { LatestDominancePercentages } from "@/components/dominance/LatestDominancePercentages";
 import { FilteredCoinsResults } from "@/components/FilteredCoinsResults";
-import { HelloWave } from "@/components/hello-wave";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Spacing } from "@/constants/theme";
@@ -79,7 +78,6 @@ export default function HomeScreen() {
       >
         <ThemedView style={styles.titleContainer}>
           <ThemedText type="large">CryptoSpect</ThemedText>
-          <HelloWave />
         </ThemedView>
 
         {/* Dominance Section */}
