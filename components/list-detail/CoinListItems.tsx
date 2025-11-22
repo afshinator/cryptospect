@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   Keyboard,
@@ -20,6 +20,7 @@ import { CoinListItem } from "@/constants/coinLists";
 import { isStablecoin } from "@/constants/coinTypes";
 import { Spacing } from "@/constants/theme";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { loadSearchedCoins } from "@/utils/searchedCoinsStorage";
 
 // --- Constants ---
 const STABLECOIN_BADGE_OPACITY = 0.45; // Transparency for mobile badge to respect text underneath
@@ -58,6 +59,19 @@ export function CoinListItems({
   isCompactView,
   onCompactViewChange,
 }: CoinListItemsProps) {
+  const [searchedCoins, setSearchedCoins] = useState<{ [coinId: string]: CoinGeckoMarketData }>({});
+
+  // Load searched coins on mount and whenever coins change (new coin added)
+  useEffect(() => {
+    const reloadSearchedCoins = async () => {
+      // Small delay to ensure any async saves have completed
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const loaded = await loadSearchedCoins();
+      setSearchedCoins(loaded);
+    };
+    
+    reloadSearchedCoins().catch(console.error);
+  }, [coins.length]); // Reload when coins are added/removed
   const textColor = useThemeColor({}, "text");
   const backgroundColor = useThemeColor({}, "background");
   const borderColor = useThemeColor({}, "border");
@@ -109,11 +123,14 @@ export function CoinListItems({
               (m) => m.id === coin.coinId
             );
 
-            // Use marketData for live details, otherwise fallback to the minimal data stored in the list item
-            const displayName = marketData?.name || coin.name;
-            const displaySymbol = marketData?.symbol || coin.symbol;
-            // Fallback to legacy coin.apiData.image if global snapshot isn't loaded (for existing items)
-            const displayImage = marketData?.image || coin.apiData?.image;
+            // Check searched coins storage if not in main cache
+            const searchedCoin = !marketData ? searchedCoins[coin.coinId] : null;
+
+            // Use marketData for live details, otherwise fallback to searched coin, then minimal data stored in the list item
+            const displayName = marketData?.name || searchedCoin?.name || coin.name;
+            const displaySymbol = marketData?.symbol || searchedCoin?.symbol || coin.symbol;
+            // Fallback order: marketData -> searchedCoin -> legacy coin.apiData.image
+            const displayImage = marketData?.image || searchedCoin?.image || coin.apiData?.image;
             const priceChange24h = marketData?.price_change_percentage_24h;
 
             const isEditingThisCoin = editingCoinId === coin.coinId;

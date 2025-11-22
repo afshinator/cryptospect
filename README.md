@@ -207,6 +207,78 @@ The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per
 
 ---
 
+### 5. CoinGecko API - Coin Search
+
+**Endpoint:** `https://api.coingecko.com/api/v3/search`
+
+**Method:** `GET`
+
+**Query Parameters:**
+- `query`: Search term (coin name or symbol, minimum 2 characters)
+
+**Cache Duration:** Persistent (client-side AsyncStorage)
+- **Storage Key:** `SearchedCoins` (configured in `constants/misc.ts`)
+- **Storage Location:** `utils/searchedCoinsStorage.ts`
+
+**When It's Used:**
+- Triggered automatically when a user searches for a coin in the "Add Coin" modal
+- Only searches if:
+  - The search query is at least 2 characters long
+  - No matching coins are found in the local cache (from `/coins/markets` endpoint)
+  - User stops typing for 500ms (debounced to avoid excessive API calls)
+
+**Data Retrieved:**
+The search endpoint returns a simplified response with limited fields:
+- `coins`: Array of matching coins, each containing:
+  - `id`: string (CoinGecko coin ID)
+  - `name`: string (Full coin name)
+  - `symbol`: string (Ticker symbol, e.g., "btc")
+  - `api_symbol`: string (API identifier)
+  - `market_cap_rank`: number | null (Market cap ranking)
+  - `thumb`: string (Small image URL)
+  - `large`: string (Large image URL)
+
+**Why Most Fields Are Null:**
+The search endpoint (`/search`) is designed for discovery and returns minimal data compared to the markets endpoint (`/coins/markets`). When search results are mapped to the `CoinGeckoMarketData` format used throughout the app, most market data fields are set to `null` because:
+
+1. **Different Purpose**: The search endpoint is optimized for finding coins by name/symbol, not for retrieving full market data
+2. **Performance**: Returning minimal data makes search faster and reduces API response size
+3. **Data Availability**: Market data (prices, volumes, etc.) requires additional API calls to the `/coins/markets` endpoint
+
+**Fields That Are Populated:**
+- ✅ `id`: Coin identifier
+- ✅ `name`: Coin name
+- ✅ `symbol`: Ticker symbol
+- ✅ `image`: Coin icon (from `large` or `thumb` field)
+- ✅ `market_cap_rank`: Market cap ranking (if available)
+
+**Fields That Are Null:**
+- ❌ `current_price`: Requires market data endpoint
+- ❌ `market_cap`: Requires market data endpoint
+- ❌ `total_volume`: Requires market data endpoint
+- ❌ `price_change_percentage_24h`: Requires market data endpoint
+- ❌ `high_24h`, `low_24h`: Requires market data endpoint
+- ❌ `circulating_supply`, `total_supply`, `max_supply`: Requires market data endpoint
+- ❌ `ath`, `atl`, `ath_date`, `atl_date`: Requires market data endpoint
+- ❌ All other market data fields
+
+**Storage and Usage:**
+- Searched coins are saved to AsyncStorage when selected by the user
+- Stored coins are used to display icons and basic information in:
+  - List Details screen (coin icons)
+  - Coin Details screen (basic info, with "Limited data available" indicator)
+- If a searched coin later appears in the main market cache (from `/coins/markets`), the full market data will be used instead
+- **Implementation:** `utils/searchedCoinsStorage.ts` → `saveSearchedCoin()`, `loadSearchedCoins()`
+
+**Rate Limiting:**
+- Search requests are debounced (500ms delay after user stops typing)
+- No explicit rate limit handling, but debouncing helps prevent excessive calls
+- If rate limited (HTTP 429), an error message is displayed to the user
+
+**Usage:** Enables users to find and add coins that aren't in the top 1,250 cryptocurrencies cached from the `/coins/markets` endpoint. Allows discovery of smaller market cap coins, new listings, or coins that have dropped in ranking.
+
+---
+
 ## API Summary Table
 
 | API | Endpoint | Refresh Interval | Purpose |
@@ -214,6 +286,7 @@ The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per
 | Backend | `/api/dominance` | 24 hours | Historical dominance data (180 days) |
 | CoinGecko | `/coins/markets` | 6 minutes | Top 1,250 cryptocurrencies market data (5 pages) |
 | CoinGecko | `/global` | 6 minutes | Global crypto market overview |
+| CoinGecko | `/search` | On-demand (debounced) | Search for coins by name/symbol (limited data) |
 | Exchange Rate API | `/v6/latest/USD` | 24 hours | Fiat currency exchange rates |
 
 **Note:** All APIs implement client-side caching using AsyncStorage with graceful fallback to stale cache if fresh data fails to fetch.

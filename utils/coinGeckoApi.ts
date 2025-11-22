@@ -2,7 +2,9 @@
 
 import {
   COINGECKO_COINS_MARKETS_ENDPOINT,
+  COINGECKO_SEARCH_ENDPOINT,
   CoinGeckoMarketData,
+  CoinGeckoSearchResponse,
   CryptoMarketSnapshot,
   MARKET_DATA_ORDER,
   MARKET_DATA_PAGES_TO_FETCH,
@@ -238,6 +240,75 @@ export async function fetchAndPersistCryptoMarket(
     
     // Only throw if there's no existing data to fall back to
     throw e;
+  }
+}
+
+/**
+ * Searches for coins using CoinGecko's search API.
+ * Maps search results to CoinGeckoMarketData format for compatibility.
+ * @param query - The search query (coin name or symbol)
+ * @returns Array of coins matching the search query, mapped to CoinGeckoMarketData format
+ * @throws {Error} if the API call fails
+ */
+export async function searchCoins(query: string): Promise<CoinGeckoMarketData[]> {
+  if (!query || !query.trim()) {
+    return [];
+  }
+
+  const url = new URL(COINGECKO_SEARCH_ENDPOINT);
+  url.searchParams.append('query', query.trim());
+
+  try {
+    const response = await fetch(url.toString());
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('❌ CoinGecko API rate limit exceeded. Please try again later.');
+      }
+      throw new Error(`❌ CoinGecko API returned status ${response.status}`);
+    }
+
+    const data: CoinGeckoSearchResponse = await response.json();
+
+    if (!data || !Array.isArray(data.coins)) {
+      return [];
+    }
+
+    // Map search results to CoinGeckoMarketData format
+    // Search results have limited fields, so we set most market data fields to null
+    const mappedResults: CoinGeckoMarketData[] = data.coins.map((coin) => ({
+      id: coin.id,
+      symbol: coin.symbol,
+      name: coin.name,
+      image: coin.large || coin.thumb || '',
+      current_price: null,
+      market_cap: null,
+      market_cap_rank: coin.market_cap_rank,
+      fully_diluted_valuation: null,
+      total_volume: null,
+      high_24h: null,
+      low_24h: null,
+      price_change_24h: null,
+      price_change_percentage_24h: null,
+      market_cap_change_24h: null,
+      market_cap_change_percentage_24h: null,
+      circulating_supply: null,
+      total_supply: null,
+      max_supply: null,
+      ath: null,
+      ath_change_percentage: null,
+      ath_date: null,
+      atl: null,
+      atl_change_percentage: null,
+      atl_date: null,
+      roi: null,
+      last_updated: null,
+    }));
+
+    return mappedResults;
+  } catch (error) {
+    console.error('❌ Error searching coins:', error);
+    throw error;
   }
 }
 

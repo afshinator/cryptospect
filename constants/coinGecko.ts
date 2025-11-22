@@ -9,12 +9,16 @@ export const COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3";
 export const COINGECKO_GLOBAL_PATH = "/global";
 export const COINGECKO_SIMPLE_PRICE_PATH = "/simple/price";
 export const COINGECKO_COINS_MARKETS_PATH = "/coins/markets"; // Use the path only
+export const COINGECKO_SEARCH_PATH = "/search"; // Use the path only
 
 // Endpoint for global market data (Full URL is now easy to construct)
 export const COINGECKO_GLOBAL_DATA_ENDPOINT = `${COINGECKO_BASE_URL}${COINGECKO_GLOBAL_PATH}`;
 
 // Endpoint for market data, used for getting icon URLs and current prices
 export const COINGECKO_COINS_MARKETS_ENDPOINT = `${COINGECKO_BASE_URL}${COINGECKO_COINS_MARKETS_PATH}`;
+
+// Endpoint for searching coins
+export const COINGECKO_SEARCH_ENDPOINT = `${COINGECKO_BASE_URL}${COINGECKO_SEARCH_PATH}`;
 
 // API Parameters for /coins/markets
 export const MARKET_DATA_PER_PAGE = 250; // Free tier max
@@ -78,4 +82,23 @@ export type CoinGeckoGlobalData = {
 export type CryptoOverviewSnapshot = {
   data: CoinGeckoGlobalData | null;
   timestamp: number;
+};
+
+// CoinGecko API response type for /search endpoint
+export type CoinGeckoSearchResult = {
+  id: string;
+  name: string;
+  api_symbol: string;
+  symbol: string;
+  market_cap_rank: number | null;
+  thumb: string;
+  large: string;
+};
+
+export type CoinGeckoSearchResponse = {
+  coins: CoinGeckoSearchResult[];
+  exchanges: any[];
+  icos: any[];
+  categories: any[];
+  nfts: any[];
 };

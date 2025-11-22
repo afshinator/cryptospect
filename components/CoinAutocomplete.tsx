@@ -7,8 +7,11 @@ import { CoinGeckoMarketData } from "@/constants/coinGecko";
 import { Spacing } from "@/constants/theme";
 import { useAppInitialization } from "@/hooks/use-app-initializations";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { searchCoins } from "@/utils/coinGeckoApi";
+import { saveSearchedCoin } from "@/utils/searchedCoinsStorage";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+    ActivityIndicator,
     Image,
     Keyboard,
     KeyboardAvoidingView,
@@ -35,6 +38,9 @@ export function CoinAutocomplete({
   const { cryptoMarket } = useAppInitialization();
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [apiSearchResults, setApiSearchResults] = useState<CoinGeckoMarketData[]>([]);
+  const [isSearchingApi, setIsSearchingApi] = useState(false);
+  const [apiSearchError, setApiSearchError] = useState<string | null>(null);
   const inputRef = React.useRef<TextInput>(null);
   
   const textColor = useThemeColor({}, "text");
@@ -114,7 +120,40 @@ export function CoinAutocomplete({
     ].slice(0, 50);
   }, [searchQuery, cryptoMarket?.data, excludeCoinIds]);
 
-  const handleSelect = (coin: CoinGeckoMarketData) => {
+  // Combine local results with API search results, filtering out excluded coins
+  const allFilteredCoins = useMemo(() => {
+    const local = filteredCoins;
+    const api = apiSearchResults.filter(
+      (coin) => !excludeCoinIds.includes(coin.id)
+    );
+    
+    // Remove duplicates (prioritize local results)
+    const localIds = new Set(local.map(c => c.id));
+    const uniqueApi = api.filter(c => !localIds.has(c.id));
+    
+    return [...local, ...uniqueApi].slice(0, 50);
+  }, [filteredCoins, apiSearchResults, excludeCoinIds]);
+
+  const handleSelect = async (coin: CoinGeckoMarketData) => {
+    // Check if this coin is from API search (not in local cache)
+    // A coin is from API search if:
+    // 1. It's in apiSearchResults, OR
+    // 2. It's not in the main cryptoMarket cache (meaning it was found via search)
+    const isInApiResults = apiSearchResults.some(c => c.id === coin.id);
+    const isInMainCache = cryptoMarket?.data?.some(c => c.id === coin.id);
+    const isFromApiSearch = isInApiResults || (!isInMainCache && searchQuery.trim().length >= 2);
+    
+    // If it's from API search, save it to searched coins storage
+    if (isFromApiSearch) {
+      try {
+        await saveSearchedCoin(coin);
+        console.log(`✅ Saved searched coin to storage: ${coin.name} (${coin.id})`);
+      } catch (error) {
+        console.error('Failed to save searched coin:', error);
+        // Continue anyway - don't block the selection
+      }
+    }
+    
     // Select immediately
     onSelect(coin);
     setSearchQuery("");
@@ -128,7 +167,43 @@ export function CoinAutocomplete({
 
   const handleTextChange = (text: string) => {
     setSearchQuery(text);
+    // Reset API search state when query changes
+    setApiSearchResults([]);
+    setApiSearchError(null);
   };
+
+  // Trigger API search when local results are empty and there's a query
+  useEffect(() => {
+    const query = searchQuery.trim();
+    
+    // Only search API if:
+    // 1. There's a search query
+    // 2. No local results found
+    // 3. Not already searching
+    // 4. Query is at least 2 characters (to avoid too many API calls)
+    if (query.length >= 2 && filteredCoins.length === 0 && !isSearchingApi) {
+      const searchTimeout = setTimeout(async () => {
+        setIsSearchingApi(true);
+        setApiSearchError(null);
+        
+        try {
+          const results = await searchCoins(query);
+          setApiSearchResults(results);
+        } catch (error) {
+          console.error('Failed to search coins via API:', error);
+          setApiSearchError(error instanceof Error ? error.message : 'Failed to search coins');
+        } finally {
+          setIsSearchingApi(false);
+        }
+      }, 500); // Debounce: wait 500ms after user stops typing
+
+      return () => clearTimeout(searchTimeout);
+    } else if (query.length === 0) {
+      // Clear API results when query is cleared
+      setApiSearchResults([]);
+      setApiSearchError(null);
+    }
+  }, [searchQuery, filteredCoins.length, isSearchingApi]);
 
   const handleCloseModal = () => {
     setIsModalVisible(false);
@@ -222,13 +297,13 @@ export function CoinAutocomplete({
               )}
 
               {/* Results List */}
-              {filteredCoins.length > 0 ? (
+              {allFilteredCoins.length > 0 ? (
                 <ScrollView
                   style={styles.modalScrollView}
                   keyboardShouldPersistTaps="handled"
                   contentContainerStyle={styles.modalScrollViewContent}
                 >
-                  {filteredCoins.map((item) => (
+                  {allFilteredCoins.map((item) => (
                     <Pressable
                       key={item.id}
                       style={({ pressed }) => [
@@ -255,9 +330,22 @@ export function CoinAutocomplete({
                 </ScrollView>
               ) : searchQuery ? (
                 <ThemedView style={styles.emptyState}>
-                  <ThemedText type="body" variant="secondary">
-                    No coins found. API lookup coming soon.
-                  </ThemedText>
+                  {isSearchingApi ? (
+                    <>
+                      <ActivityIndicator size="small" color={tintColor} />
+                      <ThemedText type="body" variant="secondary" style={{ marginTop: Spacing.sm }}>
+                        Searching CoinGecko...
+                      </ThemedText>
+                    </>
+                  ) : apiSearchError ? (
+                    <ThemedText type="body" variant="error">
+                      {apiSearchError}
+                    </ThemedText>
+                  ) : (
+                    <ThemedText type="body" variant="secondary">
+                      No coins found.
+                    </ThemedText>
+                  )}
                 </ThemedView>
               ) : (
                 <ThemedView style={styles.emptyState}>
