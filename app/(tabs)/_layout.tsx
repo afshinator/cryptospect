@@ -27,11 +27,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="dominance"
         options={{
-          title: "Explore",
+          title: "Dominance",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="paperplane.fill" color={color} />
+            <IconSymbol
+              size={28}
+              name="chart.line.uptrend.xyaxis"
+              color={color}
+            />
           ),
         }}
       />
@@ -48,19 +52,7 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="dominance"
-        options={{
-          title: "Dominance",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol
-              size={28}
-              name="chart.line.uptrend.xyaxis"
-              color={color}
-            />
-          ),
-        }}
-      />
+
       <Tabs.Screen
         name="lists"
         options={{
@@ -70,7 +62,7 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="example"
         options={{
           title: "example",
@@ -78,7 +70,7 @@ export default function TabLayout() {
             <IconSymbol size={28} name="ellipsis.circle.fill" color={color} />
           ),
         }}
-      />
+      /> */}
       <Tabs.Screen
         name="settings"
         options={{
