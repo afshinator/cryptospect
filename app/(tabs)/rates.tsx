@@ -1,7 +1,7 @@
 // app/(tabs)/rates.tsx
 
 import React from "react";
-import { FlatList, Platform, Pressable, StyleSheet, Switch } from "react-native";
+import { FlatList, Pressable, StyleSheet, Switch } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CurrencySelectorModal } from "@/components/CurrencySelectorModal";
