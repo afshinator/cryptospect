@@ -243,9 +243,9 @@ export async function fetchAndPersistCryptoMarket(
         // Delay between pages to respect rate limits
         const currentIndex = pagesToFetch.indexOf(page);
         if (currentIndex < pagesToFetch.length - 1) {
-          // After every N pages, use a longer delay
-          if (pagesFetched % PAGES_BEFORE_LONG_DELAY === 0) {
-            logger(`   └─ ⏸️  Fetched ${PAGES_BEFORE_LONG_DELAY} pages. Waiting ${DELAY_AFTER_EVERY_N_PAGES_MS}ms before next page...`, 'log', 'debug');
+          // After fetching 2 pages, switch to long delays for all subsequent pages
+          if (pagesFetched >= PAGES_BEFORE_LONG_DELAY) {
+            logger(`   └─ ⏸️  Fetched ${pagesFetched} pages (≥${PAGES_BEFORE_LONG_DELAY}). Using long delay: ${DELAY_AFTER_EVERY_N_PAGES_MS}ms before next page...`, 'log', 'debug');
             await new Promise(resolve => setTimeout(resolve, DELAY_AFTER_EVERY_N_PAGES_MS));
           } else {
             logger(`   └─ ⏸️  Waiting ${DELAY_BETWEEN_PAGES_MS}ms before next page...`, 'log', 'debug');
@@ -493,10 +493,10 @@ export async function fetchCoinMarketData(
     
     logger(`✅ [CoinGecko API] Successfully fetched coin data for ${coinId}`, 'log', 'info');
     logger(`   └─ Data source: COINGECKO API`, 'log', 'info');
-    logger(`   └─ Name: ${data.name || coinId}`, 'log', 'info');
-    logger(`   └─ Symbol: ${data.symbol || ''}`, 'log', 'info');
-    logger(`   └─ Current price: ${currentPrice}`, 'log', 'info');
-    logger(`   └─ 24h change: ${priceChangePercentage24h !== null && priceChangePercentage24h !== undefined ? `${priceChangePercentage24h.toFixed(2)}%` : 'N/A'}`, 'log', 'info');
+    // logger(`   └─ Name: ${data.name || coinId}`, 'log', 'info');
+    // logger(`   └─ Symbol: ${data.symbol || ''}`, 'log', 'info');
+    // logger(`   └─ Current price: ${currentPrice}`, 'log', 'info');
+    // logger(`   └─ 24h change: ${priceChangePercentage24h !== null && priceChangePercentage24h !== undefined ? `${priceChangePercentage24h.toFixed(2)}%` : 'N/A'}`, 'log', 'info');
     const marketCapChange24h = marketData.market_cap_change_24h?.[currency] ?? null;
     const marketCapChangePercentage24h = marketData.market_cap_change_percentage_24h?.[currency] ?? null;
 

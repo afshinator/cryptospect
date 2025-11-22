@@ -23,9 +23,9 @@ import { SupportedCurrency } from "@/constants/currency";
 import { Spacing } from "@/constants/theme";
 import { useStartupCoinFetch } from "@/hooks/use-startup-coin-fetch";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { fetchOutlierCoinData } from "@/utils/fetchOutlierCoinData";
 import { logger } from "@/utils/logger";
 import { loadSavedOutlierCoins, SavedOutlierCoinWithTimestamp, saveSavedOutlierCoin } from "@/utils/searchedCoinsStorage";
-import { fetchOutlierCoinData } from "@/utils/fetchOutlierCoinData";
 
 // --- Constants ---
 const STABLECOIN_BADGE_OPACITY = 0.45; // Transparency for mobile badge to respect text underneath
@@ -111,10 +111,10 @@ export function CoinListItems({
               [coinId]: coinWithTimestamp,
             };
             logger(`📝 [CoinListItems] Updating savedOutlierCoins state for ${coinId}:`, 'log', 'info');
-            logger(`   └─ Name: ${fullData.name}`, 'log', 'info');
-            logger(`   └─ Data source: ${dataSource.toUpperCase()}`, 'log', 'info');
-            logger(`   └─ Price change: ${fullData.price_change_percentage_24h}`, 'log', 'info');
-            logger(`   └─ Timestamp: ${new Date(coinWithTimestamp._lastUpdated!).toISOString()}`, 'log', 'info');
+            // logger(`   └─ Name: ${fullData.name}`, 'log', 'info');
+            // logger(`   └─ Data source: ${dataSource.toUpperCase()}`, 'log', 'info');
+            // logger(`   └─ Price change: ${fullData.price_change_percentage_24h}`, 'log', 'info');
+            // logger(`   └─ Timestamp: ${new Date(coinWithTimestamp._lastUpdated!).toISOString()}`, 'log', 'info');
             return updated;
           });
             
@@ -177,10 +177,10 @@ export function CoinListItems({
       Object.entries(loaded).forEach(([coinId, coinData]) => {
         const lastUpdated = coinData._lastUpdated ? new Date(coinData._lastUpdated).toISOString() : '⚠️ NO TIMESTAMP';
         logger(`📦 [CoinListItems] SearchedCoin [${coinId}]:`, 'log', 'debug');
-        logger(`   └─ Name: ${coinData.name}`, 'log', 'debug');
-        logger(`   └─ Has price change: ${coinData.price_change_percentage_24h !== null && coinData.price_change_percentage_24h !== undefined}`, 'log', 'debug');
-        logger(`   └─ Price change: ${coinData.price_change_percentage_24h ?? 'null'}`, 'log', 'debug');
-        logger(`   └─ Last updated: ${lastUpdated}`, 'log', 'debug');
+        // logger(`   └─ Name: ${coinData.name}`, 'log', 'debug');
+        // logger(`   └─ Has price change: ${coinData.price_change_percentage_24h !== null && coinData.price_change_percentage_24h !== undefined}`, 'log', 'debug');
+        // logger(`   └─ Price change: ${coinData.price_change_percentage_24h ?? 'null'}`, 'log', 'debug');
+        // logger(`   └─ Last updated: ${lastUpdated}`, 'log', 'debug');
         
         // Warn if timestamp is missing
         if (!coinData._lastUpdated) {

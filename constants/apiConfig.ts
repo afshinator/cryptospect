@@ -39,8 +39,8 @@ export const MARKET_DATA_DELAY_BETWEEN_PAGES_MS = 1200; // 1.2 seconds
 /** Longer delay applied after every N pages (10 seconds) */
 export const MARKET_DATA_LONG_DELAY_MS = 10000; // 10 seconds
 
-/** Number of pages to fetch before applying longer delay */
-export const MARKET_DATA_PAGES_BEFORE_LONG_DELAY = 3;
+/** Number of pages to fetch before switching to longer delays for all subsequent pages */
+export const MARKET_DATA_PAGES_BEFORE_LONG_DELAY = 2;
 
 /** Maximum retry attempts for failed requests */
 export const MARKET_DATA_MAX_RETRIES = 3;

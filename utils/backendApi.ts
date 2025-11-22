@@ -151,9 +151,9 @@ export async function fetchCoinDataFromBackend(
 
   const url = `${BACKEND_BASE_URL}/api/coins/${coinId.trim()}`;
   logger(`⚡ [Backend API] Starting fetch for ${coinId}...`, 'log', 'info');
-  logger(`   └─ URL: ${url}`, 'log', 'info');
-  logger(`   └─ Currency: ${currency}`, 'log', 'info');
-  logger(`   └─ Has API key: ${!!BACKEND_API_KEY}`, 'log', 'info');
+  // logger(`   └─ URL: ${url}`, 'log', 'info');
+  // logger(`   └─ Currency: ${currency}`, 'log', 'info');
+  // logger(`   └─ Has API key: ${!!BACKEND_API_KEY}`, 'log', 'info');
 
   try {
     const startTime = Date.now();
@@ -165,9 +165,9 @@ export async function fetchCoinDataFromBackend(
     const duration = Date.now() - startTime;
     
     logger(`📡 [Backend API] Response received for ${coinId}:`, 'log', 'info');
-    logger(`   └─ Status: ${response.status} ${response.statusText}`, 'log', 'info');
-    logger(`   └─ Duration: ${duration}ms`, 'log', 'info');
-    logger(`   └─ OK: ${response.ok}`, 'log', 'info');
+    // logger(`   └─ Status: ${response.status} ${response.statusText}`, 'log', 'info');
+    // logger(`   └─ Duration: ${duration}ms`, 'log', 'info');
+    // logger(`   └─ OK: ${response.ok}`, 'log', 'info');
 
     if (!response.ok) {
       let failureReason = '';
