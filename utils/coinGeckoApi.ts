@@ -108,11 +108,12 @@ async function fetchCryptoMarketPage(
     const waitTime = retryAfter ? parseInt(retryAfter, 10) * 1000 : BASE_RETRY_DELAY_MS;
     
     if (retryCount < MAX_RETRIES) {
-      logger(`⚠️ Rate limited on page ${page}. Waiting ${waitTime / 1000} seconds before retry ${retryCount + 1}/${MAX_RETRIES}...`, 'warn');
+      logger(`⚠️🚦 Rate limited on page ${page}. Waiting ${waitTime / 1000} seconds before retry ${retryCount + 1}/${MAX_RETRIES}...`, 'warn');
       await new Promise(resolve => setTimeout(resolve, waitTime));
       return fetchCryptoMarketPage(currency, page, retryCount + 1);
     } else {
-      throw new Error(`❌ CoinGecko API rate limit exceeded after ${MAX_RETRIES} retries for page ${page}`);
+      logger(`⚠️🚦 CoinGecko API rate limit exceeded after ${MAX_RETRIES} retries for page ${page}`, 'warn');
+      throw new Error(`CoinGecko API rate limit exceeded after ${MAX_RETRIES} retries for page ${page}`);
     }
   }
 
@@ -184,7 +185,15 @@ export async function fetchAndPersistCryptoMarket(
           }
         }
       } catch (error) {
-        logger(`   └─ ❌ Error fetching page ${page}:`, 'error', undefined, error);
+        // Check if it's a rate limit error - log as warning, not error
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const isRateLimit = errorMessage.includes('rate limit') || errorMessage.includes('429');
+        
+        if (isRateLimit) {
+          logger(`   └─ ⚠️🚦 Rate limit error fetching page ${page}:`, 'warn', undefined, error);
+        } else {
+          logger(`   └─ ❌ Error fetching page ${page}:`, 'error', undefined, error);
+        }
         fetchFailed = true;
         
         // If we have some data, continue with what we have
@@ -283,7 +292,7 @@ export async function fetchCoinMarketData(
       if (response.status === 429) {
         const retryAfter = response.headers.get('retry-after');
         const retrySeconds = retryAfter ? parseInt(retryAfter, 10) : 60;
-        logger(`⚠️ [CoinGecko API] Rate limit exceeded for ${coinId}:`, 'warn');
+        logger(`⚠️🚦 [CoinGecko API] Rate limit exceeded for ${coinId}:`, 'warn');
         logger(`   └─ Retry after: ${retrySeconds} seconds`, 'warn');
         // Return null instead of throwing - this allows the UI to continue showing partial data
         return null;
@@ -421,7 +430,8 @@ export async function searchCoins(query: string): Promise<CoinGeckoMarketData[]>
 
     if (!response.ok) {
       if (response.status === 429) {
-        throw new Error('❌ CoinGecko API rate limit exceeded. Please try again later.');
+        logger(`⚠️🚦 [CoinGecko API] Rate limit exceeded on search. Please try again later.`, 'warn');
+        throw new Error('CoinGecko API rate limit exceeded. Please try again later.');
       }
       throw new Error(`❌ CoinGecko API returned status ${response.status}`);
     }
@@ -465,7 +475,15 @@ export async function searchCoins(query: string): Promise<CoinGeckoMarketData[]>
 
     return mappedResults;
   } catch (error) {
-    logger('❌ [CoinGecko API] Error searching coins:', 'error', undefined, error);
+    // Check if it's a rate limit error - log as warning, not error
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isRateLimit = errorMessage.includes('rate limit') || errorMessage.includes('429');
+    
+    if (isRateLimit) {
+      logger('⚠️🚦 [CoinGecko API] Rate limit error searching coins:', 'warn', undefined, error);
+    } else {
+      logger('❌ [CoinGecko API] Error searching coins:', 'error', undefined, error);
+    }
     throw error;
   }
 }
@@ -500,7 +518,15 @@ export async function getCryptoMarket(
     const freshData = await fetchAndPersistCryptoMarket(currency);
     return freshData;
   } catch (error) {
-    logger('❌ [CoinGecko API] Failed to fetch fresh data. Falling back to stale cache if available.', 'warn');
+    // Check if it's a rate limit error - log as warning, not error
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isRateLimit = errorMessage.includes('rate limit') || errorMessage.includes('429');
+    
+    if (isRateLimit) {
+      logger('⚠️🚦 [CoinGecko API] Rate limited. Falling back to stale cache if available.', 'warn');
+    } else {
+      logger('❌ [CoinGecko API] Failed to fetch fresh data. Falling back to stale cache if available.', 'warn');
+    }
     if (cachedData) {
       logger(`   └─ 💾 Using stale cache (${cachedData.data?.length || 0} coins) as fallback`, 'log', 'debug');
       // Return stale cache if fetching failed (graceful degradation)

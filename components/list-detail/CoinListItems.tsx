@@ -153,7 +153,7 @@ export function CoinListItems({
         const isNetworkError = errorMessage.includes('Failed to fetch') || errorMessage.includes('Network error');
         
         if (isRateLimit) {
-          logger(`⚠️ [CoinListItems] Rate limit hit for ${searchedCoin.id}. Will retry later.`, 'warn');
+          logger(`⚠️🚦 [CoinListItems] Rate limit hit for ${searchedCoin.id}. Will retry later.`, 'warn');
         } else if (isNetworkError) {
           logger(`⚠️ [CoinListItems] Network/CORS issue for ${searchedCoin.id} (expected):`, 'warn');
           logger(`   └─ This is informational, not an error`, 'warn');

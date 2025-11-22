@@ -154,7 +154,7 @@ export function useStartupCoinFetch() {
                 return { coinId, success: true, skipped: false };
               } else {
                 // Rate limit or other error - don't count as failure, just skip
-                logger(`⚠️ No data returned for ${coinId} (likely rate limit)`, 'warn');
+                logger(`⚠️🚦 No data returned for ${coinId} (likely rate limit)`, 'warn');
                 return { coinId, success: false, skipped: false };
               }
             } catch (error) {

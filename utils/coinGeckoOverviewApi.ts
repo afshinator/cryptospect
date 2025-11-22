@@ -54,13 +54,13 @@ export async function fetchAndPersistCryptoOverview(
       const waitTime = retryAfter ? parseInt(retryAfter, 10) * 1000 : OVERVIEW_DATA_BASE_RETRY_DELAY_MS;
       
       if (retryCount < OVERVIEW_DATA_MAX_RETRIES) {
-        logger(`⚠️ [CoinGecko API] Rate limited on overview data. Waiting ${waitTime / 1000} seconds before retry ${retryCount + 1}/${OVERVIEW_DATA_MAX_RETRIES}...`, 'warn');
+        logger(`⚠️🚦 [CoinGecko API] Rate limited on overview data. Waiting ${waitTime / 1000} seconds before retry ${retryCount + 1}/${OVERVIEW_DATA_MAX_RETRIES}...`, 'warn');
         await new Promise(resolve => setTimeout(resolve, waitTime));
         // Retry the fetch
         return fetchAndPersistCryptoOverview(retryCount + 1);
       } else {
         // Max retries reached - return null to allow graceful degradation
-        logger(`⚠️ [CoinGecko API] Rate limit exceeded after ${OVERVIEW_DATA_MAX_RETRIES} retries for overview data. Will use stale cache.`, 'warn');
+        logger(`⚠️🚦 [CoinGecko API] Rate limit exceeded after ${OVERVIEW_DATA_MAX_RETRIES} retries for overview data. Will use stale cache.`, 'warn');
         return null;
       }
     }
@@ -154,18 +154,28 @@ export async function getCryptoOverview(): Promise<CryptoOverviewSnapshot> {
     // If rate limited (returns null), use stale cache if available
     if (freshData === null) {
       if (cachedData) {
-        logger(`⚠️ [CoinGecko API] Rate limited. Using stale overview cache (${cachedData ? 'available' : 'not available'})`, 'warn');
+        logger(`⚠️🚦 [CoinGecko API] Rate limited. Using stale overview cache (${cachedData ? 'available' : 'not available'})`, 'warn');
         return cachedData;
       }
-      // No cache available and rate limited - throw error
+      // No cache available and rate limited - log as warning and throw
+      logger(`⚠️🚦 [CoinGecko API] Rate limited and no cached overview data available`, 'warn');
       throw new Error('Rate limited and no cached overview data available');
     }
     
     return freshData;
   } catch (error) {
-    // Real error occurred (network, parsing, validation, etc.)
-    logger(`❌ [CoinGecko API] Failed to fetch fresh overview data:`, 'error');
-    logger(`   └─ Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    // Check if it's a rate limit error - log as warning, not error
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isRateLimit = errorMessage.includes('rate limit') || errorMessage.includes('429') || errorMessage.includes('Rate limited');
+    
+    if (isRateLimit) {
+      logger(`⚠️🚦 [CoinGecko API] Rate limited. Failed to fetch fresh overview data:`, 'warn');
+      logger(`   └─ Error: ${errorMessage}`, 'warn');
+    } else {
+      // Real error occurred (network, parsing, validation, etc.)
+      logger(`❌ [CoinGecko API] Failed to fetch fresh overview data:`, 'error');
+      logger(`   └─ Error: ${errorMessage}`, 'error');
+    }
     
     if (cachedData) {
       logger(`   └─ Falling back to stale cache (graceful degradation)`, 'warn');
