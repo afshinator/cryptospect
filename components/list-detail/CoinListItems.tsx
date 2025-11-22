@@ -23,10 +23,9 @@ import { SupportedCurrency } from "@/constants/currency";
 import { Spacing } from "@/constants/theme";
 import { useStartupCoinFetch } from "@/hooks/use-startup-coin-fetch";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import { fetchCoinDataFromBackend } from "@/utils/backendApi";
-import { fetchCoinMarketData } from "@/utils/coinGeckoApi";
 import { logger } from "@/utils/logger";
 import { loadSavedOutlierCoins, SavedOutlierCoinWithTimestamp, saveSavedOutlierCoin } from "@/utils/searchedCoinsStorage";
+import { fetchOutlierCoinData } from "@/utils/fetchOutlierCoinData";
 
 // --- Constants ---
 const STABLECOIN_BADGE_OPACITY = 0.45; // Transparency for mobile badge to respect text underneath
@@ -89,96 +88,10 @@ export function CoinListItems({
     logger(`🚀 [CoinListItems] Starting fetch for ${coinId} (${savedOutlierCoin.name})...`, 'log', 'info');
     logger(`   └─ Strategy: Try BACKEND first, then CoinGecko if backend fails`, 'log', 'info');
     
-    // Track which API was used for this fetch
-    let dataSource: 'backend' | 'coingecko' | 'unknown' = 'unknown';
-    
-    // Try backend first, then CoinGecko if backend fails
-    logger(`🔵 [CoinListItems] STEP 1: Attempting BACKEND API for ${savedOutlierCoin.id}...`, 'log', 'info');
-    fetchCoinDataFromBackend(savedOutlierCoin.id, currency)
-      .then((backendData) => {
-        if (backendData) {
-          dataSource = 'backend';
-          logger(`✅ [CoinListItems] STEP 1 SUCCESS: BACKEND API returned data for ${savedOutlierCoin.id}`, 'log', 'info');
-          logger(`   └─ Name: ${backendData.name}`, 'log', 'info');
-          logger(`   └─ Price change: ${backendData.price_change_percentage_24h ?? 'null'}`, 'log', 'info');
-          logger(`   └─ Skipping CoinGecko (backend data available)`, 'log', 'info');
-          // Process backend data the same way as CoinGecko data
-          return Promise.resolve(backendData);
-        } else {
-          // Backend returned null - check the logs above for the specific reason
-          logger(`⚠️ [CoinListItems] STEP 1 FAILED: Backend returned null for ${savedOutlierCoin.id}`, 'log', 'info');
-          logger(`   └─ Check logs above for failure reason (COIN_NOT_FOUND, NO_MARKET_DATA, CORS_BLOCKED, etc.)`, 'log', 'info');
-          logger(`🟡 [CoinListItems] STEP 2: Falling back to CoinGecko API for ${savedOutlierCoin.id}...`, 'log', 'info');
-          return fetchCoinMarketData(savedOutlierCoin.id, currency).then((coingeckoData) => {
-            if (coingeckoData) {
-              dataSource = 'coingecko';
-              logger(`✅ [CoinListItems] STEP 2 SUCCESS: CoinGecko API returned data for ${savedOutlierCoin.id}`, 'log', 'info');
-              logger(`   └─ Name: ${coingeckoData.name}`, 'log', 'info');
-              logger(`   └─ Price change: ${coingeckoData.price_change_percentage_24h ?? 'null'}`, 'log', 'info');
-            } else {
-              logger(`❌ [CoinListItems] STEP 2 FAILED: CoinGecko also returned null for ${savedOutlierCoin.id}`, 'log', 'info');
-            }
-            return coingeckoData;
-          });
-        }
-      })
-      .catch((backendError) => {
-        // Backend error, try CoinGecko as fallback
-        const failureReason = (backendError as any)?.failureReason || 'UNKNOWN';
-        const statusCode = (backendError as any)?.statusCode;
-        
-        logger(`⚠️ [CoinListItems] STEP 1 ERROR: Backend threw an error for ${savedOutlierCoin.id}`, 'log', 'info');
-        logger(`   └─ Failure reason: ${failureReason}`, 'log', 'info');
-        if (statusCode) {
-          logger(`   └─ HTTP status: ${statusCode}`, 'log', 'info');
-        }
-        logger(`   └─ Error type: ${backendError instanceof Error ? backendError.constructor.name : typeof backendError}`, 'log', 'info');
-        logger(`   └─ Error message: ${backendError instanceof Error ? backendError.message : String(backendError)}`, 'log', 'info');
-        logger(`   └─ Interpretation:`, 'log', 'info');
-        
-        // Provide interpretation of failure reasons
-        if (failureReason === 'COIN_NOT_FOUND') {
-          logger(`      • Coin does not exist in backend database`, 'log', 'info');
-          logger(`      • This is expected if the coin ID is invalid or not supported by backend`, 'log', 'info');
-        } else if (failureReason === 'NO_MARKET_DATA') {
-          logger(`      • Backend returned response but missing market_data field`, 'log', 'info');
-          logger(`      • Backend may have incomplete data for this coin`, 'log', 'info');
-        } else if (failureReason === 'CORS_BLOCKED') {
-          logger(`      • Browser blocked the request due to CORS policy`, 'log', 'info');
-          logger(`      • This is expected on web when calling backend directly from browser`, 'log', 'info');
-        } else if (failureReason === 'NETWORK_ERROR') {
-          logger(`      • Network connection failed`, 'log', 'info');
-          logger(`      • Check internet connection or backend server status`, 'log', 'info');
-        } else if (failureReason === 'AUTH_ERROR') {
-          logger(`      • Authentication failed (invalid or missing API key)`, 'log', 'info');
-          logger(`      • Check BACKEND_API_KEY configuration`, 'log', 'info');
-        } else if (failureReason === 'RATE_LIMITED') {
-          logger(`      • Backend rate limit exceeded`, 'log', 'info');
-          logger(`      • Too many requests to backend API`, 'log', 'info');
-        } else if (failureReason === 'SERVER_ERROR') {
-          logger(`      • Backend server error (5xx)`, 'log', 'info');
-          logger(`      • Backend server may be down or experiencing issues`, 'log', 'info');
-        } else {
-          logger(`      • Unknown error - check backend API logs above for details`, 'log', 'info');
-        }
-        
-        logger(`🟡 [CoinListItems] STEP 2: Falling back to CoinGecko API for ${savedOutlierCoin.id}...`, 'log', 'info');
-        return fetchCoinMarketData(savedOutlierCoin.id, currency).then((coingeckoData) => {
-          if (coingeckoData) {
-            dataSource = 'coingecko';
-            logger(`✅ [CoinListItems] STEP 2 SUCCESS: CoinGecko API returned data for ${savedOutlierCoin.id}`, 'log', 'info');
-            logger(`   └─ Name: ${coingeckoData.name}`, 'log', 'info');
-            logger(`   └─ Price change: ${coingeckoData.price_change_percentage_24h ?? 'null'}`, 'log', 'info');
-          } else {
-            logger(`❌ [CoinListItems] STEP 2 FAILED: CoinGecko also returned null for ${savedOutlierCoin.id}`, 'log', 'info');
-          }
-          return coingeckoData;
-        });
-      })
-      .then((fullData) => {
-        logger(`📊 [CoinListItems] Fetch summary for ${savedOutlierCoin.id}:`, 'log', 'info');
-        logger(`   └─ Final data source: ${dataSource.toUpperCase()}`, 'log', 'info');
-        logger(`   └─ Has data: ${!!fullData}`, 'log', 'info');
+    // Use shared utility function for backend-first fetch strategy
+    fetchOutlierCoinData(savedOutlierCoin.id, currency, 'CoinListItems')
+      .then((result) => {
+        const { data: fullData, dataSource } = result;
         
         if (fullData) {
           logger(`📥 [CoinListItems] Final data for ${fullData.name} (${fullData.id}):`, 'log', 'info');

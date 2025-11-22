@@ -61,7 +61,7 @@ function logRateLimitInfo(response: Response, page: number): void {
       }
     }
   } else {
-    logger(`📊 [CoinGecko API] Rate Limit Info (Page ${page}): No rate-limiting info received`, 'log');
+    // logger(`📊 [CoinGecko API] Rate Limit Info (Page ${page}): No rate-limiting info received`, 'log');
   }
 }
 

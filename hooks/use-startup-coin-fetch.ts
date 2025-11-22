@@ -6,10 +6,10 @@ import {
   STARTUP_FETCH_DELAY_MS,
 } from '@/constants/apiConfig';
 import { SupportedCurrency } from '@/constants/currency';
-import { fetchCoinMarketData } from '@/utils/coinGeckoApi';
 import { getCoinLists } from '@/utils/coinListStorage';
 import { logger } from '@/utils/logger';
-import { saveSearchedCoin } from '@/utils/searchedCoinsStorage';
+import { loadSavedOutlierCoins, saveSavedOutlierCoin } from '@/utils/searchedCoinsStorage';
+import { fetchOutlierCoinData } from '@/utils/fetchOutlierCoinData';
 import { useEffect, useRef, useState } from 'react';
 import { useAppInitialization } from './use-app-initializations';
 import { useCoinLists } from './use-coin-lists';
@@ -101,12 +101,32 @@ export function useStartupCoinFetch() {
           cryptoMarket.data.map(coin => coin.id.toLowerCase())
         );
         
+        // Also check SavedOutlierCoins to avoid refetching coins that already have data
+        const savedOutlierCoins = await loadSavedOutlierCoins();
+        const savedOutlierCoinsMap = new Set(
+          Object.keys(savedOutlierCoins || {}).map(id => id.toLowerCase())
+        );
+        
+        // Filter out coins that are in main cache OR already in SavedOutlierCoins
         const coinsToFetch = Array.from(allCoinIds).filter(
-          coinId => !marketDataMap.has(coinId)
+          coinId => {
+            const inMainCache = marketDataMap.has(coinId);
+            const inSavedOutlier = savedOutlierCoinsMap.has(coinId);
+            
+            if (inMainCache) {
+              logger(`   └─ Skipping ${coinId}: already in main cache`, 'log', 'debug');
+              return false;
+            }
+            if (inSavedOutlier) {
+              logger(`   └─ Skipping ${coinId}: already in SavedOutlierCoins`, 'log', 'debug');
+              return false;
+            }
+            return true;
+          }
         );
 
         if (coinsToFetch.length === 0) {
-          logger('✅ No coins to fetch - all coins are in main cache', 'log', 'debug');
+          logger('✅ No coins to fetch - all coins are in main cache or SavedOutlierCoins', 'log', 'debug');
           setState({
             isFetching: false,
             isComplete: true,
@@ -145,20 +165,22 @@ export function useStartupCoinFetch() {
             }
 
             try {
-              const coinData = await fetchCoinMarketData(coinId, currency);
+              // Use shared utility function for backend-first fetch strategy
+              const result = await fetchOutlierCoinData(coinId, currency, 'Startup Fetch');
               
-              if (coinData) {
-                // Save to SearchedCoins storage
-                await saveSearchedCoin(coinData);
+              if (result.data) {
+                // Save to SavedOutlierCoins storage
+                await saveSavedOutlierCoin(result.data);
                 fetchedCoinIdsRef.current.add(coinId);
+                logger(`✅ [Startup Fetch] Successfully fetched ${coinId} from ${result.dataSource.toUpperCase()}`, 'log', 'debug');
                 return { coinId, success: true, skipped: false };
               } else {
                 // Rate limit or other error - don't count as failure, just skip
-                logger(`⚠️🚦 No data returned for ${coinId} (likely rate limit)`, 'warn');
+                logger(`⚠️🚦 [Startup Fetch] No data returned for ${coinId} (likely rate limit)`, 'warn');
                 return { coinId, success: false, skipped: false };
               }
             } catch (error) {
-              logger(`❌ Error fetching ${coinId}:`, 'error', undefined, error);
+              logger(`❌ [Startup Fetch] Error fetching ${coinId}:`, 'error', undefined, error);
               return { coinId, success: false, skipped: false };
             }
           });

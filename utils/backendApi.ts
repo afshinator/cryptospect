@@ -213,15 +213,15 @@ export async function fetchCoinDataFromBackend(
     const data: any = await response.json();
 
     // Debug: Log the raw backend response
-    logger(`📊 [Backend API] Raw response for ${coinId}:`, 'log', 'info');
-    logger(`   └─ Response type: ${typeof data}`, 'log', 'info');
-    logger(`   └─ Has data: ${!!data}`, 'log', 'info');
-    logger(`   └─ Data keys: ${data ? Object.keys(data).join(', ') : 'none'}`, 'log', 'info');
-    logger(`   └─ Has market_data: ${!!data?.market_data}`, 'log', 'info');
-    if (data?.market_data) {
-      logger(`   └─ market_data keys: ${Object.keys(data.market_data).join(', ')}`, 'log', 'info');
-    }
-    logger(`   └─ Full response:`, 'log', 'info', data);
+    // logger(`📊 [Backend API] Raw response for ${coinId}:`, 'log', 'info');
+    // logger(`   └─ Response type: ${typeof data}`, 'log', 'info');
+    // logger(`   └─ Has data: ${!!data}`, 'log', 'info');
+    // logger(`   └─ Data keys: ${data ? Object.keys(data).join(', ') : 'none'}`, 'log', 'info');
+    // logger(`   └─ Has market_data: ${!!data?.market_data}`, 'log', 'info');
+    // if (data?.market_data) {
+    //   logger(`   └─ market_data keys: ${Object.keys(data.market_data).join(', ')}`, 'log', 'info');
+    // }
+    // logger(`   └─ Full response:`, 'log', 'info', data);
 
     if (!data || !data.market_data) {
       logger(`⚠️ [Backend API] No market data in response for ${coinId}`, 'log', 'info');
