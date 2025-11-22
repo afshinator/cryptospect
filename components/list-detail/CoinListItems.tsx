@@ -509,7 +509,6 @@ export function CoinListItems({
                       </Pressable>
                       <Pressable
                         onPress={(e) => {
-                          console.log('Remove coin handler called - stopping propagation'); 
                           e.stopPropagation(); 
                           onRemoveCoin(coin.coinId);
                         }}
