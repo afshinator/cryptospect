@@ -27,9 +27,53 @@ import {
   HistoricalDominanceSnapshot,
 } from "@/utils/backendApi";
 
+// --- CONSTANTS ---
+
 // Timing
 const STALE_TIME_HOURS = 24;
 const STALE_TIME_MS = STALE_TIME_HOURS * 60 * 60 * 1000;
+
+// Data Requirements
+const MIN_DATA_POINTS_REQUIRED = 7; // Minimum days needed to calculate 7-day change
+
+// Display Formatting
+const DECIMAL_PLACES = 2; // Number of decimal places for percentage display
+const STATISTICS_PERIOD_DAYS = 180; // Period for statistics calculation
+
+// Layout Constants
+const TWO_COLUMN_MIN_HEIGHT = 80; // Minimum height for two-column layout vertical centering
+const STAT_ITEM_MIN_WIDTH = 100; // Minimum width for statistics items
+
+// Styling Constants
+const BORDER_COLOR = '#a9a9a9'; // Color for separators and borders
+const FONT_WEIGHT_SEMIBOLD = '600'; // Font weight for semibold text
+const FONT_WEIGHT_MEDIUM = '500'; // Font weight for medium text
+
+// Date Formatting Options
+const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  month: "short",
+  day: "numeric",
+  year: "numeric"
+};
+
+// Text Constants
+const INTERPRETATION_POSITIVE = "Risk-off environment, favoring BTC dominance";
+const INTERPRETATION_NEGATIVE = "Altcoin Season precursor - shift toward large-cap altcoins";
+const INTERPRETATION_NEUTRAL = "Neutral - stable dominance ratio";
+const DESCRIPTION_POSITIVE = "BTC/ETH ratio accelerating toward BTC";
+const DESCRIPTION_NEGATIVE = "BTC/ETH ratio accelerating toward ETH";
+const STATS_TITLE_PREFIX = "180-Day Statistics";
+const STAT_LABEL_MIN = "Minimum";
+const STAT_LABEL_MAX = "Maximum";
+const STAT_LABEL_AVG = "Average";
+const STAT_INTERPRETATION_MIN = "Most extreme rotation toward ETH/altcoins in the period";
+const STAT_INTERPRETATION_MAX = "Most extreme rotation toward BTC/risk-off in the period";
+const STAT_INTERPRETATION_AVG_POSITIVE = "Overall trend favors BTC dominance";
+const STAT_INTERPRETATION_AVG_NEGATIVE = "Overall trend favors ETH/altcoin rotation";
+const STAT_INTERPRETATION_AVG_NEUTRAL = "Balanced momentum over the period";
+const LOADING_TEXT = "Loading momentum data...";
+const TITLE_TEXT = "Dominance Momentum";
+const LABEL_7_DAY_CHANGE = "7-Day Change";
 
 interface DominanceMomentumWidgetProps {
   extendedInfo?: boolean;
@@ -62,23 +106,23 @@ export function DominanceMomentumWidget({ extendedInfo = false }: DominanceMomen
   const isPositive = currentChange > 0;
   const interpretation =
     currentChange > 0
-      ? "Risk-off environment, favoring BTC dominance"
+      ? INTERPRETATION_POSITIVE
       : currentChange < 0
-      ? "Altcoin Season precursor - shift toward large-cap altcoins"
-      : "Neutral - stable dominance ratio";
+      ? INTERPRETATION_NEGATIVE
+      : INTERPRETATION_NEUTRAL;
 
   if (isPending) {
     return (
       <SectionContainer marginBottom={Spacing.md}>
         <ActivityIndicator size="small" />
         <ThemedText type="body" variant="secondary" style={styles.loadingText}>
-          Loading momentum data...
+          {LOADING_TEXT}
         </ThemedText>
       </SectionContainer>
     );
   }
 
-  if (!historicalDominance || historicalDominance.length < 7) {
+  if (!historicalDominance || historicalDominance.length < MIN_DATA_POINTS_REQUIRED) {
     return null; // Not enough data
   }
 
@@ -88,7 +132,7 @@ export function DominanceMomentumWidget({ extendedInfo = false }: DominanceMomen
   return (
     <SectionContainer marginBottom={Spacing.md}>
       <ThemedText type="subtitle" style={styles.title}>
-        Dominance Momentum
+        {TITLE_TEXT}
       </ThemedText>
       
       {/* Current 7-Day Change - Two Column Layout */}
@@ -99,10 +143,10 @@ export function DominanceMomentumWidget({ extendedInfo = false }: DominanceMomen
             style={[styles.value, { color: changeColor }]}
           >
             {sign}
-            {currentChange.toFixed(2)}%
+            {currentChange.toFixed(DECIMAL_PLACES)}%
           </ThemedText>
           <ThemedText type="small" variant="secondary" style={styles.label}>
-            7-Day Change
+            {LABEL_7_DAY_CHANGE}
           </ThemedText>
         </ThemedView>
         <ThemedView style={styles.separator} />
@@ -112,8 +156,8 @@ export function DominanceMomentumWidget({ extendedInfo = false }: DominanceMomen
           </ThemedText>
           <ThemedText type="small" style={styles.description}>
             {isPositive
-              ? "BTC/ETH ratio accelerating toward BTC"
-              : "BTC/ETH ratio accelerating toward ETH"}
+              ? DESCRIPTION_POSITIVE
+              : DESCRIPTION_NEGATIVE}
           </ThemedText>
         </ThemedView>
       </ThemedView>
@@ -122,62 +166,54 @@ export function DominanceMomentumWidget({ extendedInfo = false }: DominanceMomen
       {extendedInfo && stats.count > 0 && (
         <ThemedView style={styles.statsSection}>
           <ThemedText type="body" variant="secondary" style={styles.statsTitle}>
-            180-Day Statistics ({stats.count} valid periods)
+            {STATS_TITLE_PREFIX} ({stats.count} valid periods)
           </ThemedText>
           <ThemedView style={styles.statsGrid}>
             <ThemedView style={styles.statItem}>
               <ThemedText type="small" variant="secondary" style={styles.statLabel}>
-                Minimum
+                {STAT_LABEL_MIN}
               </ThemedText>
               <ThemedText type="body" style={[styles.statValue, { color: errorColor }]}>
-                {stats.min < 0 ? '' : '+'}{stats.min.toFixed(2)}%
+                {stats.min < 0 ? '' : '+'}{stats.min.toFixed(DECIMAL_PLACES)}%
               </ThemedText>
               {stats.minDate && (
                 <ThemedText type="xsmall" style={styles.statDate}>
-                  {new Date(stats.minDate).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric"
-                  })}
+                  {new Date(stats.minDate).toLocaleDateString("en-US", DATE_FORMAT_OPTIONS)}
                 </ThemedText>
               )}
               <ThemedText type="xsmall" variant="secondary" style={styles.statInterpretation}>
-                Most extreme rotation toward ETH/altcoins in the period
+                {STAT_INTERPRETATION_MIN}
               </ThemedText>
             </ThemedView>
             <ThemedView style={styles.statItem}>
               <ThemedText type="small" variant="secondary" style={styles.statLabel}>
-                Maximum
+                {STAT_LABEL_MAX}
               </ThemedText>
               <ThemedText type="body" style={[styles.statValue, { color: successColor }]}>
-                {stats.max < 0 ? '' : '+'}{stats.max.toFixed(2)}%
+                {stats.max < 0 ? '' : '+'}{stats.max.toFixed(DECIMAL_PLACES)}%
               </ThemedText>
               {stats.maxDate && (
                 <ThemedText type="xsmall" style={styles.statDate}>
-                  {new Date(stats.maxDate).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric"
-                  })}
+                  {new Date(stats.maxDate).toLocaleDateString("en-US", DATE_FORMAT_OPTIONS)}
                 </ThemedText>
               )}
               <ThemedText type="xsmall" variant="secondary" style={styles.statInterpretation}>
-                Most extreme rotation toward BTC/risk-off in the period
+                {STAT_INTERPRETATION_MAX}
               </ThemedText>
             </ThemedView>
             <ThemedView style={styles.statItem}>
               <ThemedText type="small" variant="secondary" style={styles.statLabel}>
-                Average
+                {STAT_LABEL_AVG}
               </ThemedText>
               <ThemedText type="body" style={styles.statValue}>
-                {stats.average < 0 ? '' : '+'}{stats.average.toFixed(2)}%
+                {stats.average < 0 ? '' : '+'}{stats.average.toFixed(DECIMAL_PLACES)}%
               </ThemedText>
               <ThemedText type="xsmall" variant="secondary" style={styles.statInterpretation}>
                 {stats.average > 0 
-                  ? "Overall trend favors BTC dominance" 
+                  ? STAT_INTERPRETATION_AVG_POSITIVE
                   : stats.average < 0
-                  ? "Overall trend favors ETH/altcoin rotation"
-                  : "Balanced momentum over the period"}
+                  ? STAT_INTERPRETATION_AVG_NEGATIVE
+                  : STAT_INTERPRETATION_AVG_NEUTRAL}
               </ThemedText>
             </ThemedView>
           </ThemedView>
@@ -194,7 +230,7 @@ const styles = StyleSheet.create({
   twoColumnContainer: {
     flexDirection: "row",
     marginBottom: Spacing.sm,
-    minHeight: 80, // Ensure enough height for vertical centering
+    minHeight: TWO_COLUMN_MIN_HEIGHT,
   },
   leftColumn: {
     flex: 1,
@@ -203,7 +239,7 @@ const styles = StyleSheet.create({
   },
   separator: {
     width: StyleSheet.hairlineWidth,
-    backgroundColor: '#a9a9a9',
+    backgroundColor: BORDER_COLOR,
     marginHorizontal: Spacing.md,
   },
   rightColumn: {
@@ -228,11 +264,11 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
     paddingTop: Spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#a9a9a9',
+    borderTopColor: BORDER_COLOR,
   },
   statsTitle: {
     marginBottom: Spacing.sm,
-    fontWeight: '600',
+    fontWeight: FONT_WEIGHT_SEMIBOLD,
     textAlign: 'center',
   },
   statsGrid: {
@@ -242,18 +278,18 @@ const styles = StyleSheet.create({
   },
   statItem: {
     flex: 1,
-    minWidth: 100,
+    minWidth: STAT_ITEM_MIN_WIDTH,
   },
   statLabel: {
     marginBottom: Spacing.xs / 2,
   },
   statValue: {
-    fontWeight: '600',
+    fontWeight: FONT_WEIGHT_SEMIBOLD,
     marginBottom: Spacing.xs / 2,
   },
   statDate: {
     marginBottom: Spacing.xs / 2,
-    fontWeight: '500',
+    fontWeight: FONT_WEIGHT_MEDIUM,
   },
   statInterpretation: {
     marginTop: Spacing.xs / 2,

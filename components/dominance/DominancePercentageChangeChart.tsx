@@ -1,6 +1,6 @@
 // components/DominancePercentageChangeChart.tsx
 import React from 'react';
-import { StyleSheet, useColorScheme } from "react-native";
+import { Platform, StyleSheet, useColorScheme } from "react-native";
 
 import { SectionContainer } from '@/components/SectionContainer';
 import { ThemedText } from '@/components/themed-text';
@@ -149,6 +149,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     textAlign: 'center',
     paddingHorizontal: Spacing.lg,
+    ...(Platform.OS === 'web' && { fontSize: 16 }), // Larger font on web
   },
   loadingText: {
     textAlign: 'center',

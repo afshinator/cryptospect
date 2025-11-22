@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Dimensions, StyleSheet, useColorScheme } from "react-native";
+import { Dimensions, Platform, StyleSheet, useColorScheme } from "react-native";
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -13,7 +13,7 @@ import { Collapsible } from '../ui/collapsible';
 const CHART_HEIGHT = 180;
 const TRANSPARENT_COLOR = "#00000000";
 const BAR_COLOR = "#9ca3af"; // Gray for non-highlighted bars
-const CURRENT_RATIO_COLOR = "#ef4444"; // Red for the current ratio marker
+const CURRENT_RATIO_COLOR = "#3b82f6"; // Red for the current ratio marker
 
 // Calculated Dimensions
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -203,16 +203,20 @@ export default function DominanceRatioHistogram({ historicalData }: DominanceRat
 
       <Collapsible title="Details">
         <ThemedText type="body" style={styles.explanatoryText}>
-          The chart provides context for the current ratio by answering the
-          question: &quot;How often has the ratio been at this level in the
-          past?&quot;
+          Shows how often has the above ratio has been at this aproximate level in the past.
         </ThemedText>
         <ThemedText type="body" style={styles.explanatoryText}>
-          The &quot;Fair Value Zone&quot; on this chart is simply the range of ratios
-          where the market has spent the most time. Tall Bars = Fair Value:
+
+          <ThemedText type="bodySemibold" >Tall Bars = Fair Value:</ThemedText>
           The tallest bars represent the most frequent ratios. This is the
           statistical mean or mode of the data. The market generally
-          gravitates toward this area. Meaning: When the ratio is inside
+          gravitates toward this area.
+          The <ThemedText type="bodySemibold" >Fair Value Zone</ThemedText> on this chart is
+          the range of ratios where the market has spent the most time.
+
+        </ThemedText>
+        <ThemedText type="body" style={styles.explanatoryText}>
+          Meaning: When the ratio is inside
           this zone, it suggests the relationship between BTC&apos;s dominance
           and ETH&apos;s dominance is stable, balanced, and historically common.
           No significant, non-standard capital rotation is likely signaled.
@@ -283,6 +287,7 @@ const styles = StyleSheet.create({
   caption: {
     marginTop: Spacing.sm,
     textAlign: 'center',
+    ...(Platform.OS === 'web' && { fontSize: 16 }), // Larger font on web
   },
   currentRatioMarker: {
     marginTop: Spacing.xs,

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, useColorScheme } from "react-native";
+import { Platform, StyleSheet, useColorScheme } from "react-native";
 
 import { SectionContainer } from '@/components/SectionContainer';
 import { ThemedText } from '@/components/themed-text';
@@ -15,7 +15,7 @@ const CHART_HEIGHT = 180; // Slightly smaller height for comparison chart
 const LINE_STROKE_WIDTH = 2;
 
 // Defined Colors (Ratio-specific colors)
-const RATIO_COLOR = "#fde047"; // Yellow (for the ratio line)
+const RATIO_COLOR = "#3b82f6"; // Yellow (for the ratio line)
 const AVERAGE_COLOR = "#999"; // Red (for the baseline)
 const TRANSPARENT_COLOR = "#00000000";
 
@@ -184,6 +184,7 @@ const styles = StyleSheet.create({
   caption: {
     marginTop: Spacing.sm,
     textAlign: 'center',
+    ...(Platform.OS === 'web' && { fontSize: 16 }), // Larger font on web
   },
   loadingText: {
     padding: Spacing.xl,

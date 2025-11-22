@@ -40,6 +40,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="lists"
+        options={{
+          title: "Lists",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="list.bullet" color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="rates"
         options={{
           title: "rates",
@@ -53,15 +63,7 @@ export default function TabLayout() {
         }}
       />
 
-      <Tabs.Screen
-        name="lists"
-        options={{
-          title: "Lists",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="list.bullet" color={color} />
-          ),
-        }}
-      />
+
       {/* <Tabs.Screen
         name="example"
         options={{
