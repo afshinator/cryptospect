@@ -145,29 +145,69 @@ export async function fetchCoinDataFromBackend(
   currency: SupportedCurrency = "usd"
 ): Promise<CoinGeckoMarketData | null> {
   if (!coinId || !coinId.trim()) {
+    logger(`⚠️ [Backend API] Invalid coinId: ${coinId}`, 'log', 'info');
     return null;
   }
 
-  logger(`⚡ [Backend API] Fetching coin data for ${coinId}...`, 'log', 'debug');
+  const url = `${BACKEND_BASE_URL}/api/coins/${coinId.trim()}`;
+  logger(`⚡ [Backend API] Starting fetch for ${coinId}...`, 'log', 'info');
+  logger(`   └─ URL: ${url}`, 'log', 'info');
+  logger(`   └─ Currency: ${currency}`, 'log', 'info');
+  logger(`   └─ Has API key: ${!!BACKEND_API_KEY}`, 'log', 'info');
 
   try {
-    const response = await fetch(`${BACKEND_BASE_URL}/api/coins/${coinId.trim()}`, {
+    const startTime = Date.now();
+    const response = await fetch(url, {
       headers: {
         'x-api-key': BACKEND_API_KEY,
       },
     });
+    const duration = Date.now() - startTime;
+    
+    logger(`📡 [Backend API] Response received for ${coinId}:`, 'log', 'info');
+    logger(`   └─ Status: ${response.status} ${response.statusText}`, 'log', 'info');
+    logger(`   └─ Duration: ${duration}ms`, 'log', 'info');
+    logger(`   └─ OK: ${response.ok}`, 'log', 'info');
 
     if (!response.ok) {
+      let failureReason = '';
       if (response.status === 404) {
-        logger(`⚠️ [Backend API] Coin not found: ${coinId}`, 'warn');
-        return null;
+        failureReason = 'COIN_NOT_FOUND';
+        logger(`⚠️ [Backend API] Coin not found (404) for ${coinId}`, 'log', 'info');
+        logger(`   └─ Reason: Coin does not exist in backend database`, 'log', 'info');
+        logger(`   └─ This is expected if the coin ID is invalid or not supported`, 'log', 'info');
+      } else if (response.status === 429) {
+        failureReason = 'RATE_LIMITED';
+        logger(`⚠️🚦 [Backend API] Rate limit exceeded (429) for ${coinId}`, 'log', 'info');
+        logger(`   └─ Reason: Too many requests to backend API`, 'log', 'info');
+      } else if (response.status === 401 || response.status === 403) {
+        failureReason = 'AUTH_ERROR';
+        logger(`⚠️ [Backend API] Authentication error (${response.status}) for ${coinId}`, 'log', 'info');
+        logger(`   └─ Reason: Invalid or missing API key`, 'log', 'info');
+      } else if (response.status >= 500) {
+        failureReason = 'SERVER_ERROR';
+        logger(`⚠️ [Backend API] Server error (${response.status}) for ${coinId}`, 'log', 'info');
+        logger(`   └─ Reason: Backend server error`, 'log', 'info');
+      } else {
+        failureReason = 'HTTP_ERROR';
+        logger(`⚠️ [Backend API] HTTP error (${response.status}) for ${coinId}`, 'log', 'info');
+        logger(`   └─ Reason: Unexpected HTTP status code`, 'log', 'info');
       }
-      if (response.status === 429) {
-        logger(`⚠️🚦 [Backend API] Rate limit exceeded for ${coinId}`, 'warn');
-        return null;
+      logger(`   └─ Status text: ${response.statusText}`, 'log', 'info');
+      // Try to get error body if available
+      try {
+        const errorBody = await response.text();
+        if (errorBody) {
+          logger(`   └─ Error body: ${errorBody.substring(0, 200)}`, 'log', 'info');
+        }
+      } catch (e) {
+        // Ignore error reading body
       }
-      logger(`⚠️ [Backend API] Failed to fetch coin data for ${coinId}: status ${response.status}`, 'warn');
-      return null;
+      // Store failure reason in a way that can be passed back (we'll use a custom error)
+      const error = new Error(`Backend API failed: ${failureReason}`);
+      (error as any).failureReason = failureReason;
+      (error as any).statusCode = response.status;
+      throw error; // Throw instead of returning null so we can catch it and log the reason
     }
 
     const data: any = await response.json();
@@ -184,8 +224,16 @@ export async function fetchCoinDataFromBackend(
     logger(`   └─ Full response:`, 'log', 'info', data);
 
     if (!data || !data.market_data) {
-      logger(`⚠️ [Backend API] No market data available for coin: ${coinId}`, 'warn');
-      return null;
+      logger(`⚠️ [Backend API] No market data in response for ${coinId}`, 'log', 'info');
+      logger(`   └─ Reason: Response missing market_data field`, 'log', 'info');
+      logger(`   └─ Has data: ${!!data}`, 'log', 'info');
+      logger(`   └─ Has market_data: ${!!data?.market_data}`, 'log', 'info');
+      if (data) {
+        logger(`   └─ Response keys: ${Object.keys(data).join(', ')}`, 'log', 'info');
+      }
+      const error = new Error(`Backend API: No market data available`);
+      (error as any).failureReason = 'NO_MARKET_DATA';
+      throw error; // Throw instead of returning null
     }
 
     const marketData = data.market_data;
@@ -240,7 +288,7 @@ export async function fetchCoinDataFromBackend(
 
     // Debug: Log the mapped data
     logger(`✅ [Backend API] Successfully fetched coin data for ${coinId}`, 'log', 'info');
-    logger(`   └─ Mapped data keys: ${Object.keys(mappedData).join(', ')}`, 'log', 'info');
+    logger(`   └─ Data source: BACKEND API`, 'log', 'info');
     logger(`   └─ Name: ${mappedData.name}`, 'log', 'info');
     logger(`   └─ Symbol: ${mappedData.symbol}`, 'log', 'info');
     logger(`   └─ Current price: ${mappedData.current_price}`, 'log', 'info');
@@ -250,23 +298,37 @@ export async function fetchCoinDataFromBackend(
     
     return mappedData;
   } catch (error) {
+    const failureReason = (error as any)?.failureReason || 'UNKNOWN_ERROR';
+    const statusCode = (error as any)?.statusCode;
+    
+    logger(`❌ [Backend API] Exception caught for ${coinId}:`, 'log', 'info');
+    logger(`   └─ Failure reason: ${failureReason}`, 'log', 'info');
+    if (statusCode) {
+      logger(`   └─ HTTP status: ${statusCode}`, 'log', 'info');
+    }
+    logger(`   └─ Error type: ${error instanceof Error ? error.constructor.name : typeof error}`, 'log', 'info');
+    logger(`   └─ Error message: ${error instanceof Error ? error.message : String(error)}`, 'log', 'info');
+    
     // Check if it's a network error (Failed to fetch)
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
       // On web, CORS errors are expected - don't log as error
       if (Platform.OS === 'web') {
-        logger(`⚠️ [Backend API] Network/CORS error for ${coinId} (expected on web):`, 'warn');
-        logger(`   └─ This is informational, not an error`, 'warn');
-        logger(`   └─ Direct API calls from browser may be blocked by CORS policy`, 'warn');
+        logger(`   └─ This is a CORS/network error (expected on web)`, 'log', 'info');
+        logger(`   └─ Direct API calls from browser may be blocked by CORS policy`, 'log', 'info');
+        logger(`   └─ Failure reason: CORS_BLOCKED`, 'log', 'info');
         return null;
       } else {
         // On mobile, "Failed to fetch" is a real network error
-        logger(`⚠️ [Backend API] Network error fetching coin data for ${coinId}:`, 'warn');
-        logger(`   └─ Error: ${error.message}`, 'warn');
+        logger(`   └─ This is a network error (mobile)`, 'log', 'info');
+        logger(`   └─ Failure reason: NETWORK_ERROR`, 'log', 'info');
         return null;
       }
     }
     
-    logger(`⚠️ [Backend API] Error fetching coin data for ${coinId}:`, 'warn', undefined, error);
+    // If we have a failure reason from our code, it's already been logged above
+    if (failureReason === 'UNKNOWN_ERROR') {
+      logger(`   └─ Full error:`, 'log', 'info', error);
+    }
     return null;
   }
 }

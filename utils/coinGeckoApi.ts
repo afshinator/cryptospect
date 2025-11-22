@@ -389,10 +389,12 @@ export async function fetchCoinMarketData(
       }
     }
     
-    logger(`📊 [CoinGecko API] Market data extracted for ${coinId}:`, 'log', 'debug');
-    logger(`   └─ Currency: ${currency}`, 'log', 'debug');
-    logger(`   └─ Current price: ${currentPrice}`, 'log', 'debug');
-    logger(`   └─ 24h change: ${priceChangePercentage24h !== null && priceChangePercentage24h !== undefined ? `${priceChangePercentage24h.toFixed(2)}%` : 'N/A'}`, 'log', 'debug');
+    logger(`✅ [CoinGecko API] Successfully fetched coin data for ${coinId}`, 'log', 'info');
+    logger(`   └─ Data source: COINGECKO API`, 'log', 'info');
+    logger(`   └─ Name: ${data.name || coinId}`, 'log', 'info');
+    logger(`   └─ Symbol: ${data.symbol || ''}`, 'log', 'info');
+    logger(`   └─ Current price: ${currentPrice}`, 'log', 'info');
+    logger(`   └─ 24h change: ${priceChangePercentage24h !== null && priceChangePercentage24h !== undefined ? `${priceChangePercentage24h.toFixed(2)}%` : 'N/A'}`, 'log', 'info');
     const marketCapChange24h = marketData.market_cap_change_24h?.[currency] ?? null;
     const marketCapChangePercentage24h = marketData.market_cap_change_percentage_24h?.[currency] ?? null;
 
