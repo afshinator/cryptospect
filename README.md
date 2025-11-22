@@ -119,21 +119,30 @@ All timing constants, delays, refresh intervals, and rate limiting configuration
 - `page`: `1`, `2`, `3`, `4`, `5` (fetches 5 pages sequentially)
 - `sparkline`: `false`
 
-**Cache Duration:** 6 minutes (client-side AsyncStorage)
+**Cache Duration:** 6 minutes per page (client-side AsyncStorage)
 - **Constant Location:** `constants/apiConfig.ts` → `CRYPTO_MARKET_REFRESH_INTERVAL_MS = 6 * 60 * 1000`
 
 **Fetching Algorithm:**
 
-The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per page) using a rate-limited sequential fetching strategy:
+The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per page) using a rate-limited sequential fetching strategy with **per-page timestamp tracking**:
 
-1. **Sequential Page Fetching**: Pages are fetched one at a time (not in parallel) to respect CoinGecko's rate limits.
+1. **Per-Page Timestamp Tracking**: Each page has its own refresh timestamp, allowing granular refresh control.
    - **Number of pages:** 5 pages
    - **Coins per page:** 250 (free tier maximum)
    - **Constant Locations:**
      - `constants/coinGecko.ts` → `MARKET_DATA_PAGES_TO_FETCH = 5`
      - `constants/coinGecko.ts` → `MARKET_DATA_PER_PAGE = 250`
+   - **Storage Format:** `CryptoMarketSnapshot.pageTimestamps?: { [page: number]: number }`
+   - **Type Definition:** `constants/coinGecko.ts` → `CryptoMarketSnapshot`
 
-2. **Rate Limiting Delays**:
+2. **Smart Page Refresh Logic**:
+   - **Before fetching**: Checks which pages are stale (older than 6 minutes) or missing timestamps
+   - **Only fetches stale pages**: Pages that are fresh (less than 6 minutes old) are skipped
+   - **Failed pages**: Pages that fail to fetch keep their old timestamp (if exists) and will be retried when they become stale
+   - **Successful pages**: Get their timestamp updated to current time when successfully fetched
+   - **Example**: If pages 1-3 are fresh and page 4 is stale, only page 4 will be fetched
+
+3. **Rate Limiting Delays**:
    - **Between pages**: 1.2 seconds delay between each page request
      - **Constant Location:** `constants/apiConfig.ts` → `MARKET_DATA_DELAY_BETWEEN_PAGES_MS = 1200`
    - **After every 3 pages**: 10 seconds longer delay before continuing
@@ -145,25 +154,28 @@ The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per
        - `constants/apiConfig.ts` → `MARKET_DATA_MAX_RETRIES = 3`
        - `constants/apiConfig.ts` → `MARKET_DATA_BASE_RETRY_DELAY_MS = 60000` (60 seconds)
 
-3. **Data Preservation**:
-   - Existing cached data is preserved until new data is validated as complete
-   - New data is only persisted if:
-     - All 5 pages are successfully fetched, OR
-     - The new data has more coins than the existing cache
-   - If fetching fails or is incomplete, the old cache is preserved and returned (graceful degradation)
+4. **Data Merging Strategy**:
+   - **Successfully fetched pages**: Replace old data with fresh data, update page timestamp
+   - **Failed pages**: Preserve old data from cache, keep old timestamp (will retry when stale)
+   - **Fresh pages (not attempted)**: Preserve old data from cache, keep existing timestamp
+   - **Result**: Merged data contains fresh data from successful pages + preserved data from failed/fresh pages
+   - **Sorting**: Final merged data is sorted by `market_cap_rank` to maintain proper order
+   - **Overall timestamp**: Set to the oldest page timestamp (ensures failed pages are retried when they become stale)
    - **Implementation:** `utils/coinGeckoApi.ts` → `fetchAndPersistCryptoMarket()`
 
-4. **Refresh Triggers**:
-   - **At app startup**: If cache is missing or stale (older than 6 minutes)
-   - **Automatic**: Every 6 minutes via `refetchInterval`
+5. **Refresh Triggers**:
+   - **At app startup**: Checks per-page timestamps, fetches only stale pages
+   - **Automatic**: Every 6 minutes via `refetchInterval` (checks per-page timestamps)
      - **Constant Location:** `constants/apiConfig.ts` → `CRYPTO_MARKET_REFRESH_INTERVAL_MS`
      - **Usage:** `hooks/use-app-initializations.ts` → `useQuery` with `refetchInterval`
    - **On window focus**: When the app regains focus (`refetchOnWindowFocus`)
-   - **On access**: If cached data is older than 6 minutes when accessed
+   - **On access**: Checks per-page timestamps, fetches only stale pages
    - **Implementation:** `utils/coinGeckoApi.ts` → `getCryptoMarket()`
 
-5. **Timestamp Validation**: Each snapshot includes a `timestamp` field that tracks when the data was fetched. The cache is considered stale if `currentTime - timestamp > 6 minutes`.
-   - **Type Definition:** `constants/coinGecko.ts` → `CryptoMarketSnapshot.timestamp: number`
+6. **Backward Compatibility**:
+   - **Legacy format**: Old cache without `pageTimestamps` is detected and migrated
+   - **Migration**: On first access to legacy cache, all pages are fetched and per-page timestamps are created
+   - **Overall timestamp**: Still maintained for backward compatibility, but per-page timestamps take precedence
 
 **Data Retrieved:**
 - Array of up to 1,250 cryptocurrencies (5 pages × 250 per page) with comprehensive market data:

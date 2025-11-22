@@ -63,8 +63,9 @@ export type CoinGeckoMarketData = {
 
 export type CryptoMarketSnapshot = {
   data: CoinGeckoMarketData[] | null;
-  timestamp: number;
+  timestamp: number; // Legacy: overall timestamp (kept for backward compatibility)
   currency: SupportedCurrency;
+  pageTimestamps?: { [page: number]: number }; // Per-page timestamps for granular refresh control
 };
 
 // CoinGecko API response type for /global endpoint

@@ -173,18 +173,54 @@ export async function fetchAndPersistCryptoMarket(
   // Load existing cached data to preserve it if new fetch fails or is incomplete
   const existingData = await loadCachedCryptoMarket();
   const existingCoinCount = existingData?.data?.length || 0;
+  const now = Date.now();
   
   if (existingData) {
     logger(`💾 [CoinGecko API] Preserving existing cache (${existingCoinCount} coins) until new data is validated`, 'log', 'debug');
   }
 
+  // Determine which pages need refreshing based on per-page timestamps
+  const pagesToFetch: number[] = [];
+  const existingPageTimestamps = existingData?.pageTimestamps || {};
+  
+  for (let page = 1; page <= MARKET_DATA_PAGES_TO_FETCH; page++) {
+    const pageTimestamp = existingPageTimestamps[page];
+    const pageAge = pageTimestamp ? now - pageTimestamp : Infinity;
+    const isStale = !pageTimestamp || pageAge >= CRYPTO_MARKET_REFRESH_INTERVAL_MS;
+    
+    if (isStale) {
+      pagesToFetch.push(page);
+      if (pageTimestamp) {
+        logger(`   └─ Page ${page}: Stale (${Math.round(pageAge / 1000)}s old, threshold: ${CRYPTO_MARKET_REFRESH_INTERVAL_MS / 1000}s)`, 'log', 'debug');
+      } else {
+        logger(`   └─ Page ${page}: No timestamp (needs initial fetch)`, 'log', 'debug');
+      }
+    } else {
+      logger(`   └─ Page ${page}: Fresh (${Math.round(pageAge / 1000)}s old, ${Math.round((CRYPTO_MARKET_REFRESH_INTERVAL_MS - pageAge) / 1000)}s remaining)`, 'log', 'debug');
+    }
+  }
+  
+  if (pagesToFetch.length === 0) {
+    logger(`✅ [CoinGecko API] All pages are fresh, no fetch needed`, 'log', 'debug');
+    if (existingData) {
+      return existingData;
+    }
+    // If no existing data but no pages to fetch, something's wrong - fetch all pages
+    pagesToFetch.push(...Array.from({length: MARKET_DATA_PAGES_TO_FETCH}, (_, i) => i + 1));
+    logger(`   └─ ⚠️ No existing data found, fetching all pages`, 'warn');
+  } else {
+    logger(`🔄 [CoinGecko API] Pages to fetch: ${pagesToFetch.join(', ')} (${pagesToFetch.length}/${MARKET_DATA_PAGES_TO_FETCH})`, 'log', 'info');
+  }
+
   try {
     const allData: CoinGeckoMarketData[] = [];
+    const successfulPages: number[] = []; // Track which pages were successfully fetched
+    const newPageTimestamps: { [page: number]: number } = { ...existingPageTimestamps }; // Start with existing timestamps
     let pagesFetched = 0;
     let fetchFailed = false;
 
-    // Fetch pages sequentially to avoid rate limiting
-    for (let page = 1; page <= MARKET_DATA_PAGES_TO_FETCH; page++) {
+    // Fetch only pages that need refreshing
+    for (const page of pagesToFetch) {
       logger(`📄 [CoinGecko API] Fetching page ${page}/${MARKET_DATA_PAGES_TO_FETCH}...`, 'log', 'debug');
       
       try {
@@ -192,15 +228,21 @@ export async function fetchAndPersistCryptoMarket(
         
         if (pageData.length === 0) {
           logger(`   └─ ⚠️ Page ${page} returned no data. Stopping pagination.`, 'log', 'debug');
-          break; // No more data available
+          // Don't break - continue with remaining pages, but mark this page as failed
+          fetchFailed = true;
+          continue;
         }
         
         allData.push(...pageData);
+        successfulPages.push(page);
+        newPageTimestamps[page] = now; // Update timestamp for successfully fetched page
         pagesFetched++;
         logger(`   └─ ✅ Page ${page} fetched: ${pageData.length} coins (total: ${allData.length})`, 'log', 'debug');
+        logger(`   └─ 📅 Page ${page} timestamp updated: ${new Date(now).toISOString()}`, 'log', 'debug');
         
         // Delay between pages to respect rate limits
-        if (page < MARKET_DATA_PAGES_TO_FETCH) {
+        const currentIndex = pagesToFetch.indexOf(page);
+        if (currentIndex < pagesToFetch.length - 1) {
           // After every N pages, use a longer delay
           if (pagesFetched % PAGES_BEFORE_LONG_DELAY === 0) {
             logger(`   └─ ⏸️  Fetched ${PAGES_BEFORE_LONG_DELAY} pages. Waiting ${DELAY_AFTER_EVERY_N_PAGES_MS}ms before next page...`, 'log', 'debug');
@@ -231,54 +273,114 @@ export async function fetchAndPersistCryptoMarket(
         }
         fetchFailed = true;
         
-        // If we have some data, continue with what we have
-        if (allData.length > 0) {
-          logger(`   └─ ⚠️ Continuing with partial data (${allData.length} coins from ${pagesFetched} pages)`, 'warn');
-          break;
+        // Continue to next page even if this one failed (we'll merge with existing data)
+        // Don't update timestamp for failed pages - they'll be retried next time
+        logger(`   └─ ⚠️ Page ${page} failed, keeping old timestamp (if exists) for retry`, 'warn');
+        
+        // If we have some data, continue with remaining pages
+        if (allData.length > 0 || pagesToFetch.length > 1) {
+          logger(`   └─ ⚠️ Continuing with remaining pages...`, 'warn');
+          continue;
         }
-        // If first page fails, throw the error
+        // If this is the only page and it fails, throw the error
         throw error;
       }
     }
 
-    if (allData.length === 0) {
-      throw new Error('❌ CoinGecko API returned no data for any page.');
+    if (allData.length === 0 && (!existingData || !existingData.data || existingData.data.length === 0)) {
+      throw new Error('❌ CoinGecko API returned no data for any page and no existing cache available.');
     }
 
-    // Validate new data: only persist if it's complete (all pages fetched) OR better than existing
-    const isComplete = pagesFetched === MARKET_DATA_PAGES_TO_FETCH && !fetchFailed;
-    const isBetterThanExisting = allData.length >= existingCoinCount;
+    // Determine which pages failed (were in pagesToFetch but not in successfulPages)
+    const failedPages = pagesToFetch.filter(p => !successfulPages.includes(p));
+    const allPages = Array.from({length: MARKET_DATA_PAGES_TO_FETCH}, (_, i) => i + 1);
+    const pagesNotAttempted = allPages.filter(p => !pagesToFetch.includes(p));
     
-    if (!isComplete && !isBetterThanExisting) {
-      logger(`⚠️ [CoinGecko API] New data is incomplete:`, 'warn');
-      logger(`   └─ New data: ${allData.length} coins from ${pagesFetched}/${MARKET_DATA_PAGES_TO_FETCH} pages`, 'warn');
-      logger(`   └─ Existing cache: ${existingCoinCount} coins`, 'warn');
-      logger(`   └─ Preserving existing data.`, 'warn');
-      if (existingData) {
-        return existingData;
+    // If we have existing data, merge new pages with old pages
+    if (existingData && existingData.data && existingData.data.length > 0) {
+      logger(`🔄 [CoinGecko API] Merging successfully fetched pages with existing cache:`, 'log', 'info');
+      logger(`   └─ Successfully fetched pages: ${successfulPages.length > 0 ? successfulPages.join(', ') : 'none'} (${allData.length} coins)`, 'log', 'info');
+      if (failedPages.length > 0) {
+        logger(`   └─ Failed pages (will retry when stale): ${failedPages.join(', ')}`, 'log', 'info');
       }
-      // If no existing data, use what we have (better than nothing)
-      logger(`   └─ ⚠️ No existing cache available. Using partial data (${allData.length} coins).`, 'warn');
+      if (pagesNotAttempted.length > 0) {
+        logger(`   └─ Pages not attempted (still fresh): ${pagesNotAttempted.join(', ')}`, 'log', 'info');
+      }
+      
+      // Create a Set of coin IDs from successfully fetched pages (for fast lookup)
+      const newCoinIds = new Set(allData.map(coin => coin.id.toLowerCase()));
+      
+      // Keep coins from existing cache that are NOT in the successfully fetched pages
+      // This preserves data from failed pages and pages not attempted
+      const existingCoinsFromOtherPages = existingData.data.filter(
+        coin => !newCoinIds.has(coin.id.toLowerCase())
+      );
+      
+      // Merge: new data from successful pages + old data from other pages
+      const mergedData = [...allData, ...existingCoinsFromOtherPages];
+      
+      // Sort by market_cap_rank to maintain proper order
+      mergedData.sort((a, b) => {
+        const rankA = a.market_cap_rank ?? Infinity;
+        const rankB = b.market_cap_rank ?? Infinity;
+        return rankA - rankB;
+      });
+      
+      logger(`   └─ Merged result: ${mergedData.length} coins (${allData.length} new + ${existingCoinsFromOtherPages.length} from cache)`, 'log', 'info');
+      
+      // Calculate overall timestamp (oldest page timestamp, or now if all pages are fresh)
+      const allPageTimestamps = Object.values(newPageTimestamps);
+      const oldestPageTimestamp = allPageTimestamps.length > 0 ? Math.min(...allPageTimestamps) : now;
+      
+      const mergedSnapshot: CryptoMarketSnapshot = {
+        data: mergedData,
+        timestamp: oldestPageTimestamp, // Overall timestamp is oldest page timestamp
+        currency,
+        pageTimestamps: newPageTimestamps, // Per-page timestamps for granular refresh
+      };
+      
+      // Always persist merged data (it's at least as good as what we had)
+      await setJSONObject(CRYPTO_MARKET_CACHE_KEY, mergedSnapshot);
+      logger(`✅ [CoinGecko API] Successfully merged and persisted market data:`, 'log', 'info');
+      logger(`   └─ Total coins: ${mergedData.length}`, 'log', 'info');
+      logger(`   └─ Pages updated: ${successfulPages.length > 0 ? successfulPages.join(', ') : 'none'}`, 'log', 'info');
+      if (failedPages.length > 0) {
+        const failedPageAges = failedPages.map(p => {
+          const ts = existingPageTimestamps[p];
+          return ts ? `${p}(${Math.round((now - ts) / 1000)}s old)` : `${p}(never)`;
+        });
+        logger(`   └─ Failed pages (retry when stale): ${failedPageAges.join(', ')}`, 'log', 'info');
+      }
+      if (pagesNotAttempted.length > 0) {
+        const notAttemptedAges = pagesNotAttempted.map(p => {
+          const ts = existingPageTimestamps[p];
+          return ts ? `${p}(${Math.round((now - ts) / 1000)}s old, ${Math.round((CRYPTO_MARKET_REFRESH_INTERVAL_MS - (now - ts)) / 1000)}s remaining)` : `${p}(never)`;
+        });
+        logger(`   └─ Pages not attempted (still fresh): ${notAttemptedAges.join(', ')}`, 'log', 'info');
+      }
+      logger(`   └─ Overall timestamp: ${new Date(oldestPageTimestamp).toISOString()} (${Math.round((now - oldestPageTimestamp) / 1000)}s old)`, 'log', 'info');
+      
+      return mergedSnapshot;
     }
 
+    // If no existing data, use the fetched data as-is
+    // Calculate overall timestamp (oldest page timestamp, or now if all pages are fresh)
+    const allPageTimestamps = Object.values(newPageTimestamps);
+    const oldestPageTimestamp = allPageTimestamps.length > 0 ? Math.min(...allPageTimestamps) : now;
+    
     const newSnapshot: CryptoMarketSnapshot = {
       data: allData,
-      timestamp: Date.now(),
+      timestamp: oldestPageTimestamp,
       currency,
+      pageTimestamps: newPageTimestamps, // Per-page timestamps for granular refresh
     };
 
-    // Only persist if data is complete or better than existing
-    if (isComplete || isBetterThanExisting) {
-      await setJSONObject(CRYPTO_MARKET_CACHE_KEY, newSnapshot);
-      logger(`✅ [CoinGecko API] Successfully fetched and persisted market data:`, 'log', 'debug');
-      logger(`   └─ Total coins: ${allData.length}`, 'log', 'debug');
-      logger(`   └─ Pages fetched: ${pagesFetched}/${MARKET_DATA_PAGES_TO_FETCH}`, 'log', 'debug');
-    } else {
-      logger(`⚠️ [CoinGecko API] Not persisting incomplete data. Existing cache preserved.`, 'warn');
-      if (existingData) {
-        return existingData;
-      }
-    }
+    // Persist the data
+    await setJSONObject(CRYPTO_MARKET_CACHE_KEY, newSnapshot);
+    logger(`✅ [CoinGecko API] Successfully fetched and persisted market data:`, 'log', 'debug');
+    logger(`   └─ Total coins: ${allData.length}`, 'log', 'debug');
+    logger(`   └─ Pages fetched: ${successfulPages.length}/${pagesToFetch.length} attempted`, 'log', 'debug');
+    logger(`   └─ Overall timestamp: ${new Date(oldestPageTimestamp).toISOString()}`, 'log', 'debug');
 
     return newSnapshot;
   } catch (e) {
@@ -551,20 +653,45 @@ export async function getCryptoMarket(
   const cachedData = await loadCachedCryptoMarket();
   const now = Date.now();
 
-  // Condition Check: Cache exists, is NOT STALE, AND matches the requested currency
-  if (
-    cachedData &&
-    cachedData.currency === currency &&
-    now - cachedData.timestamp < CRYPTO_MARKET_REFRESH_INTERVAL_MS
-  ) {
-    logger(`💾 [CoinGecko API] Using cached market data:`, 'log', 'debug');
-    logger(`   └─ Coins: ${cachedData.data?.length || 0}`, 'log', 'debug');
-    logger(`   └─ Status: Still fresh, no refetch needed`, 'log', 'debug');
-    return cachedData;
+  // Check if we have per-page timestamps (new format) or just overall timestamp (legacy format)
+  const hasPerPageTimestamps = cachedData?.pageTimestamps && Object.keys(cachedData.pageTimestamps).length > 0;
+  
+  if (cachedData && cachedData.currency === currency) {
+    if (hasPerPageTimestamps) {
+      // New format: Check if any pages are stale
+      const stalePages: number[] = [];
+      for (let page = 1; page <= MARKET_DATA_PAGES_TO_FETCH; page++) {
+        const pageTimestamp = cachedData.pageTimestamps![page];
+        if (!pageTimestamp || (now - pageTimestamp) >= CRYPTO_MARKET_REFRESH_INTERVAL_MS) {
+          stalePages.push(page);
+        }
+      }
+      
+      if (stalePages.length === 0) {
+        logger(`💾 [CoinGecko API] Using cached market data:`, 'log', 'debug');
+        logger(`   └─ Coins: ${cachedData.data?.length || 0}`, 'log', 'debug');
+        logger(`   └─ Status: All pages fresh, no refetch needed`, 'log', 'debug');
+        return cachedData;
+      } else {
+        logger(`🔄 [CoinGecko API] Some pages are stale (${stalePages.join(', ')}). Fetching only stale pages...`, 'log', 'debug');
+        // Will fetch only stale pages in fetchAndPersistCryptoMarket
+      }
+    } else {
+      // Legacy format: Check overall timestamp
+      if (now - cachedData.timestamp < CRYPTO_MARKET_REFRESH_INTERVAL_MS) {
+        logger(`💾 [CoinGecko API] Using cached market data:`, 'log', 'debug');
+        logger(`   └─ Coins: ${cachedData.data?.length || 0}`, 'log', 'debug');
+        logger(`   └─ Status: Still fresh (legacy format), no refetch needed`, 'log', 'debug');
+        return cachedData;
+      } else {
+        logger(`🔄 [CoinGecko API] Cache stale (legacy format). Migrating to per-page timestamps...`, 'log', 'debug');
+        // Will fetch all pages and migrate to per-page format
+      }
+    }
   }
 
   // Cache is missing, stale, or currency changed - attempt to fetch and persist new data
-  const cacheStatus = !cachedData ? 'missing' : cachedData.currency !== currency ? 'currency mismatch' : 'stale';
+  const cacheStatus = !cachedData ? 'missing' : cachedData.currency !== currency ? 'currency mismatch' : hasPerPageTimestamps ? 'some pages stale' : 'stale';
   logger(`🔄 [CoinGecko API] Cache ${cacheStatus}. Fetching fresh data...`, 'log', 'debug');
   
   try {
