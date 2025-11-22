@@ -13,6 +13,7 @@ import "react-native-reanimated";
  
  
 import { useAppInitialization } from "@/hooks/use-app-initializations";
+import { useBackendHealth } from "@/hooks/use-backend-health";
 import { useStartupCoinFetch } from "@/hooks/use-startup-coin-fetch";
 import { ActivityIndicator, Platform, View } from "react-native";
 
@@ -32,6 +33,8 @@ const LoadingGuard = () => {
 
 function RootLayoutContent() {
   const { isReady, resolvedColorScheme } = useAppInitialization();
+  // Fetch backend health info at startup (non-blocking, informational)
+  useBackendHealth();
   // Start background fetching of coins not in main cache
   useStartupCoinFetch();
 

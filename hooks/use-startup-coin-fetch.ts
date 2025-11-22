@@ -91,6 +91,12 @@ export function useStartupCoinFetch() {
         });
 
         // Filter out coins that are already in CryptoMarketSnapshot
+        // Note: cryptoMarket.data is guaranteed to exist due to check on line 67, but TypeScript needs explicit check here
+        if (!cryptoMarket?.data) {
+          logger('⚠️ CryptoMarket data not available, skipping startup fetch', 'warn');
+          return;
+        }
+        
         const marketDataMap = new Set(
           cryptoMarket.data.map(coin => coin.id.toLowerCase())
         );

@@ -1,6 +1,7 @@
 // utils/backendApi.ts
 
 import { BACKEND_API_KEY, BACKEND_BASE_URL } from '@/constants/backend';
+import { logger } from '@/utils/logger';
 
 // The interface is correct and includes usdtDominance
 export interface HistoricalDominanceSnapshot {
@@ -15,8 +16,68 @@ export interface HistoricalDominanceSnapshot {
  * Fetches historical dominance data (180 days) from your Vercel backend
  * Backend caches this data for 24 hours
  */
+/**
+ * Backend info response interface
+ */
+export interface BackendEndpoint {
+  path: string;
+  description: string;
+  cache?: string;
+  authentication?: string;
+}
+
+export interface BackendInfo {
+  name?: string;
+  version?: string;
+  status?: string;
+  health?: string;
+  endpoints?: {
+    [key: string]: BackendEndpoint;
+  };
+  diagnostics?: {
+    environmentVariables?: {
+      [key: string]: boolean;
+    };
+    cache?: {
+      exists?: boolean;
+      isStale?: boolean;
+    };
+  };
+  timestamp?: string;
+  [key: string]: any; // Allow for additional fields
+}
+
+/**
+ * Fetches backend health and info from /api/info endpoint
+ * Returns health status, available endpoints, and other backend metadata
+ */
+export async function fetchBackendHealthInfo(): Promise<BackendInfo | null> {
+  try {
+    const response = await fetch(`${BACKEND_BASE_URL}/api/info`, {
+      headers: {
+        // 'x-api-key': BACKEND_API_KEY, // doesn't need the key, it'll fail with it.
+      },
+    });
+
+    if (!response.ok) {
+      logger(`⚠️ Backend /api/info returned status ${response.status}`, 'warn');
+      return null;
+    }
+
+    const data: BackendInfo = await response.json();
+    return data;
+  } catch (e) {
+    logger('⚠️ Error fetching backend info:', 'warn', undefined, e);
+    return null;
+  }
+}
+
+/**
+ * Fetches historical dominance data (180 days) from your Vercel backend
+ * Backend caches this data for 24 hours
+ */
 export async function fetchHistoricalDominance(): Promise<HistoricalDominanceSnapshot[]> {
-  console.log('⚡ Fetching historical dominance from backend...');
+  logger('⚡ Fetching historical dominance from backend...', 'log', 'debug');
 
   try {
     const response = await fetch(`${BACKEND_BASE_URL}/api/dominance`, {
@@ -61,10 +122,10 @@ export async function fetchHistoricalDominance(): Promise<HistoricalDominanceSna
       })
       .filter((item): item is HistoricalDominanceSnapshot => item !== null); // Filter out any points with invalid dates
 
-    console.log(`✅ Received and sanitized ${sanitizedData.length} historical dominance data points from backend`);
+    logger(`✅ Received and sanitized ${sanitizedData.length} historical dominance data points from backend`, 'log', 'debug');
     return sanitizedData;
   } catch (e) {
-    console.error('❌ Error fetching from backend:', e);
+    logger('❌ Error fetching from backend:', 'error', undefined, e);
     throw e;
   }
 }

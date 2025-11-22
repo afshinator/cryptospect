@@ -53,6 +53,9 @@ export default {
       // Expose environment variables to the app via Constants.expoConfig.extra
       backendApiKey: process.env.EXPO_PUBLIC_BACKEND_API_KEY || process.env.BACKEND_API_KEY,
       backendBaseUrl: process.env.EXPO_PUBLIC_BACKEND_BASE_URL || process.env.BACKEND_BASE_URL,
+      eas: {
+        projectId: "912de5eb-96df-4062-801e-82f79a7824f1",
+      }
     },
   },
 };

@@ -27,7 +27,7 @@ interface LoggerConfig {
  * Default level is 'warn' (only warnings and errors are shown)
  */
 let loggerConfig: LoggerConfig = {
-  level: 'warn',
+  level: 'info',
 };
 
 /**
