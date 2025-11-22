@@ -7,9 +7,9 @@ import {
 } from '@/constants/apiConfig';
 import { SupportedCurrency } from '@/constants/currency';
 import { getCoinLists } from '@/utils/coinListStorage';
+import { fetchOutlierCoinData } from '@/utils/fetchOutlierCoinData';
 import { logger } from '@/utils/logger';
 import { loadSavedOutlierCoins, saveSavedOutlierCoin } from '@/utils/searchedCoinsStorage';
-import { fetchOutlierCoinData } from '@/utils/fetchOutlierCoinData';
 import { useEffect, useRef, useState } from 'react';
 import { useAppInitialization } from './use-app-initializations';
 import { useCoinLists } from './use-coin-lists';
@@ -114,7 +114,7 @@ export function useStartupCoinFetch() {
             const inSavedOutlier = savedOutlierCoinsMap.has(coinId);
             
             if (inMainCache) {
-              logger(`   └─ Skipping ${coinId}: already in main cache`, 'log', 'debug');
+              // logger(`   └─ Skipping ${coinId}: already in main cache`, 'log', 'debug');
               return false;
             }
             if (inSavedOutlier) {

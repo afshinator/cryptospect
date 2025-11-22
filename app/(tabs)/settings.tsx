@@ -2,20 +2,30 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import Slider from "@react-native-community/slider";
 import { useEffect, useState } from "react";
-import { Alert, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { AlertModal } from "@/components/AlertModal";
+import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { SectionContainer } from "@/components/SectionContainer";
 import {
   CURRENCY_DISPLAY_NAMES,
   SupportedCurrency,
 } from "@/constants/currency";
-import { LightDarkMode } from "@/constants/misc";
+import {
+  CRYPTO_MARKET_QUERY_KEY,
+  CRYPTO_OVERVIEW_QUERY_KEY,
+  EXCHANGE_RATES_QUERY_KEY,
+  STABLECOIN_DATA_QUERY_KEY,
+  SAVED_OUTLIER_COINS_QUERY_KEY,
+  LightDarkMode,
+} from "@/constants/misc";
 import { BorderRadius, Spacing } from "@/constants/theme";
 import { usePreferences, useUpdatePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { clearNetworkData } from "@/utils/clearNetworkData";
 
 // 💡 🔨 TODO: for Font Size section, add a snap-to-1.0 button
 // -- Replace heading like Appearance and Preferred Currency with icons
@@ -31,6 +41,7 @@ const BUTTON_BORDER_WIDTH = 2;
 export default function SettingsScreen() {
   const { data: preferences, isLoading } = usePreferences();
   const updatePreferences = useUpdatePreferences();
+  const queryClient = useQueryClient();
   const borderSelectedColor = useThemeColor({}, "tint"); // Use 'tint' for selected border for better visibility
   const sliderThumbColor = useThemeColor({}, "tint");
   const sliderMinColor = useThemeColor({}, "tint");
@@ -40,6 +51,7 @@ export default function SettingsScreen() {
   const backgroundColor = useThemeColor({}, "background");
   const borderColor = useThemeColor({}, "border");
   const placeholderColor = useThemeColor({}, "textSecondary");
+  const errorColor = useThemeColor({}, "error");
 
   // Local state for slider value during drag
   const [tempFontScale, setTempFontScale] = useState<number | null>(null);
@@ -47,6 +59,7 @@ export default function SettingsScreen() {
   // Local state for directory input - sync with preferences
   const [directoryInput, setDirectoryInput] = useState<string>("");
   const [alertModal, setAlertModal] = useState<{ title: string; message: string; buttonStyle?: "default" | "danger" | "success" } | null>(null);
+  const [showResetConfirmation, setShowResetConfirmation] = useState(false);
   
   // Update directory input when preferences load
   useEffect(() => {
@@ -334,7 +347,75 @@ export default function SettingsScreen() {
           </ThemedText>
           )}
         </SectionContainer>
+
+        {/* Reset Network Data */}
+        <SectionContainer>
+          <ThemedText type="subtitle" propFontScale={inverseFontScale}>
+            Reset Network Data
+          </ThemedText>
+          <ThemedText
+            variant="secondary"
+            type="small"
+            style={styles.sectionDescription}
+            propFontScale={inverseFontScale}
+          >
+            Clear all cached network data (market data, exchange rates, etc.). Your coin lists and preferences will be preserved.
+          </ThemedText>
+
+          <Pressable
+            onPress={() => setShowResetConfirmation(true)}
+            style={styles.resetNetworkDataButton}
+          >
+            <ThemedView
+              shadow="sm"
+              style={[
+                styles.resetNetworkDataButtonContent,
+                { borderColor: errorColor },
+              ]}
+            >
+              <ThemedText type="bodySemibold" propFontScale={inverseFontScale}>
+                ⚠️ Reset Network Data
+              </ThemedText>
+            </ThemedView>
+          </Pressable>
+        </SectionContainer>
       </ScreenContainer>
+      <ConfirmationModal
+        visible={showResetConfirmation}
+        onConfirm={async () => {
+          setShowResetConfirmation(false);
+          try {
+            await clearNetworkData();
+            
+            // Invalidate React Query cache to trigger refetch
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: CRYPTO_MARKET_QUERY_KEY }),
+              queryClient.invalidateQueries({ queryKey: CRYPTO_OVERVIEW_QUERY_KEY }),
+              queryClient.invalidateQueries({ queryKey: EXCHANGE_RATES_QUERY_KEY }),
+              queryClient.invalidateQueries({ queryKey: STABLECOIN_DATA_QUERY_KEY }),
+              queryClient.invalidateQueries({ queryKey: SAVED_OUTLIER_COINS_QUERY_KEY }),
+            ]);
+
+            setAlertModal({
+              title: "Success",
+              message: "Network data has been cleared. The app will refetch fresh data.",
+              buttonStyle: "success",
+            });
+          } catch (error) {
+            setAlertModal({
+              title: "Error",
+              message: "Failed to clear network data. Please try again.",
+              buttonStyle: "danger",
+            });
+          }
+        }}
+        onCancel={() => setShowResetConfirmation(false)}
+        title="⚠️ Reset Network Data"
+        message="This will clear all cached network data including:\n• Market data\n• Exchange rates\n• Stablecoin data\n• Saved outlier coins\n\nYour coin lists and preferences will be preserved.\n\nThis action cannot be undone. Continue?"
+        confirmText="Reset"
+        cancelText="Cancel"
+        confirmButtonStyle="danger"
+      />
       <AlertModal
         visible={alertModal !== null}
         onDismiss={() => setAlertModal(null)}
@@ -452,6 +533,16 @@ const styles = StyleSheet.create({
   currentDirectory: {
     marginTop: Spacing.xs,
     fontStyle: "italic",
+  },
+  resetNetworkDataButton: {
+    marginTop: Spacing.sm,
+  },
+  resetNetworkDataButtonContent: {
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: BUTTON_BORDER_WIDTH,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
 

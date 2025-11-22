@@ -141,8 +141,8 @@ export function CoinListItems({
           logger(`⚠️🚦 [CoinListItems] Rate limit hit for ${savedOutlierCoin.id}. Will retry later.`, 'warn');
         } else if (isNetworkError) {
           logger(`⚠️ [CoinListItems] Network/CORS issue for ${savedOutlierCoin.id} (expected):`, 'warn');
-          logger(`   └─ This is informational, not an error`, 'warn');
-          logger(`   └─ Will retry later when network is available`, 'warn');
+          // logger(`   └─ This is informational, not an error`, 'warn');
+          // logger(`   └─ Will retry later when network is available`, 'warn');
         } else {
           // Real error - log it
           logger(`❌ [CoinListItems] Failed to fetch market data for ${savedOutlierCoin.id}:`, 'error');
