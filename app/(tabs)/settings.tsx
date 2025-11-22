@@ -348,7 +348,8 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: CONTAINER_PADDING,
+    paddingTop: CONTAINER_PADDING,
+    paddingHorizontal: CONTAINER_PADDING,
   },
   scrollContent: {
     padding: CONTAINER_PADDING,

@@ -370,7 +370,7 @@ export default function ListsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
         <ScreenContainer>
           <ThemedView style={styles.centerContainer}>
             <ActivityIndicator size="large" />
@@ -384,7 +384,7 @@ export default function ListsScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
       <ScreenContainer>
         <ThemedView style={styles.container}>
           <ThemedText type="large" style={styles.title}>

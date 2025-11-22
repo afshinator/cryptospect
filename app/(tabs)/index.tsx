@@ -62,7 +62,7 @@ export default function HomeScreen() {
   }, [lists, cryptoMarket, activeFilterIds, andFilterIds]);
 
   return (
-    <SafeAreaView style={{ flex: 1 }}> 
+    <SafeAreaView style={{ flex: 1 }} edges={["top"]}> 
       
       {/* FIXED CONTENT: Currency Banner remains at the top */}
       <CurrencyBanner 

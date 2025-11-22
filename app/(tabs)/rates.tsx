@@ -170,7 +170,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   container: {
-    padding: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingHorizontal: Spacing.md,
   },
   titleContainer: {
     flexDirection: "row",
