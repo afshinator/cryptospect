@@ -9,11 +9,15 @@ import { useAppInitialization } from './use-app-initializations';
 import { useCoinLists } from './use-coin-lists';
 import { usePreferences } from './use-preference';
 import { SupportedCurrency } from '@/constants/currency';
+import {
+  STARTUP_FETCH_DELAY_MS,
+  STARTUP_FETCH_BATCH_DELAY_MS,
+  STARTUP_FETCH_BATCH_SIZE,
+} from '@/constants/apiConfig';
 
-// --- CONFIGURATION CONSTANTS ---
-const STARTUP_FETCH_DELAY_MS = 5000; // Wait 5 seconds after initial fetching completes
-const FETCH_BATCH_DELAY_MS = 1000; // Delay between batches to avoid rate limits
-const BATCH_SIZE = 5; // Number of coins to fetch in parallel per batch
+// Use constants from apiConfig
+const FETCH_BATCH_DELAY_MS = STARTUP_FETCH_BATCH_DELAY_MS;
+const BATCH_SIZE = STARTUP_FETCH_BATCH_SIZE;
 
 interface StartupFetchState {
   isFetching: boolean;

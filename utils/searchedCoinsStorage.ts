@@ -28,12 +28,40 @@ export interface SearchedCoinsStorage {
 /**
  * Loads all searched coins from AsyncStorage
  */
+/**
+ * Loads all searched coins from AsyncStorage
+ * Ensures all coins have timestamps (adds current timestamp if missing for backward compatibility)
+ */
 export async function loadSearchedCoins(): Promise<SearchedCoinsStorage> {
   try {
     const data = await getJSONObject<SearchedCoinsStorage>(SEARCHED_COINS_CACHE_KEY);
-    return data || {};
+    if (!data) return {};
+    
+    // Ensure all coins have timestamps (backward compatibility)
+    const now = Date.now();
+    let needsSave = false;
+    const updated: SearchedCoinsStorage = {};
+    
+    for (const [coinId, coinData] of Object.entries(data)) {
+      if (!coinData._lastUpdated) {
+        // Add timestamp for coins missing it
+        updated[coinId] = { ...coinData, _lastUpdated: now };
+        needsSave = true;
+        console.log(`🔍 [SearchedCoins] Added missing timestamp for ${coinId}`);
+      } else {
+        updated[coinId] = coinData;
+      }
+    }
+    
+    // Save if we added any missing timestamps
+    if (needsSave) {
+      await setJSONObject(SEARCHED_COINS_CACHE_KEY, updated);
+      console.log(`💾 [SearchedCoins] Saved updated coins with timestamps`);
+    }
+    
+    return updated;
   } catch (e) {
-    console.error('❌🔍 Error loading searched coins:', e);
+    console.error('❌🔍 [SearchedCoins] Error loading coins:', e);
     return {};
   }
 }
@@ -62,11 +90,15 @@ function isNewDataBetter(existing: SearchedCoinWithTimestamp, newData: CoinGecko
 
 /**
  * Merges new data with existing data, preserving non-null values
+ * CRITICAL: NEVER overwrites existing non-null values with null values
  * Returns the merged data and whether any new data was actually merged
  */
 function mergeCoinData(existing: SearchedCoinWithTimestamp, newData: CoinGeckoMarketData): { merged: SearchedCoinWithTimestamp; hasNewData: boolean } {
   const merged: SearchedCoinWithTimestamp = { ...existing };
   let hasNewData = false;
+  
+  // Track which fields we're protecting from null overwrites
+  const protectedFields: string[] = [];
   
   // Only update fields where new data is better (non-null when existing is null, or both are non-null)
   Object.keys(newData).forEach((key) => {
@@ -87,16 +119,25 @@ function mergeCoinData(existing: SearchedCoinWithTimestamp, newData: CoinGeckoMa
         hasNewData = true;
       }
     }
-    // Never overwrite non-null with null
-    // (existing value is preserved, which is already in merged)
+    // CRITICAL: Never overwrite non-null with null - preserve existing value
+    else if (existingValue !== null && existingValue !== undefined && (newValue === null || newValue === undefined)) {
+      // Keep existing value (already in merged via spread)
+      protectedFields.push(key);
+      // Do NOT update hasNewData - we're preserving, not adding
+    }
   });
+  
+  // Log if we protected any fields from null overwrites
+  if (protectedFields.length > 0) {
+    console.log(`   └─ 🛡️ Protected ${protectedFields.length} fields from null overwrite: ${protectedFields.join(', ')}`);
+  }
   
   // Update timestamp if we actually merged any new data
   if (hasNewData) {
     merged._lastUpdated = Date.now();
   } else {
-    // Preserve existing timestamp
-    merged._lastUpdated = existing._lastUpdated;
+    // Preserve existing timestamp - don't update if no new data was merged
+    merged._lastUpdated = existing._lastUpdated || Date.now();
   }
   
   return { merged, hasNewData };
@@ -104,7 +145,9 @@ function mergeCoinData(existing: SearchedCoinWithTimestamp, newData: CoinGeckoMa
 
 /**
  * Saves a searched coin to storage
- * Only overwrites existing data if new data is better (has more non-null fields, especially price_change_percentage_24h)
+ * NEVER overwrites existing non-null data with null values
+ * Only updates fields where new data is non-null and existing is null, or both are non-null
+ * Always preserves timestamps - only updates timestamp when new data is actually merged
  * @param coin - The coin data to save (from search API or full market data)
  */
 export async function saveSearchedCoin(coin: CoinGeckoMarketData): Promise<void> {
@@ -116,25 +159,42 @@ export async function saveSearchedCoin(coin: CoinGeckoMarketData): Promise<void>
     const now = Date.now();
     
     if (existingCoin) {
-      // Merge intelligently - preserve non-null values from existing
+      // Merge intelligently - preserve non-null values from existing, never overwrite with nulls
       const { merged, hasNewData } = mergeCoinData(existingCoin, coin);
-      existing[normalizedId] = { ...merged, id: normalizedId };
+      
+      // CRITICAL: Preserve existing timestamp if no new data was merged
+      // Only update timestamp when we actually merged new data
+      if (!hasNewData) {
+        merged._lastUpdated = existingCoin._lastUpdated || now;
+      }
+      
+      // Ensure ID is normalized
+      merged.id = normalizedId;
+      
+      existing[normalizedId] = merged;
       
       if (hasNewData) {
         const timestamp = merged._lastUpdated ? new Date(merged._lastUpdated).toISOString() : 'unknown';
-        console.log(`✅🔍 Updated searched coin: ${coin.name} (${coin.symbol}) with new data at ${timestamp}`);
+        console.log(`✅🔍 [SearchedCoins] Updated coin: ${coin.name} (${coin.symbol})`);
+        console.log(`   └─ New data merged at: ${timestamp}`);
+        console.log(`   └─ Preserved existing non-null fields`);
       } else {
-        console.log(`✅🔍 Searched coin: ${coin.name} (${coin.symbol}) - no new data to merge, preserved existing`);
+        const preservedTimestamp = existingCoin._lastUpdated ? new Date(existingCoin._lastUpdated).toISOString() : 'unknown';
+        console.log(`✅🔍 [SearchedCoins] Coin: ${coin.name} (${coin.symbol}) - no new data to merge`);
+        console.log(`   └─ Preserved existing data (timestamp: ${preservedTimestamp})`);
+        console.log(`   └─ Prevented overwriting with null values`);
       }
     } else {
       // New coin, save it with timestamp
       existing[normalizedId] = { ...coin, id: normalizedId, _lastUpdated: now };
-      console.log(`✅🔍 Saved new searched coin: ${coin.name} (${coin.symbol}) with ID: ${normalizedId} at ${new Date(now).toISOString()}`);
+      console.log(`✅🔍 [SearchedCoins] Saved new coin: ${coin.name} (${coin.symbol})`);
+      console.log(`   └─ ID: ${normalizedId}`);
+      console.log(`   └─ Timestamp: ${new Date(now).toISOString()}`);
     }
     
     await setJSONObject(SEARCHED_COINS_CACHE_KEY, existing);
   } catch (e) {
-    console.error('❌🔍 Error saving searched coin:', e);
+    console.error('❌🔍 [SearchedCoins] Error saving coin:', e);
     throw e;
   }
 }

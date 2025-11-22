@@ -15,14 +15,14 @@ import { StablecoinBadge } from "@/components/list-detail/StablecoinBadge";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ASYNC_STORAGE_OPERATION_DELAY_MS } from "@/constants/apiConfig";
 import { CoinGeckoMarketData } from "@/constants/coinGecko";
-import { SupportedCurrency } from "@/constants/currency";
 import { CoinListItem } from "@/constants/coinLists";
 import { isStablecoin } from "@/constants/coinTypes";
+import { SupportedCurrency } from "@/constants/currency";
 import { Spacing } from "@/constants/theme";
-import { usePreferences } from "@/hooks/use-preference";
-import { useThemeColor } from "@/hooks/use-theme-color";
 import { useStartupCoinFetch } from "@/hooks/use-startup-coin-fetch";
+import { useThemeColor } from "@/hooks/use-theme-color";
 import { fetchCoinMarketData } from "@/utils/coinGeckoApi";
 import { loadSearchedCoins, saveSearchedCoin, SearchedCoinWithTimestamp } from "@/utils/searchedCoinsStorage";
 
@@ -110,30 +110,34 @@ export function CoinListItems({
              Object.values(existingCoin).filter(v => v !== null && v !== undefined).length);
           
           if (hasBetterData) {
-            // Update the searched coins state with full data
+            // Preserve existing timestamp if available
+            const existingCoin = searchedCoins[coinId];
+            const coinWithTimestamp: SearchedCoinWithTimestamp = {
+              ...fullData,
+              _lastUpdated: Date.now(), // Always update timestamp when we get new data
+            };
+            
+            // Update the searched coins state with full data (preserving timestamp)
             setSearchedCoins(prev => {
               const updated = {
                 ...prev,
-                [coinId]: fullData,
+                [coinId]: coinWithTimestamp,
               };
-              console.log(`📝 Updating searchedCoins state for ${coinId}:`, {
-                beforeKeys: Object.keys(prev),
-                afterKeys: Object.keys(updated),
-                updatedCoinId: coinId,
-                updatedCoinData: updated[coinId],
-                updatedCoinPriceChange: updated[coinId]?.price_change_percentage_24h,
-              });
+              console.log(`📝 [CoinListItems] Updating searchedCoins state for ${coinId}:`);
+              console.log(`   └─ Name: ${fullData.name}`);
+              console.log(`   └─ Price change: ${fullData.price_change_percentage_24h}`);
+              console.log(`   └─ Timestamp: ${new Date(coinWithTimestamp._lastUpdated!).toISOString()}`);
               return updated;
             });
             
-            // Also save to storage for future use (saveSearchedCoin will merge intelligently)
+            // Also save to storage for future use (saveSearchedCoin will merge intelligently and preserve non-null data)
             saveSearchedCoin(fullData).then(() => {
-              console.log(`💾 Saved/merged full data to storage for ${fullData.name}`);
+              console.log(`💾 [CoinListItems] Saved/merged full data to storage for ${fullData.name}`);
             }).catch((saveError) => {
-              console.error(`❌ Error saving to storage:`, saveError);
+              console.error(`❌ [CoinListItems] Error saving to storage:`, saveError);
             });
           } else {
-            console.log(`ℹ️ Fetched data for ${fullData.name} is not better than existing, keeping existing data`);
+            console.log(`ℹ️ [CoinListItems] Fetched data for ${fullData.name} is not better than existing, keeping existing data`);
           }
         } else {
           console.warn(`⚠️ Fetch returned no data (null/undefined) for ${searchedCoin.id}`);
@@ -142,13 +146,23 @@ export function CoinListItems({
         }
       })
       .catch((error) => {
-        // Don't log as error if it's a rate limit - that's expected
-        if (error?.message?.includes('rate limit') || error?.message?.includes('429')) {
-          console.warn(`⚠️ Rate limit hit for ${searchedCoin.id}. Will retry later.`);
+        // Don't log as error if it's a rate limit or network/CORS issue - these are expected
+        const errorMessage = error?.message || '';
+        const isRateLimit = errorMessage.includes('rate limit') || errorMessage.includes('429');
+        const isNetworkError = errorMessage.includes('Failed to fetch') || errorMessage.includes('Network error');
+        
+        if (isRateLimit) {
+          console.warn(`⚠️ [CoinListItems] Rate limit hit for ${searchedCoin.id}. Will retry later.`);
+        } else if (isNetworkError) {
+          console.warn(`⚠️ [CoinListItems] Network/CORS issue for ${searchedCoin.id} (expected):`);
+          console.warn(`   └─ This is informational, not an error`);
+          console.warn(`   └─ Will retry later when network is available`);
         } else {
-          console.error(`❌ Failed to fetch market data for ${searchedCoin.id}:`, error);
+          // Real error - log it
+          console.error(`❌ [CoinListItems] Failed to fetch market data for ${searchedCoin.id}:`);
+          console.error(`   └─ Error: ${errorMessage}`);
         }
-        // Remove from ref so we can retry later if needed (after rate limit expires)
+        // Remove from ref so we can retry later if needed (after rate limit expires or network recovers)
         fetchedCoinsRef.current.delete(coinId);
       })
       .finally(() => {
@@ -165,19 +179,23 @@ export function CoinListItems({
   useEffect(() => {
     const reloadAndCheck = async () => {
       // Small delay to ensure any async saves have completed
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, ASYNC_STORAGE_OPERATION_DELAY_MS));
       const loaded = await loadSearchedCoins();
       console.log('📦 Loaded SearchedCoins:', Object.keys(loaded).length, 'coins');
       
-      // Log each coin's price change status
+      // Log each coin's price change status with timestamp
       Object.entries(loaded).forEach(([coinId, coinData]) => {
-        const lastUpdated = coinData._lastUpdated ? new Date(coinData._lastUpdated).toISOString() : 'unknown';
-        console.log(`📦 SearchedCoin [${coinId}]:`, {
-          name: coinData.name,
-          hasPriceChange: coinData.price_change_percentage_24h !== null && coinData.price_change_percentage_24h !== undefined,
-          priceChange: coinData.price_change_percentage_24h,
-          lastUpdated,
-        });
+        const lastUpdated = coinData._lastUpdated ? new Date(coinData._lastUpdated).toISOString() : '⚠️ NO TIMESTAMP';
+        console.log(`📦 [CoinListItems] SearchedCoin [${coinId}]:`);
+        console.log(`   └─ Name: ${coinData.name}`);
+        console.log(`   └─ Has price change: ${coinData.price_change_percentage_24h !== null && coinData.price_change_percentage_24h !== undefined}`);
+        console.log(`   └─ Price change: ${coinData.price_change_percentage_24h ?? 'null'}`);
+        console.log(`   └─ Last updated: ${lastUpdated}`);
+        
+        // Warn if timestamp is missing
+        if (!coinData._lastUpdated) {
+          console.warn(`   └─ ⚠️ WARNING: Missing timestamp for ${coinId}!`);
+        }
       });
       
       setSearchedCoins(loaded);
@@ -316,20 +334,6 @@ export function CoinListItems({
               !marketData && 
               !searchedCoin && 
               startupFetchState.isFetching;
-
-            // Debug logging for coins not in main cache
-            if (!marketData && coin.coinId && searchedCoin) {
-              console.log(`🔍 List Details - Coin: ${coin.coinId}`, {
-                foundInSearched: !!searchedCoin,
-                searchedCoinId: searchedCoin?.id,
-                hasPriceChange: priceChange24h !== null && priceChange24h !== undefined,
-                priceChangeValue: priceChange24h,
-                searchedCoinPriceChange: searchedCoin?.price_change_percentage_24h,
-                searchedCoinsStateKeys: Object.keys(searchedCoins),
-                isInSearchedCoinsState: normalizedCoinId in searchedCoins,
-                willDisplay: priceChange24h !== null && priceChange24h !== undefined,
-              });
-            }
 
             const isEditingThisCoin = editingCoinId === coin.coinId;
 

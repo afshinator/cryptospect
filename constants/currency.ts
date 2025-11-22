@@ -1,7 +1,8 @@
 // constants/currency.ts
 
 export const EXCHANGE_RATE_API_BASE_URL = 'https://open.er-api.com/v6/latest/USD'
-export const DAILY_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+// Refresh interval moved to constants/apiConfig.ts - re-exported for backward compatibility
+export { EXCHANGE_RATES_REFRESH_INTERVAL_MS as DAILY_REFRESH_INTERVAL_MS } from './apiConfig';
 
 export interface ExchangeRateCache {
   timestamp: number;

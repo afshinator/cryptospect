@@ -2,6 +2,12 @@
 
 import { DEFAULT_CURRENCY, SupportedCurrency } from "./currency";
 
+// Re-export API config constants for backward compatibility
+export {
+  CRYPTO_MARKET_REFRESH_INTERVAL_MS,
+  CRYPTO_OVERVIEW_REFRESH_INTERVAL_MS,
+} from "./apiConfig";
+
 export type LightDarkMode = 'system' | 'light' | 'dark';
 export type ResolvedColorScheme = 'light' | 'dark';
 
@@ -26,12 +32,12 @@ export const PREFERENCES_QUERY_KEY = ['prefs'];
 // Crypto Market Data (CoinGecko /coins/markets)
 export const CRYPTO_MARKET_CACHE_KEY = 'CryptoMarketSnapshot';
 export const CRYPTO_MARKET_QUERY_KEY = ['cryptoMarket'];
-export const CRYPTO_MARKET_REFRESH_INTERVAL_MS = 6 * 60 * 1000; // 6 minutes
+// Refresh interval moved to constants/apiConfig.ts
 
 // Crypto Overview Data (CoinGecko /global)
 export const CRYPTO_OVERVIEW_CACHE_KEY = 'CryptoOverviewSnapshot';
 export const CRYPTO_OVERVIEW_QUERY_KEY = ['cryptoOverview'];
-export const CRYPTO_OVERVIEW_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+// Refresh interval moved to constants/apiConfig.ts
 
 // Backend Historical Dominance (180 days from Vercel backend)
 export const BACKEND_DOMINANCE_QUERY_KEY = ['backendDominance'];

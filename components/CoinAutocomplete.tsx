@@ -9,6 +9,12 @@ import { Spacing } from "@/constants/theme";
 import { useAppInitialization } from "@/hooks/use-app-initializations";
 import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { 
+  SEARCH_DEBOUNCE_DELAY_MS, 
+  SEARCH_MIN_QUERY_LENGTH,
+  MODAL_FOCUS_DELAY_IOS_MS,
+  MODAL_FOCUS_DELAY_ANDROID_MS,
+} from "@/constants/apiConfig";
 import { fetchCoinMarketData, searchCoins } from "@/utils/coinGeckoApi";
 import { saveSearchedCoin } from "@/utils/searchedCoinsStorage";
 import React, { useEffect, useMemo, useState } from "react";
@@ -227,8 +233,8 @@ export function CoinAutocomplete({
     // 1. There's a search query
     // 2. No local results found
     // 3. Not already searching
-    // 4. Query is at least 2 characters (to avoid too many API calls)
-    if (query.length >= 2 && filteredCoins.length === 0 && !isSearchingApi) {
+    // 4. Query meets minimum length requirement
+    if (query.length >= SEARCH_MIN_QUERY_LENGTH && filteredCoins.length === 0 && !isSearchingApi) {
       const searchTimeout = setTimeout(async () => {
         setIsSearchingApi(true);
         setApiSearchError(null);
@@ -242,7 +248,7 @@ export function CoinAutocomplete({
         } finally {
           setIsSearchingApi(false);
         }
-      }, 500); // Debounce: wait 500ms after user stops typing
+      }, SEARCH_DEBOUNCE_DELAY_MS); // Debounce: wait after user stops typing
 
       return () => clearTimeout(searchTimeout);
     } else if (query.length === 0) {
@@ -266,7 +272,7 @@ export function CoinAutocomplete({
       // Small delay to ensure modal is fully rendered before focusing
       const timer = setTimeout(() => {
         inputRef.current?.focus();
-      }, Platform.OS === "ios" ? 300 : 100);
+      }, Platform.OS === "ios" ? MODAL_FOCUS_DELAY_IOS_MS : MODAL_FOCUS_DELAY_ANDROID_MS);
       return () => clearTimeout(timer);
     }
   }, [isModalVisible]);

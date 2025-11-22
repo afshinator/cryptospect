@@ -62,7 +62,24 @@ Caching: The frontend cache for this data is very short (CRYPTO_OVERVIEW_REFRESH
 
 ## API Calls & Data Sources
 
-The app makes API calls to four different endpoints to retrieve market data, exchange rates, and historical dominance information.
+The app makes API calls to multiple endpoints to retrieve market data, exchange rates, and historical dominance information.
+
+**⚠️ IMPORTANT: All API timing constants, delays, and refresh intervals are centralized in `constants/apiConfig.ts` for easy configuration and adjustment.**
+
+### API Configuration Overview
+
+All timing constants, delays, refresh intervals, and rate limiting configurations are located in **`constants/apiConfig.ts`**. This file contains:
+
+- **Refresh Intervals**: How often data is considered stale
+- **Rate Limiting**: Delays between API calls
+- **Startup Fetch**: Background fetching configuration
+- **Search & UI**: Debouncing and interaction delays
+- **API Call Order**: Documentation of initialization sequence
+- **What Each API Affects**: Detailed impact documentation
+
+**To adjust any timing or delay values, edit `constants/apiConfig.ts`.**
+
+---
 
 ### 1. Backend API - Historical Dominance Data
 
@@ -103,7 +120,7 @@ The app makes API calls to four different endpoints to retrieve market data, exc
 - `sparkline`: `false`
 
 **Cache Duration:** 6 minutes (client-side AsyncStorage)
-- **Constant Location:** `constants/misc.ts` → `CRYPTO_MARKET_REFRESH_INTERVAL_MS = 6 * 60 * 1000`
+- **Constant Location:** `constants/apiConfig.ts` → `CRYPTO_MARKET_REFRESH_INTERVAL_MS = 6 * 60 * 1000`
 
 **Fetching Algorithm:**
 
@@ -118,15 +135,15 @@ The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per
 
 2. **Rate Limiting Delays**:
    - **Between pages**: 1.2 seconds delay between each page request
-     - **Constant Location:** `utils/coinGeckoApi.ts` → `DELAY_BETWEEN_PAGES_MS = 1200`
+     - **Constant Location:** `constants/apiConfig.ts` → `MARKET_DATA_DELAY_BETWEEN_PAGES_MS = 1200`
    - **After every 3 pages**: 10 seconds longer delay before continuing
      - **Constant Locations:** 
-       - `utils/coinGeckoApi.ts` → `DELAY_AFTER_EVERY_N_PAGES_MS = 10000`
-       - `utils/coinGeckoApi.ts` → `PAGES_BEFORE_LONG_DELAY = 3`
+       - `constants/apiConfig.ts` → `MARKET_DATA_LONG_DELAY_MS = 10000`
+       - `constants/apiConfig.ts` → `MARKET_DATA_PAGES_BEFORE_LONG_DELAY = 3`
    - **On rate limit (HTTP 429)**: Respects `Retry-After` header, with exponential backoff up to 3 retries
      - **Constant Locations:**
-       - `utils/coinGeckoApi.ts` → `MAX_RETRIES = 3`
-       - `utils/coinGeckoApi.ts` → `BASE_RETRY_DELAY_MS = 60000` (60 seconds)
+       - `constants/apiConfig.ts` → `MARKET_DATA_MAX_RETRIES = 3`
+       - `constants/apiConfig.ts` → `MARKET_DATA_BASE_RETRY_DELAY_MS = 60000` (60 seconds)
 
 3. **Data Preservation**:
    - Existing cached data is preserved until new data is validated as complete
@@ -139,7 +156,7 @@ The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per
 4. **Refresh Triggers**:
    - **At app startup**: If cache is missing or stale (older than 6 minutes)
    - **Automatic**: Every 6 minutes via `refetchInterval`
-     - **Constant Location:** `constants/misc.ts` → `CRYPTO_MARKET_REFRESH_INTERVAL_MS`
+     - **Constant Location:** `constants/apiConfig.ts` → `CRYPTO_MARKET_REFRESH_INTERVAL_MS`
      - **Usage:** `hooks/use-app-initializations.ts` → `useQuery` with `refetchInterval`
    - **On window focus**: When the app regains focus (`refetchOnWindowFocus`)
    - **On access**: If cached data is older than 6 minutes when accessed
@@ -168,8 +185,8 @@ The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per
 
 **Method:** `GET`
 
-**Cache Duration:** 6 minutes (client-side AsyncStorage)
-- **Constant Location:** `constants/misc.ts` → `CRYPTO_OVERVIEW_REFRESH_INTERVAL_MS = 6 * 60 * 1000`
+**Cache Duration:** 5 minutes (client-side AsyncStorage)
+- **Constant Location:** `constants/apiConfig.ts` → `CRYPTO_OVERVIEW_REFRESH_INTERVAL_MS = 5 * 60 * 1000`
 
 **Data Retrieved:**
 - Global market statistics object:
@@ -192,7 +209,7 @@ The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per
 **Method:** `GET`
 
 **Cache Duration:** 24 hours (client-side AsyncStorage)
-- **Constant Location:** `constants/currency.ts` → `DAILY_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000`
+- **Constant Location:** `constants/apiConfig.ts` → `EXCHANGE_RATES_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000`
 
 **Data Retrieved:**
 - Exchange rate response object:
@@ -272,6 +289,9 @@ The search endpoint (`/search`) is designed for discovery and returns minimal da
 
 **Rate Limiting:**
 - Search requests are debounced (500ms delay after user stops typing)
+  - **Constant Location:** `constants/apiConfig.ts` → `SEARCH_DEBOUNCE_DELAY_MS = 500`
+- Minimum query length: 2 characters before triggering API search
+  - **Constant Location:** `constants/apiConfig.ts` → `SEARCH_MIN_QUERY_LENGTH = 2`
 - No explicit rate limit handling, but debouncing helps prevent excessive calls
 - If rate limited (HTTP 429), an error message is displayed to the user
 
@@ -281,12 +301,35 @@ The search endpoint (`/search`) is designed for discovery and returns minimal da
 
 ## API Summary Table
 
-| API | Endpoint | Refresh Interval | Purpose |
-|-----|----------|------------------|---------|
-| Backend | `/api/dominance` | 24 hours | Historical dominance data (180 days) |
-| CoinGecko | `/coins/markets` | 6 minutes | Top 1,250 cryptocurrencies market data (5 pages) |
-| CoinGecko | `/global` | 6 minutes | Global crypto market overview |
-| CoinGecko | `/search` | On-demand (debounced) | Search for coins by name/symbol (limited data) |
-| Exchange Rate API | `/v6/latest/USD` | 24 hours | Fiat currency exchange rates |
+| API | Endpoint | Refresh Interval | Purpose | Config Location |
+|-----|----------|------------------|---------|----------------|
+| Backend | `/api/dominance` | 24 hours | Historical dominance data (180 days) | Backend-side |
+| CoinGecko | `/coins/markets` | 6 minutes | Top 1,250 cryptocurrencies market data (5 pages) | `apiConfig.ts` |
+| CoinGecko | `/global` | 5 minutes | Global crypto market overview | `apiConfig.ts` |
+| CoinGecko | `/search` | On-demand (debounced 500ms) | Search for coins by name/symbol (limited data) | `apiConfig.ts` |
+| CoinGecko | `/coins/{id}` | On-demand | Full market data for individual coins | `apiConfig.ts` |
+| Exchange Rate API | `/v6/latest/USD` | 24 hours | Fiat currency exchange rates | `apiConfig.ts` |
 
 **Note:** All APIs implement client-side caching using AsyncStorage with graceful fallback to stale cache if fresh data fails to fetch.
+
+### Startup Coin Fetch
+
+After app initialization completes, the app automatically fetches full market data for coins in user lists that aren't in the main cache:
+
+- **Delay after initialization:** 5 seconds
+  - **Constant Location:** `constants/apiConfig.ts` → `STARTUP_FETCH_DELAY_MS = 5000`
+- **Batch size:** 5 coins fetched in parallel per batch
+  - **Constant Location:** `constants/apiConfig.ts` → `STARTUP_FETCH_BATCH_SIZE = 5`
+- **Delay between batches:** 1 second
+  - **Constant Location:** `constants/apiConfig.ts` → `STARTUP_FETCH_BATCH_DELAY_MS = 1000`
+- **Implementation:** `hooks/use-startup-coin-fetch.ts`
+
+### App Initialization Order
+
+1. **User Preferences** (blocking) - Required for currency selection
+2. **Exchange Rates** (non-blocking) - Can load in parallel
+3. **Crypto Market Data** (non-blocking) - Requires preferences.currency
+4. **Crypto Overview** (non-blocking) - Can load in parallel
+5. **Startup Coin Fetch** (waits `STARTUP_FETCH_DELAY_MS`, then fetches coins in lists)
+
+**Implementation:** `hooks/use-app-initializations.ts`
