@@ -97,7 +97,33 @@ async function fetchCryptoMarketPage(
   url.searchParams.append('page', page.toString());
   url.searchParams.append('sparkline', MARKET_DATA_SPARKLINE.toString());
 
-  const response = await fetch(url.toString());
+  let response: Response;
+  try {
+    response = await fetch(url.toString());
+  } catch (fetchError) {
+    // Check if the fetch error is related to 429 rate limiting
+    const errorMessage = fetchError instanceof Error ? fetchError.message : String(fetchError);
+    const errorString = String(fetchError);
+    const isRateLimit = 
+      errorMessage.includes('429') || 
+      errorMessage.includes('Too Many Requests') ||
+      errorString.includes('429') ||
+      errorString.includes('Too Many Requests');
+    
+    if (isRateLimit) {
+      logger(`⚠️🚦 Rate limited on page ${page} (fetch failed with 429). Waiting before retry ${retryCount + 1}/${MAX_RETRIES}...`, 'warn');
+      const waitTime = BASE_RETRY_DELAY_MS;
+      if (retryCount < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        return fetchCryptoMarketPage(currency, page, retryCount + 1);
+      } else {
+        logger(`⚠️🚦 CoinGecko API rate limit exceeded after ${MAX_RETRIES} retries for page ${page}`, 'warn');
+        throw new Error(`CoinGecko API rate limit exceeded after ${MAX_RETRIES} retries for page ${page}`);
+      }
+    }
+    // Re-throw if it's not a rate limit error
+    throw fetchError;
+  }
 
   // Log rate limit info for all responses
   logRateLimitInfo(response, page);
@@ -187,10 +213,19 @@ export async function fetchAndPersistCryptoMarket(
       } catch (error) {
         // Check if it's a rate limit error - log as warning, not error
         const errorMessage = error instanceof Error ? error.message : String(error);
-        const isRateLimit = errorMessage.includes('rate limit') || errorMessage.includes('429');
+        const errorString = String(error);
+        // Check for 429 in error message, stack trace, or if it's a network error that might be rate limiting
+        // On web, "Failed to fetch" errors from CoinGecko API could be rate limiting (browser shows 429 in network tab)
+        const isRateLimit = 
+          errorMessage.includes('rate limit') || 
+          errorMessage.includes('429') || 
+          errorMessage.includes('Too Many Requests') ||
+          errorString.includes('429') ||
+          errorString.includes('Too Many Requests') ||
+          (error instanceof TypeError && errorMessage.includes('Failed to fetch') && Platform.OS === 'web');
         
         if (isRateLimit) {
-          logger(`   └─ ⚠️🚦 Rate limit error fetching page ${page}:`, 'warn', undefined, error);
+          logger(`   └─ ⚠️🚦 Rate limit error fetching page ${page} (likely 429):`, 'warn', undefined, error);
         } else {
           logger(`   └─ ❌ Error fetching page ${page}:`, 'error', undefined, error);
         }
@@ -247,7 +282,23 @@ export async function fetchAndPersistCryptoMarket(
 
     return newSnapshot;
   } catch (e) {
-    logger('❌ [CoinGecko API] Error fetching/persisting market data:', 'error', undefined, e);
+    // Check if it's a rate limit error - log as warning, not error
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    const errorString = String(e);
+    // On web, "Failed to fetch" errors from CoinGecko API could be rate limiting (browser shows 429 in network tab)
+    const isRateLimit = 
+      errorMessage.includes('rate limit') || 
+      errorMessage.includes('429') || 
+      errorMessage.includes('Too Many Requests') ||
+      errorString.includes('429') ||
+      errorString.includes('Too Many Requests') ||
+      (e instanceof TypeError && errorMessage.includes('Failed to fetch') && Platform.OS === 'web');
+    
+    if (isRateLimit) {
+      logger('⚠️🚦 [CoinGecko API] Rate limit error fetching/persisting market data (likely 429):', 'warn', undefined, e);
+    } else {
+      logger('❌ [CoinGecko API] Error fetching/persisting market data:', 'error', undefined, e);
+    }
     
     // If we have existing data, preserve it and return it instead of throwing
     if (existingData) {

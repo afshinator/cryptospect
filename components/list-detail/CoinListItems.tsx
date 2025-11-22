@@ -23,6 +23,7 @@ import { SupportedCurrency } from "@/constants/currency";
 import { Spacing } from "@/constants/theme";
 import { useStartupCoinFetch } from "@/hooks/use-startup-coin-fetch";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { fetchCoinDataFromBackend } from "@/utils/backendApi";
 import { fetchCoinMarketData } from "@/utils/coinGeckoApi";
 import { logger } from "@/utils/logger";
 import { loadSearchedCoins, saveSearchedCoin, SearchedCoinWithTimestamp } from "@/utils/searchedCoinsStorage";
@@ -84,7 +85,25 @@ export function CoinListItems({
     setFetchingCoins(prev => new Set(prev).add(coinId));
     logger(`🚀 Starting fetch for ${coinId} (${searchedCoin.name})...`, 'log', 'debug');
     
-    fetchCoinMarketData(searchedCoin.id, currency)
+    // Try backend first, then CoinGecko if backend fails
+    fetchCoinDataFromBackend(searchedCoin.id, currency)
+      .then((backendData) => {
+        if (backendData) {
+          logger(`✅ [CoinListItems] Backend fetch successful for ${searchedCoin.id}`, 'log', 'debug');
+          // Process backend data the same way as CoinGecko data
+          return Promise.resolve(backendData);
+        } else {
+          // Backend failed, try CoinGecko
+          logger(`⚠️ [CoinListItems] Backend fetch failed for ${searchedCoin.id}, trying CoinGecko...`, 'log', 'debug');
+          return fetchCoinMarketData(searchedCoin.id, currency);
+        }
+      })
+      .catch((backendError) => {
+        // Backend error, try CoinGecko as fallback
+        logger(`⚠️ [CoinListItems] Backend fetch error for ${searchedCoin.id}, trying CoinGecko...`, 'log', 'debug');
+        logger(`   └─ Backend error: ${backendError instanceof Error ? backendError.message : String(backendError)}`, 'log', 'debug');
+        return fetchCoinMarketData(searchedCoin.id, currency);
+      })
       .then((fullData) => {
         logger(`📥 Fetch response for ${searchedCoin.id}:`, 'log', 'debug', {
           hasData: !!fullData,
