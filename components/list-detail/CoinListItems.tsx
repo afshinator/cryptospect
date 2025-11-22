@@ -26,7 +26,7 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 import { fetchCoinDataFromBackend } from "@/utils/backendApi";
 import { fetchCoinMarketData } from "@/utils/coinGeckoApi";
 import { logger } from "@/utils/logger";
-import { loadSearchedCoins, saveSearchedCoin, SearchedCoinWithTimestamp } from "@/utils/searchedCoinsStorage";
+import { loadSavedOutlierCoins, SavedOutlierCoinWithTimestamp, saveSavedOutlierCoin } from "@/utils/searchedCoinsStorage";
 
 // --- Constants ---
 const STABLECOIN_BADGE_OPACITY = 0.45; // Transparency for mobile badge to respect text underneath
@@ -67,13 +67,16 @@ export function CoinListItems({
   onCompactViewChange,
   currency = "usd",
 }: CoinListItemsProps) {
-  const [searchedCoins, setSearchedCoins] = useState<{ [coinId: string]: SearchedCoinWithTimestamp }>({});
+  const [savedOutlierCoins, setSavedOutlierCoins] = useState<{ [coinId: string]: SavedOutlierCoinWithTimestamp }>({});
+  // Legacy alias for backward compatibility
+  const searchedCoins = savedOutlierCoins;
+  const setSearchedCoins = setSavedOutlierCoins;
   const [fetchingCoins, setFetchingCoins] = useState<Set<string>>(new Set());
   const fetchedCoinsRef = useRef<Set<string>>(new Set()); // Track coins we've already attempted to fetch
   const startupFetchState = useStartupCoinFetch(); // Track startup fetch state
 
   // Helper function to fetch full market data for a coin
-  const fetchDataForCoin = React.useCallback((coinId: string, searchedCoin: SearchedCoinWithTimestamp) => {
+  const fetchDataForCoin = React.useCallback((coinId: string, savedOutlierCoin: SavedOutlierCoinWithTimestamp) => {
     // Skip if already fetching or fetched (ref prevents infinite loop)
     if (fetchedCoinsRef.current.has(coinId)) {
       logger(`⏭️ Skipping fetch for ${coinId} - already fetched or fetching`, 'log', 'debug');
@@ -83,19 +86,19 @@ export function CoinListItems({
     // Mark as being fetched (using ref to prevent duplicate fetches)
     fetchedCoinsRef.current.add(coinId);
     setFetchingCoins(prev => new Set(prev).add(coinId));
-    logger(`🚀 [CoinListItems] Starting fetch for ${coinId} (${searchedCoin.name})...`, 'log', 'info');
+    logger(`🚀 [CoinListItems] Starting fetch for ${coinId} (${savedOutlierCoin.name})...`, 'log', 'info');
     logger(`   └─ Strategy: Try BACKEND first, then CoinGecko if backend fails`, 'log', 'info');
     
     // Track which API was used for this fetch
     let dataSource: 'backend' | 'coingecko' | 'unknown' = 'unknown';
     
     // Try backend first, then CoinGecko if backend fails
-    logger(`🔵 [CoinListItems] STEP 1: Attempting BACKEND API for ${searchedCoin.id}...`, 'log', 'info');
-    fetchCoinDataFromBackend(searchedCoin.id, currency)
+    logger(`🔵 [CoinListItems] STEP 1: Attempting BACKEND API for ${savedOutlierCoin.id}...`, 'log', 'info');
+    fetchCoinDataFromBackend(savedOutlierCoin.id, currency)
       .then((backendData) => {
         if (backendData) {
           dataSource = 'backend';
-          logger(`✅ [CoinListItems] STEP 1 SUCCESS: BACKEND API returned data for ${searchedCoin.id}`, 'log', 'info');
+          logger(`✅ [CoinListItems] STEP 1 SUCCESS: BACKEND API returned data for ${savedOutlierCoin.id}`, 'log', 'info');
           logger(`   └─ Name: ${backendData.name}`, 'log', 'info');
           logger(`   └─ Price change: ${backendData.price_change_percentage_24h ?? 'null'}`, 'log', 'info');
           logger(`   └─ Skipping CoinGecko (backend data available)`, 'log', 'info');
@@ -103,17 +106,17 @@ export function CoinListItems({
           return Promise.resolve(backendData);
         } else {
           // Backend returned null - check the logs above for the specific reason
-          logger(`⚠️ [CoinListItems] STEP 1 FAILED: Backend returned null for ${searchedCoin.id}`, 'log', 'info');
+          logger(`⚠️ [CoinListItems] STEP 1 FAILED: Backend returned null for ${savedOutlierCoin.id}`, 'log', 'info');
           logger(`   └─ Check logs above for failure reason (COIN_NOT_FOUND, NO_MARKET_DATA, CORS_BLOCKED, etc.)`, 'log', 'info');
-          logger(`🟡 [CoinListItems] STEP 2: Falling back to CoinGecko API for ${searchedCoin.id}...`, 'log', 'info');
-          return fetchCoinMarketData(searchedCoin.id, currency).then((coingeckoData) => {
+          logger(`🟡 [CoinListItems] STEP 2: Falling back to CoinGecko API for ${savedOutlierCoin.id}...`, 'log', 'info');
+          return fetchCoinMarketData(savedOutlierCoin.id, currency).then((coingeckoData) => {
             if (coingeckoData) {
               dataSource = 'coingecko';
-              logger(`✅ [CoinListItems] STEP 2 SUCCESS: CoinGecko API returned data for ${searchedCoin.id}`, 'log', 'info');
+              logger(`✅ [CoinListItems] STEP 2 SUCCESS: CoinGecko API returned data for ${savedOutlierCoin.id}`, 'log', 'info');
               logger(`   └─ Name: ${coingeckoData.name}`, 'log', 'info');
               logger(`   └─ Price change: ${coingeckoData.price_change_percentage_24h ?? 'null'}`, 'log', 'info');
             } else {
-              logger(`❌ [CoinListItems] STEP 2 FAILED: CoinGecko also returned null for ${searchedCoin.id}`, 'log', 'info');
+              logger(`❌ [CoinListItems] STEP 2 FAILED: CoinGecko also returned null for ${savedOutlierCoin.id}`, 'log', 'info');
             }
             return coingeckoData;
           });
@@ -124,7 +127,7 @@ export function CoinListItems({
         const failureReason = (backendError as any)?.failureReason || 'UNKNOWN';
         const statusCode = (backendError as any)?.statusCode;
         
-        logger(`⚠️ [CoinListItems] STEP 1 ERROR: Backend threw an error for ${searchedCoin.id}`, 'log', 'info');
+        logger(`⚠️ [CoinListItems] STEP 1 ERROR: Backend threw an error for ${savedOutlierCoin.id}`, 'log', 'info');
         logger(`   └─ Failure reason: ${failureReason}`, 'log', 'info');
         if (statusCode) {
           logger(`   └─ HTTP status: ${statusCode}`, 'log', 'info');
@@ -159,21 +162,21 @@ export function CoinListItems({
           logger(`      • Unknown error - check backend API logs above for details`, 'log', 'info');
         }
         
-        logger(`🟡 [CoinListItems] STEP 2: Falling back to CoinGecko API for ${searchedCoin.id}...`, 'log', 'info');
-        return fetchCoinMarketData(searchedCoin.id, currency).then((coingeckoData) => {
+        logger(`🟡 [CoinListItems] STEP 2: Falling back to CoinGecko API for ${savedOutlierCoin.id}...`, 'log', 'info');
+        return fetchCoinMarketData(savedOutlierCoin.id, currency).then((coingeckoData) => {
           if (coingeckoData) {
             dataSource = 'coingecko';
-            logger(`✅ [CoinListItems] STEP 2 SUCCESS: CoinGecko API returned data for ${searchedCoin.id}`, 'log', 'info');
+            logger(`✅ [CoinListItems] STEP 2 SUCCESS: CoinGecko API returned data for ${savedOutlierCoin.id}`, 'log', 'info');
             logger(`   └─ Name: ${coingeckoData.name}`, 'log', 'info');
             logger(`   └─ Price change: ${coingeckoData.price_change_percentage_24h ?? 'null'}`, 'log', 'info');
           } else {
-            logger(`❌ [CoinListItems] STEP 2 FAILED: CoinGecko also returned null for ${searchedCoin.id}`, 'log', 'info');
+            logger(`❌ [CoinListItems] STEP 2 FAILED: CoinGecko also returned null for ${savedOutlierCoin.id}`, 'log', 'info');
           }
           return coingeckoData;
         });
       })
       .then((fullData) => {
-        logger(`📊 [CoinListItems] Fetch summary for ${searchedCoin.id}:`, 'log', 'info');
+        logger(`📊 [CoinListItems] Fetch summary for ${savedOutlierCoin.id}:`, 'log', 'info');
         logger(`   └─ Final data source: ${dataSource.toUpperCase()}`, 'log', 'info');
         logger(`   └─ Has data: ${!!fullData}`, 'log', 'info');
         
@@ -183,7 +186,7 @@ export function CoinListItems({
           logger(`   └─ Price change: ${fullData.price_change_percentage_24h ?? 'null'}`, 'log', 'info');
           
           // Check if fetched data is better than what we have
-          const existingCoin = searchedCoins[coinId];
+          const existingCoin = savedOutlierCoins[coinId];
           const hasBetterData = !existingCoin || 
             (existingCoin.price_change_percentage_24h === null && fullData.price_change_percentage_24h !== null) ||
             (existingCoin.price_change_percentage_24h === null && fullData.price_change_percentage_24h === null && 
@@ -192,19 +195,19 @@ export function CoinListItems({
           
           if (hasBetterData) {
             // Preserve existing timestamp if available
-            const existingCoin = searchedCoins[coinId];
-            const coinWithTimestamp: SearchedCoinWithTimestamp = {
+            const existingCoin = savedOutlierCoins[coinId];
+            const coinWithTimestamp: SavedOutlierCoinWithTimestamp = {
               ...fullData,
               _lastUpdated: Date.now(), // Always update timestamp when we get new data
             };
             
-            // Update the searched coins state with full data (preserving timestamp)
-            setSearchedCoins(prev => {
+            // Update the saved outlier coins state with full data (preserving timestamp)
+            setSavedOutlierCoins(prev => {
               const updated = {
                 ...prev,
                 [coinId]: coinWithTimestamp,
               };
-              logger(`📝 [CoinListItems] Updating searchedCoins state for ${coinId}:`, 'log', 'info');
+              logger(`📝 [CoinListItems] Updating savedOutlierCoins state for ${coinId}:`, 'log', 'info');
               logger(`   └─ Name: ${fullData.name}`, 'log', 'info');
               logger(`   └─ Data source: ${dataSource.toUpperCase()}`, 'log', 'info');
               logger(`   └─ Price change: ${fullData.price_change_percentage_24h}`, 'log', 'info');
@@ -212,8 +215,8 @@ export function CoinListItems({
               return updated;
             });
             
-            // Also save to storage for future use (saveSearchedCoin will merge intelligently and preserve non-null data)
-            saveSearchedCoin(fullData).then(() => {
+            // Also save to storage for future use (saveSavedOutlierCoin will merge intelligently and preserve non-null data)
+            saveSavedOutlierCoin(fullData).then(() => {
               logger(`💾 [CoinListItems] Saved/merged full data to storage for ${fullData.name}`, 'log', 'info');
               logger(`   └─ Data source: ${dataSource.toUpperCase()}`, 'log', 'info');
             }).catch((saveError) => {
@@ -223,7 +226,7 @@ export function CoinListItems({
             logger(`ℹ️ [CoinListItems] Fetched data for ${fullData.name} is not better than existing, keeping existing data`, 'log', 'debug');
           }
         } else {
-          logger(`⚠️ Fetch returned no data (null/undefined) for ${searchedCoin.id}`, 'warn');
+          logger(`⚠️ Fetch returned no data (null/undefined) for ${savedOutlierCoin.id}`, 'warn');
           // Remove from ref so we can retry later if needed
           fetchedCoinsRef.current.delete(coinId);
         }
@@ -235,14 +238,14 @@ export function CoinListItems({
         const isNetworkError = errorMessage.includes('Failed to fetch') || errorMessage.includes('Network error');
         
         if (isRateLimit) {
-          logger(`⚠️🚦 [CoinListItems] Rate limit hit for ${searchedCoin.id}. Will retry later.`, 'warn');
+          logger(`⚠️🚦 [CoinListItems] Rate limit hit for ${savedOutlierCoin.id}. Will retry later.`, 'warn');
         } else if (isNetworkError) {
-          logger(`⚠️ [CoinListItems] Network/CORS issue for ${searchedCoin.id} (expected):`, 'warn');
+          logger(`⚠️ [CoinListItems] Network/CORS issue for ${savedOutlierCoin.id} (expected):`, 'warn');
           logger(`   └─ This is informational, not an error`, 'warn');
           logger(`   └─ Will retry later when network is available`, 'warn');
         } else {
           // Real error - log it
-          logger(`❌ [CoinListItems] Failed to fetch market data for ${searchedCoin.id}:`, 'error');
+          logger(`❌ [CoinListItems] Failed to fetch market data for ${savedOutlierCoin.id}:`, 'error');
           logger(`   └─ Error: ${errorMessage}`, 'error');
         }
         // Remove from ref so we can retry later if needed (after rate limit expires or network recovers)
@@ -256,7 +259,7 @@ export function CoinListItems({
         });
         logger(`🏁 Fetch process finished for ${coinId}`, 'log', 'debug');
       });
-  }, [currency]);
+  }, [currency, savedOutlierCoins]);
 
   // Load searched coins and check for coins needing full market data
   useEffect(() => {
@@ -267,8 +270,8 @@ export function CoinListItems({
       
       // Small delay to ensure any async saves have completed
       await new Promise(resolve => setTimeout(resolve, ASYNC_STORAGE_OPERATION_DELAY_MS));
-      const loaded = await loadSearchedCoins();
-      logger(`📦 Loaded SearchedCoins: ${Object.keys(loaded).length} coins`, 'log', 'info');
+      const loaded = await loadSavedOutlierCoins();
+      logger(`📦 Loaded SavedOutlierCoins: ${Object.keys(loaded).length} coins`, 'log', 'info');
       
       // Log each coin's price change status with timestamp
       Object.entries(loaded).forEach(([coinId, coinData]) => {
@@ -285,7 +288,7 @@ export function CoinListItems({
         }
       });
       
-      setSearchedCoins(loaded);
+      setSavedOutlierCoins(loaded);
 
       // After loading, check if any coins need full market data
       if (!globalMarketSnapshot) {
@@ -312,25 +315,25 @@ export function CoinListItems({
         // If not in main cache, check loaded searched coins
         if (!marketData) {
           const searchedCoin = loaded[normalizedCoinId];
-          logger(`   └─ In SearchedCoins: ${!!searchedCoin}`, 'log', 'info');
+          logger(`   └─ In SavedOutlierCoins: ${!!searchedCoin}`, 'log', 'info');
           
           if (searchedCoin) {
-            // Coin exists in SearchedCoins
+            // Coin exists in SavedOutlierCoins
             logger(`   └─ Has price change data: ${searchedCoin.price_change_percentage_24h !== null && searchedCoin.price_change_percentage_24h !== undefined}`, 'log', 'info');
             // If missing price data, fetch it (in background, don't block display)
             if (searchedCoin.price_change_percentage_24h === null) {
               logger(`🔄 Coin ${coin.coinId} needs full data, fetching from BACKEND (then CoinGecko if needed)...`, 'log', 'info');
               fetchDataForCoin(normalizedCoinId, searchedCoin);
             } else {
-              logger(`✅ Coin ${coin.coinId} already has price data in SearchedCoins: ${searchedCoin.price_change_percentage_24h}`, 'log', 'info');
+              logger(`✅ Coin ${coin.coinId} already has price data in SavedOutlierCoins: ${searchedCoin.price_change_percentage_24h}`, 'log', 'info');
               logger(`   └─ Data source: Previously fetched (check storage timestamp for original source)`, 'log', 'info');
             }
           } else {
-            // Coin is NOT in main cache AND NOT in SearchedCoins
-            // This could happen if SearchedCoins was deleted or coin was never searched
+            // Coin is NOT in main cache AND NOT in SavedOutlierCoins
+            // This could happen if SavedOutlierCoins was deleted or coin was never fetched
             // Create a minimal coin entry and fetch full data
-            logger(`🔄 Coin ${coin.coinId} not found in main cache or SearchedCoins, fetching from BACKEND (then CoinGecko if needed)...`, 'log', 'info');
-            const minimalCoin: SearchedCoinWithTimestamp = {
+            logger(`🔄 Coin ${coin.coinId} not found in main cache or SavedOutlierCoins, fetching from BACKEND (then CoinGecko if needed)...`, 'log', 'info');
+            const minimalCoin: SavedOutlierCoinWithTimestamp = {
               id: normalizedCoinId,
               symbol: coin.symbol || '',
               name: coin.name || coin.coinId,

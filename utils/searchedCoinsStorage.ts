@@ -1,54 +1,62 @@
 // utils/searchedCoinsStorage.ts
 
 /*
-SearchedCoinsStorage - Stores coins found via CoinGecko search API that aren't in the main market cache.
+SavedOutlierCoinsStorage - Stores coins that aren't in the main CryptoMarketSnapshot cache.
 
-These coins have partial data (id, name, symbol, image, market_cap_rank) but lack full market data
-(price, volume, etc.) since they come from the search endpoint, not the markets endpoint.
+These are "outlier" coins that users have in their lists but aren't in the top ~1250 coins
+that are fetched in the main market data. They can come from:
+1. CoinGecko search API (partial data: id, name, symbol, image, market_cap_rank)
+2. Backend API /api/coins/{id} (full market data)
+3. CoinGecko API /coins/{id} (full market data, fallback if backend fails)
+
+The storage intelligently merges data, preserving non-null values and never overwriting
+existing data with nulls. Each coin has a timestamp (_lastUpdated) to track when it was last fetched.
 
 Functions:
-    loadSearchedCoins() - Loads all searched coins from storage
-    saveSearchedCoin() - Saves/updates a single searched coin
-    getSearchedCoin() - Gets a specific coin by ID
-    removeSearchedCoin() - Removes a coin from storage (if it's now in main cache)
+    loadSavedOutlierCoins() - Loads all saved outlier coins from storage
+    saveSavedOutlierCoin() - Saves/updates a single outlier coin
+    getSavedOutlierCoin() - Gets a specific coin by ID
+    removeSavedOutlierCoin() - Removes a coin from storage
+    getAllSavedOutlierCoins() - Returns all coins as an array
 */
 
 import { CoinGeckoMarketData } from '@/constants/coinGecko';
-import { SEARCHED_COINS_CACHE_KEY } from '@/constants/misc';
+import { SAVED_OUTLIER_COINS_CACHE_KEY } from '@/constants/misc';
 import { getJSONObject, setJSONObject } from '@/utils/asyncStorage';
 import { logger } from '@/utils/logger';
 
-export interface SearchedCoinWithTimestamp extends CoinGeckoMarketData {
+export interface SavedOutlierCoinWithTimestamp extends CoinGeckoMarketData {
   _lastUpdated?: number; // Timestamp when this coin data was last updated
 }
 
-export interface SearchedCoinsStorage {
-  [coinId: string]: SearchedCoinWithTimestamp;
+export interface SavedOutlierCoinsStorage {
+  [coinId: string]: SavedOutlierCoinWithTimestamp;
 }
 
+// Legacy type aliases for backward compatibility during migration
+export type SearchedCoinWithTimestamp = SavedOutlierCoinWithTimestamp;
+export type SearchedCoinsStorage = SavedOutlierCoinsStorage;
+
 /**
- * Loads all searched coins from AsyncStorage
- */
-/**
- * Loads all searched coins from AsyncStorage
+ * Loads all saved outlier coins from AsyncStorage
  * Ensures all coins have timestamps (adds current timestamp if missing for backward compatibility)
  */
-export async function loadSearchedCoins(): Promise<SearchedCoinsStorage> {
+export async function loadSavedOutlierCoins(): Promise<SavedOutlierCoinsStorage> {
   try {
-    const data = await getJSONObject<SearchedCoinsStorage>(SEARCHED_COINS_CACHE_KEY);
+    const data = await getJSONObject<SavedOutlierCoinsStorage>(SAVED_OUTLIER_COINS_CACHE_KEY);
     if (!data) return {};
     
     // Ensure all coins have timestamps (backward compatibility)
     const now = Date.now();
     let needsSave = false;
-    const updated: SearchedCoinsStorage = {};
+    const updated: SavedOutlierCoinsStorage = {};
     
     for (const [coinId, coinData] of Object.entries(data)) {
       if (!coinData._lastUpdated) {
         // Add timestamp for coins missing it
         updated[coinId] = { ...coinData, _lastUpdated: now };
         needsSave = true;
-        logger(`🔍 [SearchedCoins] Added missing timestamp for ${coinId}`, 'log', 'debug');
+        logger(`🔍 [SavedOutlierCoins] Added missing timestamp for ${coinId}`, 'log', 'debug');
       } else {
         updated[coinId] = coinData;
       }
@@ -56,22 +64,25 @@ export async function loadSearchedCoins(): Promise<SearchedCoinsStorage> {
     
     // Save if we added any missing timestamps
     if (needsSave) {
-      await setJSONObject(SEARCHED_COINS_CACHE_KEY, updated);
-      logger(`💾 [SearchedCoins] Saved updated coins with timestamps`, 'log', 'debug');
+      await setJSONObject(SAVED_OUTLIER_COINS_CACHE_KEY, updated);
+      logger(`💾 [SavedOutlierCoins] Saved updated coins with timestamps`, 'log', 'debug');
     }
     
     return updated;
   } catch (e) {
-    logger('❌🔍 [SearchedCoins] Error loading coins:', 'error', undefined, e);
+    logger('❌🔍 [SavedOutlierCoins] Error loading coins:', 'error', undefined, e);
     return {};
   }
 }
+
+// Legacy function alias for backward compatibility
+export const loadSearchedCoins = loadSavedOutlierCoins;
 
 /**
  * Helper function to check if new data is better than existing data
  * New data is "better" if it has non-null values where existing has null
  */
-function isNewDataBetter(existing: SearchedCoinWithTimestamp, newData: CoinGeckoMarketData): boolean {
+function isNewDataBetter(existing: SavedOutlierCoinWithTimestamp, newData: CoinGeckoMarketData): boolean {
   // Priority: price_change_percentage_24h is the most important field
   if (existing.price_change_percentage_24h === null && newData.price_change_percentage_24h !== null) {
     return true;
@@ -94,8 +105,8 @@ function isNewDataBetter(existing: SearchedCoinWithTimestamp, newData: CoinGecko
  * CRITICAL: NEVER overwrites existing non-null values with null values
  * Returns the merged data and whether any new data was actually merged
  */
-function mergeCoinData(existing: SearchedCoinWithTimestamp, newData: CoinGeckoMarketData): { merged: SearchedCoinWithTimestamp; hasNewData: boolean } {
-  const merged: SearchedCoinWithTimestamp = { ...existing };
+function mergeCoinData(existing: SavedOutlierCoinWithTimestamp, newData: CoinGeckoMarketData): { merged: SavedOutlierCoinWithTimestamp; hasNewData: boolean } {
+  const merged: SavedOutlierCoinWithTimestamp = { ...existing };
   let hasNewData = false;
   
   // Track which fields we're protecting from null overwrites
@@ -145,15 +156,15 @@ function mergeCoinData(existing: SearchedCoinWithTimestamp, newData: CoinGeckoMa
 }
 
 /**
- * Saves a searched coin to storage
+ * Saves a saved outlier coin to storage
  * NEVER overwrites existing non-null data with null values
  * Only updates fields where new data is non-null and existing is null, or both are non-null
  * Always preserves timestamps - only updates timestamp when new data is actually merged
- * @param coin - The coin data to save (from search API or full market data)
+ * @param coin - The coin data to save (from search API, backend API, or CoinGecko API)
  */
-export async function saveSearchedCoin(coin: CoinGeckoMarketData): Promise<void> {
+export async function saveSavedOutlierCoin(coin: CoinGeckoMarketData): Promise<void> {
   try {
-    const existing = await loadSearchedCoins();
+    const existing = await loadSavedOutlierCoins();
     // Normalize coin ID to lowercase for consistent lookup
     const normalizedId = coin.id.toLowerCase();
     const existingCoin = existing[normalizedId];
@@ -176,70 +187,82 @@ export async function saveSearchedCoin(coin: CoinGeckoMarketData): Promise<void>
       
       if (hasNewData) {
         const timestamp = merged._lastUpdated ? new Date(merged._lastUpdated).toISOString() : 'unknown';
-        logger(`✅🔍 [SearchedCoins] Updated coin: ${coin.name} (${coin.symbol})`, 'log', 'debug');
+        logger(`✅🔍 [SavedOutlierCoins] Updated coin: ${coin.name} (${coin.symbol})`, 'log', 'debug');
         logger(`   └─ New data merged at: ${timestamp}`, 'log', 'debug');
         logger(`   └─ Preserved existing non-null fields`, 'log', 'debug');
       } else {
         const preservedTimestamp = existingCoin._lastUpdated ? new Date(existingCoin._lastUpdated).toISOString() : 'unknown';
-        logger(`✅🔍 [SearchedCoins] Coin: ${coin.name} (${coin.symbol}) - no new data to merge`, 'log', 'debug');
+        logger(`✅🔍 [SavedOutlierCoins] Coin: ${coin.name} (${coin.symbol}) - no new data to merge`, 'log', 'debug');
         logger(`   └─ Preserved existing data (timestamp: ${preservedTimestamp})`, 'log', 'debug');
         logger(`   └─ Prevented overwriting with null values`, 'log', 'debug');
       }
     } else {
       // New coin, save it with timestamp
       existing[normalizedId] = { ...coin, id: normalizedId, _lastUpdated: now };
-      logger(`✅🔍 [SearchedCoins] Saved new coin: ${coin.name} (${coin.symbol})`, 'log', 'debug');
+      logger(`✅🔍 [SavedOutlierCoins] Saved new coin: ${coin.name} (${coin.symbol})`, 'log', 'debug');
       logger(`   └─ ID: ${normalizedId}`, 'log', 'debug');
       logger(`   └─ Timestamp: ${new Date(now).toISOString()}`, 'log', 'debug');
     }
     
-    await setJSONObject(SEARCHED_COINS_CACHE_KEY, existing);
+    await setJSONObject(SAVED_OUTLIER_COINS_CACHE_KEY, existing);
   } catch (e) {
-    logger('❌🔍 [SearchedCoins] Error saving coin:', 'error', undefined, e);
+    logger('❌🔍 [SavedOutlierCoins] Error saving coin:', 'error', undefined, e);
     throw e;
   }
 }
 
+// Legacy function alias for backward compatibility
+export const saveSearchedCoin = saveSavedOutlierCoin;
+
 /**
- * Gets a specific searched coin by ID
+ * Gets a specific saved outlier coin by ID
  * @param coinId - The coin ID to look up (will be normalized to lowercase)
  */
-export async function getSearchedCoin(coinId: string): Promise<SearchedCoinWithTimestamp | null> {
+export async function getSavedOutlierCoin(coinId: string): Promise<SavedOutlierCoinWithTimestamp | null> {
   try {
-    const allCoins = await loadSearchedCoins();
+    const allCoins = await loadSavedOutlierCoins();
     // Normalize ID to lowercase for lookup
     const normalizedId = coinId.toLowerCase();
     return allCoins[normalizedId] || null;
   } catch (e) {
-    logger('❌🔍 Error getting searched coin:', 'error', undefined, e);
+    logger('❌🔍 Error getting saved outlier coin:', 'error', undefined, e);
     return null;
   }
 }
 
+// Legacy function alias for backward compatibility
+export const getSearchedCoin = getSavedOutlierCoin;
+
 /**
- * Removes a coin from searched coins storage
+ * Removes a coin from saved outlier coins storage
  * (Useful when a coin is now available in the main market cache)
  * @param coinId - The coin ID to remove
  */
-export async function removeSearchedCoin(coinId: string): Promise<void> {
+export async function removeSavedOutlierCoin(coinId: string): Promise<void> {
   try {
-    const existing = await loadSearchedCoins();
-    if (existing[coinId]) {
-      delete existing[coinId];
-      await setJSONObject(SEARCHED_COINS_CACHE_KEY, existing);
-      logger(`✅🔍 Removed searched coin: ${coinId}`, 'log', 'debug');
+    const existing = await loadSavedOutlierCoins();
+    const normalizedId = coinId.toLowerCase();
+    if (existing[normalizedId]) {
+      delete existing[normalizedId];
+      await setJSONObject(SAVED_OUTLIER_COINS_CACHE_KEY, existing);
+      logger(`✅🔍 Removed saved outlier coin: ${normalizedId}`, 'log', 'debug');
     }
   } catch (e) {
-    logger('❌🔍 Error removing searched coin:', 'error', undefined, e);
+    logger('❌🔍 Error removing saved outlier coin:', 'error', undefined, e);
     throw e;
   }
 }
 
+// Legacy function alias for backward compatibility
+export const removeSearchedCoin = removeSavedOutlierCoin;
+
 /**
- * Gets all searched coins as an array
+ * Gets all saved outlier coins as an array
  */
-export async function getAllSearchedCoins(): Promise<SearchedCoinWithTimestamp[]> {
-  const storage = await loadSearchedCoins();
+export async function getAllSavedOutlierCoins(): Promise<SavedOutlierCoinWithTimestamp[]> {
+  const storage = await loadSavedOutlierCoins();
   return Object.values(storage);
 }
 
+// Legacy function alias for backward compatibility
+export const getAllSearchedCoins = getAllSavedOutlierCoins;

@@ -54,6 +54,6 @@ export const EXCHANGE_RATES_QUERY_KEY = ['exchangeRates'];
 export const STABLECOIN_DATA_CACHE_KEY = 'StablecoinData';
 export const STABLECOIN_DATA_QUERY_KEY = ['stablecoinData'];
 
-// Searched Coins (from CoinGecko search API)
-export const SEARCHED_COINS_CACHE_KEY = 'SearchedCoins';
-export const SEARCHED_COINS_QUERY_KEY = ['searchedCoins'];
+// Saved Outlier Coins (coins not in main market cache, fetched from backend/CoinGecko)
+export const SAVED_OUTLIER_COINS_CACHE_KEY = 'SavedOutlierCoins';
+export const SAVED_OUTLIER_COINS_QUERY_KEY = ['savedOutlierCoins'];

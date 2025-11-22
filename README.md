@@ -234,8 +234,8 @@ The app fetches market data for up to 1,250 cryptocurrencies (5 pages × 250 per
 - `query`: Search term (coin name or symbol, minimum 2 characters)
 
 **Cache Duration:** Persistent (client-side AsyncStorage)
-- **Storage Key:** `SearchedCoins` (configured in `constants/misc.ts`)
-- **Storage Location:** `utils/searchedCoinsStorage.ts`
+- **Storage Key:** `SavedOutlierCoins` (configured in `constants/misc.ts`)
+- **Storage Location:** `utils/searchedCoinsStorage.ts` (legacy filename, contains `SavedOutlierCoins` functions)
 
 **When It's Used:**
 - Triggered automatically when a user searches for a coin in the "Add Coin" modal
@@ -285,7 +285,7 @@ The search endpoint (`/search`) is designed for discovery and returns minimal da
   - List Details screen (coin icons)
   - Coin Details screen (basic info, with "Limited data available" indicator)
 - If a searched coin later appears in the main market cache (from `/coins/markets`), the full market data will be used instead
-- **Implementation:** `utils/searchedCoinsStorage.ts` → `saveSearchedCoin()`, `loadSearchedCoins()`
+- **Implementation:** `utils/searchedCoinsStorage.ts` → `saveSavedOutlierCoin()`, `loadSavedOutlierCoins()` (legacy aliases: `saveSearchedCoin()`, `loadSearchedCoins()`)
 
 **Rate Limiting:**
 - Search requests are debounced (500ms delay after user stops typing)
@@ -308,6 +308,7 @@ The search endpoint (`/search`) is designed for discovery and returns minimal da
 | CoinGecko | `/global` | 5 minutes | Global crypto market overview | `apiConfig.ts` |
 | CoinGecko | `/search` | On-demand (debounced 500ms) | Search for coins by name/symbol (limited data) | `apiConfig.ts` |
 | CoinGecko | `/coins/{id}` | On-demand | Full market data for individual coins | `apiConfig.ts` |
+| Backend | `/api/coins/{id}` | On-demand | Full market data for individual coins (preferred over CoinGecko) | Backend-side |
 | Exchange Rate API | `/v6/latest/USD` | 24 hours | Fiat currency exchange rates | `apiConfig.ts` |
 
 **Note:** All APIs implement client-side caching using AsyncStorage with graceful fallback to stale cache if fresh data fails to fetch.
@@ -323,6 +324,40 @@ After app initialization completes, the app automatically fetches full market da
 - **Delay between batches:** 1 second
   - **Constant Location:** `constants/apiConfig.ts` → `STARTUP_FETCH_BATCH_DELAY_MS = 1000`
 - **Implementation:** `hooks/use-startup-coin-fetch.ts`
+- **Storage:** Fetched coins are saved to `SavedOutlierCoins` storage
+
+### Outlier Coin Data Fetching Algorithm
+
+When a coin in a user's list is not found in the main `CryptoMarketSnapshot` (top ~1250 coins), the app uses the following algorithm:
+
+1. **Check SavedOutlierCoins Storage First**
+   - If coin exists in `SavedOutlierCoins` and has complete data (especially `price_change_percentage_24h`), use it immediately
+   - If coin exists but missing price data, trigger background fetch
+
+2. **Fetch Strategy (when data is missing or incomplete):**
+   - **STEP 1:** Attempt to fetch from **Backend API** (`/api/coins/{id}`)
+     - If successful, save to `SavedOutlierCoins` and use the data
+     - If backend fails (404, CORS, network error, etc.), proceed to STEP 2
+   - **STEP 2:** Fallback to **CoinGecko API** (`/coins/{id}`)
+     - If successful, save to `SavedOutlierCoins` and use the data
+     - If both fail, display "Waiting on API..." indicator
+
+3. **Data Merging Rules:**
+   - Never overwrite existing non-null values with null values
+   - Only update fields where new data is non-null and existing is null
+   - Preserve timestamps - only update when new data is actually merged
+   - Priority: `price_change_percentage_24h` is the most important field
+
+4. **Storage:**
+   - **Storage Key:** `SavedOutlierCoins` (configured in `constants/misc.ts`)
+   - **Implementation:** `utils/searchedCoinsStorage.ts` → `saveSavedOutlierCoin()`, `loadSavedOutlierCoins()`
+   - Each coin has a `_lastUpdated` timestamp to track when it was last fetched
+
+**This algorithm ensures that:**
+- Backend API is tried first (faster, more reliable if available)
+- CoinGecko is used as fallback (broader coverage)
+- Existing data is never lost or overwritten with nulls
+- Users see data immediately if available in storage, even if network is down
 
 ### App Initialization Order
 
