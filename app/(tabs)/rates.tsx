@@ -1,7 +1,7 @@
 // app/(tabs)/rates.tsx
 
 import React from "react";
-import { FlatList, Pressable, StyleSheet, Switch } from "react-native";
+import { FlatList, Platform, Pressable, StyleSheet, Switch } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CurrencySelectorModal } from "@/components/CurrencySelectorModal";
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   currencySelector: {
-    flex: 2,
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     padding: Spacing.sm,
