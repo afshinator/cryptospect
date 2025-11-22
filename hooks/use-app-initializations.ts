@@ -1,5 +1,6 @@
 // hooks/use-app-initialization.ts
 
+import { EXCHANGE_RATES_REFRESH_INTERVAL_MS } from "@/constants/apiConfig";
 import {
   DEFAULT_CURRENCY,
 } from "@/constants/currency";
@@ -30,17 +31,19 @@ export function useAppInitialization() {
   const { data: rates, isPending: isRatesPending } = useQuery({
     queryKey: EXCHANGE_RATES_QUERY_KEY,
     queryFn: getExchangeRates,
-    staleTime: 0,
+    staleTime: EXCHANGE_RATES_REFRESH_INTERVAL_MS, // Data is fresh for 24 hours
+    refetchInterval: EXCHANGE_RATES_REFRESH_INTERVAL_MS,
+    refetchOnWindowFocus: true, // Only refetches if data is stale (older than staleTime)
   });
 
   // 3. Fetch Crypto Market Data (non-blocking, enabled only after prefs load)
   const { data: cryptoMarket, isPending: isCryptoMarketPending } = useQuery({
     queryKey: [...CRYPTO_MARKET_QUERY_KEY, prefs?.currency],
     queryFn: () => getCryptoMarket(prefs?.currency || DEFAULT_CURRENCY),
-    staleTime: 0,
+    staleTime: CRYPTO_MARKET_REFRESH_INTERVAL_MS, // Data is fresh for 6 minutes
     enabled: !!prefs,
     refetchInterval: CRYPTO_MARKET_REFRESH_INTERVAL_MS,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: true, // Only refetches if data is stale (older than staleTime)
   });
 
   // 4. Fetch Crypto Overview Data (non-blocking, for current dominance)
@@ -48,9 +51,9 @@ export function useAppInitialization() {
     {
       queryKey: CRYPTO_OVERVIEW_QUERY_KEY,
       queryFn: getCryptoOverview,
-      staleTime: 0,
+      staleTime: CRYPTO_OVERVIEW_REFRESH_INTERVAL_MS, // Data is fresh for 5 minutes
       refetchInterval: CRYPTO_OVERVIEW_REFRESH_INTERVAL_MS,
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: true, // Only refetches if data is stale (older than staleTime)
     }
   );
 
