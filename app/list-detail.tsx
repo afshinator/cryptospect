@@ -4,14 +4,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
-  Keyboard,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
-  TextInput,
-  View,
+  TextInput
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -19,14 +14,13 @@ import { CoinAutocomplete } from "@/components/CoinAutocomplete";
 import { CoinFilters } from "@/components/CoinFilters";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { FilteredCoinsResults } from "@/components/FilteredCoinsResults";
-import { StablecoinBadge } from "@/components/list-detail/StablecoinBadge";
+import { CoinListItems } from "@/components/list-detail/CoinListItems";
 import { ScreenContainer } from "@/components/ScreenContainer";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { CoinGeckoMarketData } from "@/constants/coinGecko";
 import { CoinListItem } from "@/constants/coinLists";
-import { isStablecoin } from "@/constants/coinTypes";
 import { SupportedCurrency } from "@/constants/currency";
 import { Spacing } from "@/constants/theme";
 import { useAppInitialization } from "@/hooks/use-app-initializations";
@@ -40,12 +34,6 @@ import {
 import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { applyFilters, createMarketDataMap } from "@/utils/coinFilters";
-
-// --- Constants ---
-const STABLECOIN_BADGE_OPACITY = 0.45; // Transparency for mobile badge to respect text underneath
-const STABLECOIN_BADGE_ROTATION = 0; // Rotation in degrees (clockwise) for mobile badge
-const STABLECOIN_BADGE_TOP_OFFSET = 0; // Top offset for mobile badge positioning
-const STABLECOIN_BADGE_LEFT_OFFSET = 0; // Left offset for mobile badge positioning
 
 // --- Main Screen Component ---
 export default function ListDetailScreen() {
@@ -75,6 +63,9 @@ export default function ListDetailScreen() {
   // State for Filters
   const [activeFilterIds, setActiveFilterIds] = useState<string[]>([]);
   const [andFilterIds, setAndFilterIds] = useState<string[]>([]);
+  
+  // State for Compact View
+  const [isCompactView, setIsCompactView] = useState(false);
 
   const textColor = useThemeColor({}, "text");
   const backgroundColor = useThemeColor({}, "background");
@@ -383,173 +374,21 @@ export default function ListDetailScreen() {
           </ThemedView>
 
           {/* Coins List */}
-          <ThemedView style={styles.coinsContainer}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              Coins ({list.coins.length})
-            </ThemedText>
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              onScrollBeginDrag={Keyboard.dismiss}
-            >
-              {list.coins.length > 0 ? (
-                list.coins.map((coin) => {
-                  // FIX #4: Look up the market data from the global snapshot using the coinId
-                  const marketData = globalMarketSnapshot?.find(
-                    (m) => m.id === coin.coinId
-                  );
-
-                  // Use marketData for live details, otherwise fallback to the minimal data stored in the list item
-                  const displayName = marketData?.name || coin.name;
-                  const displaySymbol = marketData?.symbol || coin.symbol;
-                  // Fallback to legacy coin.apiData.image if global snapshot isn't loaded (for existing items)
-                  const displayImage = marketData?.image || coin.apiData?.image; 
-
-                  const isEditingThisCoin = editingCoinId === coin.coinId;
-
-                  return (
-                    <ThemedView key={coin.coinId} style={[styles.coinItem, { borderColor }]}>
-                      {isEditingThisCoin ? (
-                        // Editing mode for coin notes
-                        <ThemedView style={styles.coinNotesEditContainer}>
-                          <ThemedView style={styles.coinNotesHeader}>
-                            <ThemedText type="bodySemibold">{displayName}</ThemedText>
-                            <ThemedText type="small" variant="secondary">
-                              {displaySymbol.toUpperCase()}
-                            </ThemedText>
-                          </ThemedView>
-                          <TextInput
-                            style={[
-                              styles.textArea,
-                              { color: textColor, backgroundColor, borderColor },
-                            ]}
-                            placeholder="Add notes for this coin..."
-                            placeholderTextColor={placeholderColor}
-                            value={editedCoinNotes}
-                            onChangeText={setEditedCoinNotes}
-                            multiline
-                            autoFocus
-                          />
-                          <ThemedView style={styles.coinNotesButtonRow}>
-                            <Pressable
-                              onPress={handleSaveCoinNotes}
-                              style={styles.saveButton}
-                              disabled={updateCoinNotes.isPending}
-                            >
-                              <ThemedText type="bodySemibold">Save</ThemedText>
-                            </Pressable>
-                            <Pressable
-                              onPress={handleCancelEditingCoinNotes}
-                              style={styles.cancelButton}
-                            >
-                              <ThemedText type="body" variant="secondary">
-                                Cancel
-                              </ThemedText>
-                            </Pressable>
-                          </ThemedView>
-                        </ThemedView>
-                      ) : (
-                        // Display mode
-                    <Pressable
-                      onPress={() => handleCoinPress(coin.coinId)}
-                          style={styles.coinItemPressable}
-                    >
-                      {/* Mobile: Stablecoin Badge - absolutely positioned relative to list item container */}
-                      {Platform.OS !== 'web' && isStablecoin(displaySymbol) && (
-                        <View style={styles.stablecoinBadgeContainerMobile}>
-                          <StablecoinBadge 
-                            backgroundColor={tintColor} 
-                            opacity={STABLECOIN_BADGE_OPACITY}
-                            rotation={STABLECOIN_BADGE_ROTATION}
-                          />
-                        </View>
-                      )}
-                      
-                      {/* Use the retrieved image from the global snapshot or legacy apiData */}
-                      {displayImage ? (
-                        <Image
-                          source={{ uri: displayImage }}
-                          style={styles.coinImage}
-                        />
-                      ) : null}
-                      {Platform.OS === 'web' ? (
-                        // Web: Badge in its own column, flushed left, vertically centered
-                        <View style={styles.coinInfoContainer}>
-                          <ThemedView style={styles.coinInfo}>
-                            <ThemedText type="bodySemibold">{displayName}</ThemedText>
-                            <ThemedText type="small" variant="secondary">
-                              {displaySymbol.toUpperCase()}
-                            </ThemedText>
-                            {coin.notes && coin.notes.trim() ? (
-                              <ThemedText type="small" variant="secondary" style={styles.coinNotesText}>
-                                {coin.notes}
-                              </ThemedText>
-                            ) : null}
-                          </ThemedView>
-                          
-                          {/* Stablecoin Badge - in its own column, flushed left */}
-                          <View style={styles.stablecoinColumn}>
-                            {isStablecoin(displaySymbol) && (
-                              <StablecoinBadge backgroundColor={tintColor} />
-                            )}
-                          </View>
-                        </View>
-                      ) : (
-                        // Mobile: Coin info without badge (badge is positioned relative to container)
-                        <ThemedView style={styles.coinInfo}>
-                          <ThemedText type="bodySemibold">{displayName}</ThemedText>
-                          <ThemedText type="small" variant="secondary">
-                            {displaySymbol.toUpperCase()}
-                          </ThemedText>
-                          {coin.notes && coin.notes.trim() ? (
-                            <ThemedText type="small" variant="secondary" style={styles.coinNotesText}>
-                              {coin.notes}
-                            </ThemedText>
-                          ) : null}
-                        </ThemedView>
-                      )}
-                      
-                          {/* Action Buttons Container */}
-                          <ThemedView style={styles.coinActionsContainer}>
-                            <Pressable
-                              onPress={(e) => {
-                                e.stopPropagation();
-                                handleStartEditingCoinNotes(coin.coinId, coin.notes || "");
-                              }}
-                              style={styles.coinActionButton}
-                              accessibilityRole="button"
-                            >
-                              <IconSymbol 
-                                name="pencil" 
-                                size={24} 
-                                color={tintColor} 
-                              />
-                            </Pressable>
-                        <Pressable
-                          onPress={(e) => {
-                            console.log('Remove coin handler called - stopping propagation'); 
-                            e.stopPropagation(); 
-                            handleRemoveCoin(coin.coinId);
-                          }}
-                          style={styles.removeButton}
-                          accessibilityRole="button"
-                        >
-                          <IconSymbol name="trash.fill" size={30} color={tintColor} />
-                        </Pressable>
-                      </ThemedView>
-                    </Pressable>
-                      )}
-                    </ThemedView>
-                  );
-                })
-              ) : (
-                <ThemedView style={styles.emptyContainer}>
-                  <ThemedText type="body" variant="secondary">
-                    No coins in this list yet. Add coins using the search above.
-                  </ThemedText>
-                </ThemedView>
-              )}
-            </ScrollView>
-          </ThemedView>
+          <CoinListItems
+            coins={list.coins}
+            globalMarketSnapshot={globalMarketSnapshot}
+            editingCoinId={editingCoinId}
+            editedCoinNotes={editedCoinNotes}
+            onCoinPress={handleCoinPress}
+            onStartEditingCoinNotes={handleStartEditingCoinNotes}
+            onSaveCoinNotes={handleSaveCoinNotes}
+            onCancelEditingCoinNotes={handleCancelEditingCoinNotes}
+            onRemoveCoin={handleRemoveCoin}
+            isSavingNotesPending={updateCoinNotes.isPending}
+            onNotesChange={setEditedCoinNotes}
+            isCompactView={isCompactView}
+            onCompactViewChange={setIsCompactView}
+          />
 
           {/* Filters and Analysis Section */}
           <ThemedView style={styles.filtersContainer}>
@@ -647,91 +486,6 @@ const styles = StyleSheet.create({
   addCoinContainer: {
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
-  },
-  sectionTitle: {
-    marginBottom: Spacing.sm,
-  },
-  coinsContainer: {
-    flex: 1,
-    marginHorizontal: Spacing.lg,
-  },
-  coinItem: {
-    marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderRadius: 8,
-  },
-  coinItemPressable: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: Spacing.md,
-    ...Platform.select({
-      default: {
-        position: "relative", // Mobile: Enable absolute positioning for badge
-      },
-      web: {},
-    }),
-  },
-  coinNotesEditContainer: {
-    padding: Spacing.md,
-    gap: Spacing.sm,
-  },
-  coinNotesHeader: {
-    marginBottom: Spacing.xs,
-  },
-  coinNotesText: {
-    marginTop: Spacing.xs,
-  },
-  coinNotesButtonRow: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-  },
-  coinActionsContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
-  },
-  coinActionButton: {
-    padding: Spacing.xs,
-  },
-  coinImage: {
-    width: 40,
-    height: 40,
-    marginRight: Spacing.md,
-    borderRadius: 20,
-  },
-  // Web: Badge in column layout
-  coinInfoContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  coinInfo: {
-    flex: 1,
-  },
-  stablecoinColumn: {
-    width: 100,
-    justifyContent: "center",
-    alignItems: "flex-start",
-    marginLeft: Spacing.md,
-  },
-  
-  // Mobile: Badge absolutely positioned at upper left corner of list item container
-  stablecoinBadgeContainerMobile: {
-    position: "absolute",
-    top: STABLECOIN_BADGE_TOP_OFFSET,
-    left: STABLECOIN_BADGE_LEFT_OFFSET,
-    zIndex: 1,
-  },
-  removeButtonContainer: {
-    paddingLeft: Spacing.sm,
-  },
-  removeButton: {
-    padding: Spacing.xs,
-    zIndex: 10, 
-  },
-  emptyContainer: {
-    padding: Spacing.xl,
-    alignItems: "center",
   },
   filtersContainer: {
     marginTop: Spacing.lg,
