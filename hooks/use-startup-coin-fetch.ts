@@ -1,19 +1,19 @@
 // hooks/use-startup-coin-fetch.ts
 
-import { useEffect, useRef, useState } from 'react';
-import { getCoinLists } from '@/utils/coinListStorage';
-import { getCryptoMarket } from '@/utils/coinGeckoApi';
+import {
+  STARTUP_FETCH_BATCH_DELAY_MS,
+  STARTUP_FETCH_BATCH_SIZE,
+  STARTUP_FETCH_DELAY_MS,
+} from '@/constants/apiConfig';
+import { SupportedCurrency } from '@/constants/currency';
 import { fetchCoinMarketData } from '@/utils/coinGeckoApi';
+import { getCoinLists } from '@/utils/coinListStorage';
+import { logger } from '@/utils/logger';
 import { saveSearchedCoin } from '@/utils/searchedCoinsStorage';
+import { useEffect, useRef, useState } from 'react';
 import { useAppInitialization } from './use-app-initializations';
 import { useCoinLists } from './use-coin-lists';
 import { usePreferences } from './use-preference';
-import { SupportedCurrency } from '@/constants/currency';
-import {
-  STARTUP_FETCH_DELAY_MS,
-  STARTUP_FETCH_BATCH_DELAY_MS,
-  STARTUP_FETCH_BATCH_SIZE,
-} from '@/constants/apiConfig';
 
 // Use constants from apiConfig
 const FETCH_BATCH_DELAY_MS = STARTUP_FETCH_BATCH_DELAY_MS;
@@ -77,7 +77,7 @@ export function useStartupCoinFetch() {
 
     // Wait for delay, then start fetching
     const delayTimer = setTimeout(async () => {
-      console.log('🚀 Starting startup coin fetch...');
+      logger('🚀 Starting startup coin fetch...', 'log', 'debug');
       
       try {
         // Get all coins from all lists
@@ -100,7 +100,7 @@ export function useStartupCoinFetch() {
         );
 
         if (coinsToFetch.length === 0) {
-          console.log('✅ No coins to fetch - all coins are in main cache');
+          logger('✅ No coins to fetch - all coins are in main cache', 'log', 'debug');
           setState({
             isFetching: false,
             isComplete: true,
@@ -111,7 +111,7 @@ export function useStartupCoinFetch() {
           return;
         }
 
-        console.log(`📊 Found ${coinsToFetch.length} coins to fetch (out of ${allCoinIds.size} total)`);
+        logger(`📊 Found ${coinsToFetch.length} coins to fetch (out of ${allCoinIds.size} total)`, 'log', 'debug');
         
         setState({
           isFetching: true,
@@ -129,7 +129,7 @@ export function useStartupCoinFetch() {
         for (let i = 0; i < coinsToFetch.length; i += BATCH_SIZE) {
           const batch = coinsToFetch.slice(i, i + BATCH_SIZE);
           
-          console.log(`📦 Fetching batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} coins)...`);
+          logger(`📦 Fetching batch ${Math.floor(i / BATCH_SIZE) + 1} (${batch.length} coins)...`, 'log', 'debug');
           
           // Fetch all coins in batch in parallel
           const batchPromises = batch.map(async (coinId) => {
@@ -148,11 +148,11 @@ export function useStartupCoinFetch() {
                 return { coinId, success: true, skipped: false };
               } else {
                 // Rate limit or other error - don't count as failure, just skip
-                console.warn(`⚠️ No data returned for ${coinId} (likely rate limit)`);
+                logger(`⚠️ No data returned for ${coinId} (likely rate limit)`, 'warn');
                 return { coinId, success: false, skipped: false };
               }
             } catch (error) {
-              console.error(`❌ Error fetching ${coinId}:`, error);
+              logger(`❌ Error fetching ${coinId}:`, 'error', undefined, error);
               return { coinId, success: false, skipped: false };
             }
           });
@@ -182,7 +182,7 @@ export function useStartupCoinFetch() {
           }
         }
 
-        console.log(`✅ Startup coin fetch complete: ${fetchedCount} fetched, ${failedCount} failed`);
+        logger(`✅ Startup coin fetch complete: ${fetchedCount} fetched, ${failedCount} failed`, 'log', 'debug');
         
         setState({
           isFetching: false,
@@ -192,7 +192,7 @@ export function useStartupCoinFetch() {
           failedCoins: failedCount,
         });
       } catch (error) {
-        console.error('❌ Error in startup coin fetch:', error);
+        logger('❌ Error in startup coin fetch:', 'error', undefined, error);
         setState(prev => ({
           ...prev,
           isFetching: false,

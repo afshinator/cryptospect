@@ -16,6 +16,7 @@ import {
   MODAL_FOCUS_DELAY_ANDROID_MS,
 } from "@/constants/apiConfig";
 import { fetchCoinMarketData, searchCoins } from "@/utils/coinGeckoApi";
+import { logger } from "@/utils/logger";
 import { saveSearchedCoin } from "@/utils/searchedCoinsStorage";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -153,7 +154,7 @@ export function CoinAutocomplete({
     const isInMainCache = cryptoMarket?.data?.some(c => c.id === coin.id);
     const isFromApiSearch = isInApiResults || (!isInMainCache && searchQuery.trim().length >= 2);
     
-    console.log(`🔍 Coin selection debug:`, {
+    logger(`🔍 Coin selection debug:`, 'log', 'debug', {
       coinId: coin.id,
       coinName: coin.name,
       isInApiResults,
@@ -164,7 +165,7 @@ export function CoinAutocomplete({
     
     // If it's from API search, fetch full market data and save it
     if (isFromApiSearch) {
-      console.log(`📥 Fetching full market data for: ${coin.name} (${coin.id})`);
+      logger(`📥 Fetching full market data for: ${coin.name} (${coin.id})`, 'log', 'debug');
       setIsFetchingMarketData(true);
       try {
         const currency = (preferences?.currency || "usd") as SupportedCurrency;
@@ -172,39 +173,39 @@ export function CoinAutocomplete({
         const fullMarketData = await fetchCoinMarketData(coin.id, currency);
         
         if (fullMarketData) {
-          console.log(`✅ Fetched full market data, saving to storage...`);
+          logger(`✅ Fetched full market data, saving to storage...`, 'log', 'debug');
           // Use the full market data (with all fields populated)
           await saveSearchedCoin(fullMarketData);
-          console.log(`✅✅ Saved searched coin with full market data: ${fullMarketData.name} (${fullMarketData.id})`);
+          logger(`✅✅ Saved searched coin with full market data: ${fullMarketData.name} (${fullMarketData.id})`, 'log', 'debug');
           // Verify it was saved
           const { loadSearchedCoins } = await import('@/utils/searchedCoinsStorage');
           const allCoins = await loadSearchedCoins();
-          console.log(`📦 Verification: ${Object.keys(allCoins).length} coins in storage, looking for: ${fullMarketData.id.toLowerCase()}`);
-          console.log(`📋 Available IDs:`, Object.keys(allCoins));
+          logger(`📦 Verification: ${Object.keys(allCoins).length} coins in storage, looking for: ${fullMarketData.id.toLowerCase()}`, 'log', 'debug');
+          logger(`📋 Available IDs:`, 'log', 'debug', Object.keys(allCoins));
           // Use the full data for selection
           onSelect(fullMarketData);
         } else {
-          console.log(`⚠️ Full fetch returned null, saving partial data...`);
+          logger(`⚠️ Full fetch returned null, saving partial data...`, 'warn');
           // Fallback: save the partial data if full fetch fails
           await saveSearchedCoin(coin);
-          console.log(`⚠️ Saved searched coin with partial data (full fetch failed): ${coin.name} (${coin.id})`);
+          logger(`⚠️ Saved searched coin with partial data (full fetch failed): ${coin.name} (${coin.id})`, 'warn');
           onSelect(coin);
         }
       } catch (error) {
-        console.error('❌ Failed to fetch/save searched coin:', error);
+        logger('❌ Failed to fetch/save searched coin:', 'error', undefined, error);
         // Fallback: save partial data and continue
         try {
           await saveSearchedCoin(coin);
-          console.log(`⚠️ Saved partial data as fallback: ${coin.name} (${coin.id})`);
+          logger(`⚠️ Saved partial data as fallback: ${coin.name} (${coin.id})`, 'warn');
         } catch (saveError) {
-          console.error('❌ Failed to save partial coin data:', saveError);
+          logger('❌ Failed to save partial coin data:', 'error', undefined, saveError);
         }
         onSelect(coin);
       } finally {
         setIsFetchingMarketData(false);
       }
     } else {
-      console.log(`ℹ️ Coin is in main cache, not saving to searched coins storage`);
+      logger(`ℹ️ Coin is in main cache, not saving to searched coins storage`, 'log', 'debug');
       // Coin is in main cache, select immediately
       onSelect(coin);
     }
@@ -243,7 +244,7 @@ export function CoinAutocomplete({
           const results = await searchCoins(query);
           setApiSearchResults(results);
         } catch (error) {
-          console.error('Failed to search coins via API:', error);
+          logger('Failed to search coins via API:', 'error', undefined, error);
           setApiSearchError(error instanceof Error ? error.message : 'Failed to search coins');
         } finally {
           setIsSearchingApi(false);

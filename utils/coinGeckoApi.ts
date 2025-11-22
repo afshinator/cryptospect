@@ -1,6 +1,13 @@
 // utils/coinGeckoApi.ts
 
 import {
+  MARKET_DATA_BASE_RETRY_DELAY_MS,
+  MARKET_DATA_DELAY_BETWEEN_PAGES_MS,
+  MARKET_DATA_LONG_DELAY_MS,
+  MARKET_DATA_MAX_RETRIES,
+  MARKET_DATA_PAGES_BEFORE_LONG_DELAY,
+} from '@/constants/apiConfig';
+import {
   COINGECKO_COIN_BY_ID_BASE_ENDPOINT,
   COINGECKO_COINS_MARKETS_ENDPOINT,
   COINGECKO_SEARCH_ENDPOINT,
@@ -17,15 +24,9 @@ import {
   CRYPTO_MARKET_CACHE_KEY,
   CRYPTO_MARKET_REFRESH_INTERVAL_MS,
 } from '@/constants/misc';
-import {
-  MARKET_DATA_DELAY_BETWEEN_PAGES_MS,
-  MARKET_DATA_LONG_DELAY_MS,
-  MARKET_DATA_PAGES_BEFORE_LONG_DELAY,
-  MARKET_DATA_MAX_RETRIES,
-  MARKET_DATA_BASE_RETRY_DELAY_MS,
-} from '@/constants/apiConfig';
-import { Platform } from 'react-native';
 import { getJSONObject, setJSONObject } from '@/utils/asyncStorage';
+import { logger } from '@/utils/logger';
+import { Platform } from 'react-native';
 
 // Use constants from apiConfig
 const DELAY_BETWEEN_PAGES_MS = MARKET_DATA_DELAY_BETWEEN_PAGES_MS;
@@ -44,10 +45,10 @@ function logRateLimitInfo(response: Response, page: number): void {
   
   // Check if any rate limit info is available
   if (limit || remaining || retryAfter) {
-    console.log(`📊 [CoinGecko API] Rate Limit Info (Page ${page}):`);
-    if (limit) console.log(`   └─ Limit: ${limit}`);
-    if (remaining) console.log(`   └─ Remaining: ${remaining}`);
-    if (retryAfter) console.log(`   └─ ⚠️ Retry-After: ${retryAfter} seconds`);
+    logger(`📊 [CoinGecko API] Rate Limit Info (Page ${page}):`, 'log', 'debug');
+    if (limit) logger(`   └─ Limit: ${limit}`, 'log', 'debug');
+    if (remaining) logger(`   └─ Remaining: ${remaining}`, 'log', 'debug');
+    if (retryAfter) logger(`   └─ ⚠️ Retry-After: ${retryAfter} seconds`, 'log', 'debug');
     
     // Warn if getting close to limit
     if (remaining && limit) {
@@ -56,11 +57,11 @@ function logRateLimitInfo(response: Response, page: number): void {
       const percentRemaining = (remainingNum / limitNum) * 100;
       
       if (percentRemaining < 20) {
-        console.warn(`   └─ ⚠️ WARNING: Only ${percentRemaining.toFixed(0)}% of rate limit remaining!`);
+        logger(`   └─ ⚠️ WARNING: Only ${percentRemaining.toFixed(0)}% of rate limit remaining!`, 'warn');
       }
     }
   } else {
-    console.log(`📊 [CoinGecko API] Rate Limit Info (Page ${page}): No rate-limiting info received`);
+    logger(`📊 [CoinGecko API] Rate Limit Info (Page ${page}): No rate-limiting info received`, 'log');
   }
 }
 
@@ -107,7 +108,7 @@ async function fetchCryptoMarketPage(
     const waitTime = retryAfter ? parseInt(retryAfter, 10) * 1000 : BASE_RETRY_DELAY_MS;
     
     if (retryCount < MAX_RETRIES) {
-      console.warn(`⚠️ Rate limited on page ${page}. Waiting ${waitTime / 1000} seconds before retry ${retryCount + 1}/${MAX_RETRIES}...`);
+      logger(`⚠️ Rate limited on page ${page}. Waiting ${waitTime / 1000} seconds before retry ${retryCount + 1}/${MAX_RETRIES}...`, 'warn');
       await new Promise(resolve => setTimeout(resolve, waitTime));
       return fetchCryptoMarketPage(currency, page, retryCount + 1);
     } else {
@@ -137,17 +138,17 @@ async function fetchCryptoMarketPage(
 export async function fetchAndPersistCryptoMarket(
   currency: SupportedCurrency
 ): Promise<CryptoMarketSnapshot> {
-  console.log(`⚡ [CoinGecko API] Starting market data fetch:`);
-  console.log(`   └─ Currency: ${currency}`);
-  console.log(`   └─ Pages to fetch: ${MARKET_DATA_PAGES_TO_FETCH}`);
-  console.log(`   └─ Delay between pages: ${DELAY_BETWEEN_PAGES_MS}ms`);
+  logger(`⚡ [CoinGecko API] Starting market data fetch:`, 'log', 'debug');
+  logger(`   └─ Currency: ${currency}`, 'log', 'debug');
+  logger(`   └─ Pages to fetch: ${MARKET_DATA_PAGES_TO_FETCH}`, 'log', 'debug');
+  logger(`   └─ Delay between pages: ${DELAY_BETWEEN_PAGES_MS}ms`, 'log', 'debug');
 
   // Load existing cached data to preserve it if new fetch fails or is incomplete
   const existingData = await loadCachedCryptoMarket();
   const existingCoinCount = existingData?.data?.length || 0;
   
   if (existingData) {
-    console.log(`💾 [CoinGecko API] Preserving existing cache (${existingCoinCount} coins) until new data is validated`);
+    logger(`💾 [CoinGecko API] Preserving existing cache (${existingCoinCount} coins) until new data is validated`, 'log', 'debug');
   }
 
   try {
@@ -157,38 +158,38 @@ export async function fetchAndPersistCryptoMarket(
 
     // Fetch pages sequentially to avoid rate limiting
     for (let page = 1; page <= MARKET_DATA_PAGES_TO_FETCH; page++) {
-      console.log(`📄 [CoinGecko API] Fetching page ${page}/${MARKET_DATA_PAGES_TO_FETCH}...`);
+      logger(`📄 [CoinGecko API] Fetching page ${page}/${MARKET_DATA_PAGES_TO_FETCH}...`, 'log', 'debug');
       
       try {
         const pageData = await fetchCryptoMarketPage(currency, page);
         
         if (pageData.length === 0) {
-          console.log(`   └─ ⚠️ Page ${page} returned no data. Stopping pagination.`);
+          logger(`   └─ ⚠️ Page ${page} returned no data. Stopping pagination.`, 'log', 'debug');
           break; // No more data available
         }
         
         allData.push(...pageData);
         pagesFetched++;
-        console.log(`   └─ ✅ Page ${page} fetched: ${pageData.length} coins (total: ${allData.length})`);
+        logger(`   └─ ✅ Page ${page} fetched: ${pageData.length} coins (total: ${allData.length})`, 'log', 'debug');
         
         // Delay between pages to respect rate limits
         if (page < MARKET_DATA_PAGES_TO_FETCH) {
           // After every N pages, use a longer delay
           if (pagesFetched % PAGES_BEFORE_LONG_DELAY === 0) {
-            console.log(`   └─ ⏸️  Fetched ${PAGES_BEFORE_LONG_DELAY} pages. Waiting ${DELAY_AFTER_EVERY_N_PAGES_MS}ms before next page...`);
+            logger(`   └─ ⏸️  Fetched ${PAGES_BEFORE_LONG_DELAY} pages. Waiting ${DELAY_AFTER_EVERY_N_PAGES_MS}ms before next page...`, 'log', 'debug');
             await new Promise(resolve => setTimeout(resolve, DELAY_AFTER_EVERY_N_PAGES_MS));
           } else {
-            console.log(`   └─ ⏸️  Waiting ${DELAY_BETWEEN_PAGES_MS}ms before next page...`);
+            logger(`   └─ ⏸️  Waiting ${DELAY_BETWEEN_PAGES_MS}ms before next page...`, 'log', 'debug');
             await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_PAGES_MS));
           }
         }
       } catch (error) {
-        console.error(`   └─ ❌ Error fetching page ${page}:`, error);
+        logger(`   └─ ❌ Error fetching page ${page}:`, 'error', undefined, error);
         fetchFailed = true;
         
         // If we have some data, continue with what we have
         if (allData.length > 0) {
-          console.warn(`   └─ ⚠️ Continuing with partial data (${allData.length} coins from ${pagesFetched} pages)`);
+          logger(`   └─ ⚠️ Continuing with partial data (${allData.length} coins from ${pagesFetched} pages)`, 'warn');
           break;
         }
         // If first page fails, throw the error
@@ -205,15 +206,15 @@ export async function fetchAndPersistCryptoMarket(
     const isBetterThanExisting = allData.length >= existingCoinCount;
     
     if (!isComplete && !isBetterThanExisting) {
-      console.warn(`⚠️ [CoinGecko API] New data is incomplete:`);
-      console.warn(`   └─ New data: ${allData.length} coins from ${pagesFetched}/${MARKET_DATA_PAGES_TO_FETCH} pages`);
-      console.warn(`   └─ Existing cache: ${existingCoinCount} coins`);
-      console.warn(`   └─ Preserving existing data.`);
+      logger(`⚠️ [CoinGecko API] New data is incomplete:`, 'warn');
+      logger(`   └─ New data: ${allData.length} coins from ${pagesFetched}/${MARKET_DATA_PAGES_TO_FETCH} pages`, 'warn');
+      logger(`   └─ Existing cache: ${existingCoinCount} coins`, 'warn');
+      logger(`   └─ Preserving existing data.`, 'warn');
       if (existingData) {
         return existingData;
       }
       // If no existing data, use what we have (better than nothing)
-      console.warn(`   └─ ⚠️ No existing cache available. Using partial data (${allData.length} coins).`);
+      logger(`   └─ ⚠️ No existing cache available. Using partial data (${allData.length} coins).`, 'warn');
     }
 
     const newSnapshot: CryptoMarketSnapshot = {
@@ -225,11 +226,11 @@ export async function fetchAndPersistCryptoMarket(
     // Only persist if data is complete or better than existing
     if (isComplete || isBetterThanExisting) {
       await setJSONObject(CRYPTO_MARKET_CACHE_KEY, newSnapshot);
-      console.log(`✅ [CoinGecko API] Successfully fetched and persisted market data:`);
-      console.log(`   └─ Total coins: ${allData.length}`);
-      console.log(`   └─ Pages fetched: ${pagesFetched}/${MARKET_DATA_PAGES_TO_FETCH}`);
+      logger(`✅ [CoinGecko API] Successfully fetched and persisted market data:`, 'log', 'debug');
+      logger(`   └─ Total coins: ${allData.length}`, 'log', 'debug');
+      logger(`   └─ Pages fetched: ${pagesFetched}/${MARKET_DATA_PAGES_TO_FETCH}`, 'log', 'debug');
     } else {
-      console.warn(`⚠️ [CoinGecko API] Not persisting incomplete data. Existing cache preserved.`);
+      logger(`⚠️ [CoinGecko API] Not persisting incomplete data. Existing cache preserved.`, 'warn');
       if (existingData) {
         return existingData;
       }
@@ -237,11 +238,11 @@ export async function fetchAndPersistCryptoMarket(
 
     return newSnapshot;
   } catch (e) {
-    console.error('❌ [CoinGecko API] Error fetching/persisting market data:', e);
+    logger('❌ [CoinGecko API] Error fetching/persisting market data:', 'error', undefined, e);
     
     // If we have existing data, preserve it and return it instead of throwing
     if (existingData) {
-      console.warn(`   └─ 💾 Fetch failed. Preserving existing cache (${existingCoinCount} coins) as fallback.`);
+      logger(`   └─ 💾 Fetch failed. Preserving existing cache (${existingCoinCount} coins) as fallback.`, 'warn');
       return existingData;
     }
     
@@ -282,13 +283,13 @@ export async function fetchCoinMarketData(
       if (response.status === 429) {
         const retryAfter = response.headers.get('retry-after');
         const retrySeconds = retryAfter ? parseInt(retryAfter, 10) : 60;
-        console.warn(`⚠️ [CoinGecko API] Rate limit exceeded for ${coinId}:`);
-        console.warn(`   └─ Retry after: ${retrySeconds} seconds`);
+        logger(`⚠️ [CoinGecko API] Rate limit exceeded for ${coinId}:`, 'warn');
+        logger(`   └─ Retry after: ${retrySeconds} seconds`, 'warn');
         // Return null instead of throwing - this allows the UI to continue showing partial data
         return null;
       }
       if (response.status === 404) {
-        console.warn(`⚠️ [CoinGecko API] Coin not found: ${coinId}`);
+        logger(`⚠️ [CoinGecko API] Coin not found: ${coinId}`, 'warn');
         return null;
       }
       throw new Error(`❌ CoinGecko API returned status ${response.status} for coin ${coinId}`);
@@ -297,10 +298,10 @@ export async function fetchCoinMarketData(
     const data: any = await response.json();
 
     if (!data || !data.market_data) {
-      console.warn(`⚠️ [CoinGecko API] No market data available for coin: ${coinId}`);
-      console.warn(`   └─ Has data: ${!!data}`);
-      console.warn(`   └─ Has market_data: ${!!data?.market_data}`);
-      console.warn(`   └─ Data keys: ${data ? Object.keys(data).join(', ') : 'none'}`);
+      logger(`⚠️ [CoinGecko API] No market data available for coin: ${coinId}`, 'warn');
+      logger(`   └─ Has data: ${!!data}`, 'warn');
+      logger(`   └─ Has market_data: ${!!data?.market_data}`, 'warn');
+      logger(`   └─ Data keys: ${data ? Object.keys(data).join(', ') : 'none'}`, 'warn');
       return null;
     }
 
@@ -320,18 +321,18 @@ export async function fetchCoinMarketData(
       const price24hAgo = currentPrice - priceChange24h;
       if (price24hAgo !== 0) {
         priceChangePercentage24h = (priceChange24h / price24hAgo) * 100;
-        console.log(`📊 [CoinGecko API] Calculated 24h % change for ${coinId}:`);
-        console.log(`   └─ Current price: ${currentPrice}`);
-        console.log(`   └─ Price change 24h: ${priceChange24h}`);
-        console.log(`   └─ Price 24h ago: ${price24hAgo}`);
-        console.log(`   └─ Calculated %: ${priceChangePercentage24h.toFixed(2)}%`);
+        logger(`📊 [CoinGecko API] Calculated 24h % change for ${coinId}:`, 'log', 'debug');
+        logger(`   └─ Current price: ${currentPrice}`, 'log', 'debug');
+        logger(`   └─ Price change 24h: ${priceChange24h}`, 'log', 'debug');
+        logger(`   └─ Price 24h ago: ${price24hAgo}`, 'log', 'debug');
+        logger(`   └─ Calculated %: ${priceChangePercentage24h.toFixed(2)}%`, 'log', 'debug');
       }
     }
     
-    console.log(`📊 [CoinGecko API] Market data extracted for ${coinId}:`);
-    console.log(`   └─ Currency: ${currency}`);
-    console.log(`   └─ Current price: ${currentPrice}`);
-    console.log(`   └─ 24h change: ${priceChangePercentage24h !== null && priceChangePercentage24h !== undefined ? `${priceChangePercentage24h.toFixed(2)}%` : 'N/A'}`);
+    logger(`📊 [CoinGecko API] Market data extracted for ${coinId}:`, 'log', 'debug');
+    logger(`   └─ Currency: ${currency}`, 'log', 'debug');
+    logger(`   └─ Current price: ${currentPrice}`, 'log', 'debug');
+    logger(`   └─ 24h change: ${priceChangePercentage24h !== null && priceChangePercentage24h !== undefined ? `${priceChangePercentage24h.toFixed(2)}%` : 'N/A'}`, 'log', 'debug');
     const marketCapChange24h = marketData.market_cap_change_24h?.[currency] ?? null;
     const marketCapChangePercentage24h = marketData.market_cap_change_percentage_24h?.[currency] ?? null;
 
@@ -372,16 +373,16 @@ export async function fetchCoinMarketData(
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
       // On web, CORS errors are expected - don't log as error
       if (Platform.OS === 'web') {
-        console.warn(`⚠️ [CoinGecko API] Network/CORS error for ${coinId} (expected on web):`);
-        console.warn(`   └─ This is informational, not an error`);
-        console.warn(`   └─ Direct API calls from browser may be blocked by CORS policy`);
+        logger(`⚠️ [CoinGecko API] Network/CORS error for ${coinId} (expected on web):`, 'warn');
+        logger(`   └─ This is informational, not an error`, 'warn');
+        logger(`   └─ Direct API calls from browser may be blocked by CORS policy`, 'warn');
         // Return null to allow graceful degradation
         return null;
       } else {
         // On mobile, "Failed to fetch" is a real network error
-        console.error(`❌ [CoinGecko API] Network error fetching market data for coin ${coinId}:`);
-        console.error(`   └─ Error: ${error.message}`);
-        console.error(`   └─ This is a real network error - check internet connection`);
+        logger(`❌ [CoinGecko API] Network error fetching market data for coin ${coinId}:`, 'error');
+        logger(`   └─ Error: ${error.message}`, 'error');
+        logger(`   └─ This is a real network error - check internet connection`, 'error');
         throw new Error(`Network error: Failed to fetch market data for ${coinId}. Check your internet connection.`);
       }
     }
@@ -393,9 +394,9 @@ export async function fetchCoinMarketData(
     }
     
     // Generic error - format it
-    console.error(`❌ [CoinGecko API] Unexpected error fetching market data for coin ${coinId}:`);
-    console.error(`   └─ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    console.error(`   └─ Type: ${error instanceof Error ? error.constructor.name : typeof error}`);
+    logger(`❌ [CoinGecko API] Unexpected error fetching market data for coin ${coinId}:`, 'error');
+    logger(`   └─ Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    logger(`   └─ Type: ${error instanceof Error ? error.constructor.name : typeof error}`, 'error');
     throw new Error(`Unexpected error fetching market data for ${coinId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -464,7 +465,7 @@ export async function searchCoins(query: string): Promise<CoinGeckoMarketData[]>
 
     return mappedResults;
   } catch (error) {
-    console.error('❌ [CoinGecko API] Error searching coins:', error);
+    logger('❌ [CoinGecko API] Error searching coins:', 'error', undefined, error);
     throw error;
   }
 }
@@ -485,23 +486,23 @@ export async function getCryptoMarket(
     cachedData.currency === currency &&
     now - cachedData.timestamp < CRYPTO_MARKET_REFRESH_INTERVAL_MS
   ) {
-    console.log(`💾 [CoinGecko API] Using cached market data:`);
-    console.log(`   └─ Coins: ${cachedData.data?.length || 0}`);
-    console.log(`   └─ Status: Still fresh, no refetch needed`);
+    logger(`💾 [CoinGecko API] Using cached market data:`, 'log', 'debug');
+    logger(`   └─ Coins: ${cachedData.data?.length || 0}`, 'log', 'debug');
+    logger(`   └─ Status: Still fresh, no refetch needed`, 'log', 'debug');
     return cachedData;
   }
 
   // Cache is missing, stale, or currency changed - attempt to fetch and persist new data
   const cacheStatus = !cachedData ? 'missing' : cachedData.currency !== currency ? 'currency mismatch' : 'stale';
-  console.log(`🔄 [CoinGecko API] Cache ${cacheStatus}. Fetching fresh data...`);
+  logger(`🔄 [CoinGecko API] Cache ${cacheStatus}. Fetching fresh data...`, 'log', 'debug');
   
   try {
     const freshData = await fetchAndPersistCryptoMarket(currency);
     return freshData;
   } catch (error) {
-    console.warn('❌ [CoinGecko API] Failed to fetch fresh data. Falling back to stale cache if available.');
+    logger('❌ [CoinGecko API] Failed to fetch fresh data. Falling back to stale cache if available.', 'warn');
     if (cachedData) {
-      console.log(`   └─ 💾 Using stale cache (${cachedData.data?.length || 0} coins) as fallback`);
+      logger(`   └─ 💾 Using stale cache (${cachedData.data?.length || 0} coins) as fallback`, 'log', 'debug');
       // Return stale cache if fetching failed (graceful degradation)
       return cachedData;
     }

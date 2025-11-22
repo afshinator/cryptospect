@@ -14,6 +14,7 @@ import {
   OVERVIEW_DATA_BASE_RETRY_DELAY_MS,
 } from '@/constants/apiConfig';
 import { getJSONObject, setJSONObject } from '@/utils/asyncStorage';
+import { logger } from '@/utils/logger';
 
 /**
  * 1. Loads the cached crypto overview data from AsyncStorage.
@@ -39,9 +40,9 @@ export async function loadCachedCryptoOverview(): Promise<CryptoOverviewSnapshot
 export async function fetchAndPersistCryptoOverview(
   retryCount: number = 0
 ): Promise<CryptoOverviewSnapshot | null> {
-  console.log(`⚡ [CoinGecko API] Fetching crypto overview data...`);
+  logger(`⚡ [CoinGecko API] Fetching crypto overview data...`, 'log', 'debug');
   if (retryCount > 0) {
-    console.log(`   └─ Retry attempt ${retryCount}/${OVERVIEW_DATA_MAX_RETRIES}`);
+    logger(`   └─ Retry attempt ${retryCount}/${OVERVIEW_DATA_MAX_RETRIES}`, 'log', 'debug');
   }
 
   try {
@@ -53,13 +54,13 @@ export async function fetchAndPersistCryptoOverview(
       const waitTime = retryAfter ? parseInt(retryAfter, 10) * 1000 : OVERVIEW_DATA_BASE_RETRY_DELAY_MS;
       
       if (retryCount < OVERVIEW_DATA_MAX_RETRIES) {
-        console.warn(`⚠️ [CoinGecko API] Rate limited on overview data. Waiting ${waitTime / 1000} seconds before retry ${retryCount + 1}/${OVERVIEW_DATA_MAX_RETRIES}...`);
+        logger(`⚠️ [CoinGecko API] Rate limited on overview data. Waiting ${waitTime / 1000} seconds before retry ${retryCount + 1}/${OVERVIEW_DATA_MAX_RETRIES}...`, 'warn');
         await new Promise(resolve => setTimeout(resolve, waitTime));
         // Retry the fetch
         return fetchAndPersistCryptoOverview(retryCount + 1);
       } else {
         // Max retries reached - return null to allow graceful degradation
-        console.warn(`⚠️ [CoinGecko API] Rate limit exceeded after ${OVERVIEW_DATA_MAX_RETRIES} retries for overview data. Will use stale cache.`);
+        logger(`⚠️ [CoinGecko API] Rate limit exceeded after ${OVERVIEW_DATA_MAX_RETRIES} retries for overview data. Will use stale cache.`, 'warn');
         return null;
       }
     }
@@ -67,9 +68,9 @@ export async function fetchAndPersistCryptoOverview(
     // Handle other HTTP errors
     if (!response.ok) {
       const errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-      console.error(`❌ [CoinGecko API] Overview data fetch failed:`);
-      console.error(`   └─ Status: ${response.status}`);
-      console.error(`   └─ Status Text: ${response.statusText}`);
+      logger(`❌ [CoinGecko API] Overview data fetch failed:`, 'error');
+      logger(`   └─ Status: ${response.status}`, 'error');
+      logger(`   └─ Status Text: ${response.statusText}`, 'error');
       throw new Error(`CoinGecko Global API returned ${errorMessage}`);
     }
 
@@ -78,16 +79,16 @@ export async function fetchAndPersistCryptoOverview(
     try {
       data = await response.json();
     } catch (parseError) {
-      console.error(`❌ [CoinGecko API] Failed to parse overview data response:`);
-      console.error(`   └─ Error: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`);
+      logger(`❌ [CoinGecko API] Failed to parse overview data response:`, 'error');
+      logger(`   └─ Error: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`, 'error');
       throw new Error(`Failed to parse CoinGecko Global API response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
     }
 
     // Validate response structure
     if (!data.data || !data.data.market_cap_percentage) {
-      console.error(`❌ [CoinGecko API] Overview data response validation failed:`);
-      console.error(`   └─ Has data: ${!!data.data}`);
-      console.error(`   └─ Has market_cap_percentage: ${!!data.data?.market_cap_percentage}`);
+      logger(`❌ [CoinGecko API] Overview data response validation failed:`, 'error');
+      logger(`   └─ Has data: ${!!data.data}`, 'error');
+      logger(`   └─ Has market_cap_percentage: ${!!data.data?.market_cap_percentage}`, 'error');
       throw new Error('CoinGecko Global API response was empty or malformed');
     }
 
@@ -99,20 +100,20 @@ export async function fetchAndPersistCryptoOverview(
     // Persist to storage
     try {
       await setJSONObject(CRYPTO_OVERVIEW_CACHE_KEY, newSnapshot);
-      console.log(`✅ [CoinGecko API] Successfully fetched and persisted overview data`);
+      logger(`✅ [CoinGecko API] Successfully fetched and persisted overview data`, 'log', 'debug');
       return newSnapshot;
     } catch (storageError) {
-      console.error(`❌ [CoinGecko API] Failed to persist overview data to storage:`);
-      console.error(`   └─ Error: ${storageError instanceof Error ? storageError.message : 'Unknown storage error'}`);
+      logger(`❌ [CoinGecko API] Failed to persist overview data to storage:`, 'error');
+      logger(`   └─ Error: ${storageError instanceof Error ? storageError.message : 'Unknown storage error'}`, 'error');
       // Still return the snapshot even if storage fails - data is valid
       return newSnapshot;
     }
   } catch (e) {
     // Check if it's a network error (Failed to fetch)
     if (e instanceof TypeError && e.message.includes('Failed to fetch')) {
-      console.error(`❌ [CoinGecko API] Network error fetching overview data:`);
-      console.error(`   └─ Error: ${e.message}`);
-      console.error(`   └─ This is a real network error - check internet connection`);
+      logger(`❌ [CoinGecko API] Network error fetching overview data:`, 'error');
+      logger(`   └─ Error: ${e.message}`, 'error');
+      logger(`   └─ This is a real network error - check internet connection`, 'error');
       throw new Error(`Network error: Failed to fetch crypto overview data. Check your internet connection.`);
     }
     
@@ -123,9 +124,9 @@ export async function fetchAndPersistCryptoOverview(
     }
     
     // Generic error - format it
-    console.error(`❌ [CoinGecko API] Unexpected error fetching overview data:`);
-    console.error(`   └─ Error: ${e instanceof Error ? e.message : 'Unknown error'}`);
-    console.error(`   └─ Type: ${e instanceof Error ? e.constructor.name : typeof e}`);
+    logger(`❌ [CoinGecko API] Unexpected error fetching overview data:`, 'error');
+    logger(`   └─ Error: ${e instanceof Error ? e.message : 'Unknown error'}`, 'error');
+    logger(`   └─ Type: ${e instanceof Error ? e.constructor.name : typeof e}`, 'error');
     throw new Error(`Unexpected error fetching crypto overview data: ${e instanceof Error ? e.message : 'Unknown error'}`);
   }
 }
@@ -142,7 +143,7 @@ export async function getCryptoOverview(): Promise<CryptoOverviewSnapshot> {
     cachedData &&
     now - cachedData.timestamp < CRYPTO_OVERVIEW_REFRESH_INTERVAL_MS
   ) {
-    console.log('💾 Using cached crypto overview data (still fresh, no refetch needed).');
+    logger('💾 Using cached crypto overview data (still fresh, no refetch needed).', 'log', 'debug');
     return cachedData;
   }
 
@@ -153,7 +154,7 @@ export async function getCryptoOverview(): Promise<CryptoOverviewSnapshot> {
     // If rate limited (returns null), use stale cache if available
     if (freshData === null) {
       if (cachedData) {
-        console.warn(`⚠️ [CoinGecko API] Rate limited. Using stale overview cache (${cachedData ? 'available' : 'not available'})`);
+        logger(`⚠️ [CoinGecko API] Rate limited. Using stale overview cache (${cachedData ? 'available' : 'not available'})`, 'warn');
         return cachedData;
       }
       // No cache available and rate limited - throw error
@@ -163,11 +164,11 @@ export async function getCryptoOverview(): Promise<CryptoOverviewSnapshot> {
     return freshData;
   } catch (error) {
     // Real error occurred (network, parsing, validation, etc.)
-    console.error(`❌ [CoinGecko API] Failed to fetch fresh overview data:`);
-    console.error(`   └─ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    logger(`❌ [CoinGecko API] Failed to fetch fresh overview data:`, 'error');
+    logger(`   └─ Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     
     if (cachedData) {
-      console.warn(`   └─ Falling back to stale cache (graceful degradation)`);
+      logger(`   └─ Falling back to stale cache (graceful degradation)`, 'warn');
       // Return stale cache if fetching failed (graceful degradation)
       return cachedData;
     }

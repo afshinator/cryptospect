@@ -24,6 +24,7 @@ import { Spacing } from "@/constants/theme";
 import { useStartupCoinFetch } from "@/hooks/use-startup-coin-fetch";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { fetchCoinMarketData } from "@/utils/coinGeckoApi";
+import { logger } from "@/utils/logger";
 import { loadSearchedCoins, saveSearchedCoin, SearchedCoinWithTimestamp } from "@/utils/searchedCoinsStorage";
 
 // --- Constants ---
@@ -74,18 +75,18 @@ export function CoinListItems({
   const fetchDataForCoin = React.useCallback((coinId: string, searchedCoin: SearchedCoinWithTimestamp) => {
     // Skip if already fetching or fetched (ref prevents infinite loop)
     if (fetchedCoinsRef.current.has(coinId)) {
-      console.log(`⏭️ Skipping fetch for ${coinId} - already fetched or fetching`);
+      logger(`⏭️ Skipping fetch for ${coinId} - already fetched or fetching`, 'log', 'debug');
       return;
     }
 
     // Mark as being fetched (using ref to prevent duplicate fetches)
     fetchedCoinsRef.current.add(coinId);
     setFetchingCoins(prev => new Set(prev).add(coinId));
-    console.log(`🚀 Starting fetch for ${coinId} (${searchedCoin.name})...`);
+    logger(`🚀 Starting fetch for ${coinId} (${searchedCoin.name})...`, 'log', 'debug');
     
     fetchCoinMarketData(searchedCoin.id, currency)
       .then((fullData) => {
-        console.log(`📥 Fetch response for ${searchedCoin.id}:`, {
+        logger(`📥 Fetch response for ${searchedCoin.id}:`, 'log', 'debug', {
           hasData: !!fullData,
           dataType: typeof fullData,
           isNull: fullData === null,
@@ -94,7 +95,7 @@ export function CoinListItems({
         });
         
         if (fullData) {
-          console.log(`✅ Fetch completed for ${fullData.name}:`, {
+          logger(`✅ Fetch completed for ${fullData.name}:`, 'log', 'debug', {
             id: fullData.id,
             priceChange: fullData.price_change_percentage_24h,
             hasPriceChange: fullData.price_change_percentage_24h !== null && fullData.price_change_percentage_24h !== undefined,
@@ -123,24 +124,24 @@ export function CoinListItems({
                 ...prev,
                 [coinId]: coinWithTimestamp,
               };
-              console.log(`📝 [CoinListItems] Updating searchedCoins state for ${coinId}:`);
-              console.log(`   └─ Name: ${fullData.name}`);
-              console.log(`   └─ Price change: ${fullData.price_change_percentage_24h}`);
-              console.log(`   └─ Timestamp: ${new Date(coinWithTimestamp._lastUpdated!).toISOString()}`);
+              logger(`📝 [CoinListItems] Updating searchedCoins state for ${coinId}:`, 'log' );
+              logger(`   └─ Name: ${fullData.name}`, 'log' );
+              logger(`   └─ Price change: ${fullData.price_change_percentage_24h}`, 'log' );
+              logger(`   └─ Timestamp: ${new Date(coinWithTimestamp._lastUpdated!).toISOString()}`, 'log' );
               return updated;
             });
             
             // Also save to storage for future use (saveSearchedCoin will merge intelligently and preserve non-null data)
             saveSearchedCoin(fullData).then(() => {
-              console.log(`💾 [CoinListItems] Saved/merged full data to storage for ${fullData.name}`);
+              logger(`💾 [CoinListItems] Saved/merged full data to storage for ${fullData.name}`, 'log' );
             }).catch((saveError) => {
-              console.error(`❌ [CoinListItems] Error saving to storage:`, saveError);
+              logger(`❌ [CoinListItems] Error saving to storage:`, 'error', undefined, saveError);
             });
           } else {
-            console.log(`ℹ️ [CoinListItems] Fetched data for ${fullData.name} is not better than existing, keeping existing data`);
+            logger(`ℹ️ [CoinListItems] Fetched data for ${fullData.name} is not better than existing, keeping existing data`, 'log', 'debug');
           }
         } else {
-          console.warn(`⚠️ Fetch returned no data (null/undefined) for ${searchedCoin.id}`);
+          logger(`⚠️ Fetch returned no data (null/undefined) for ${searchedCoin.id}`, 'warn');
           // Remove from ref so we can retry later if needed
           fetchedCoinsRef.current.delete(coinId);
         }
@@ -152,15 +153,15 @@ export function CoinListItems({
         const isNetworkError = errorMessage.includes('Failed to fetch') || errorMessage.includes('Network error');
         
         if (isRateLimit) {
-          console.warn(`⚠️ [CoinListItems] Rate limit hit for ${searchedCoin.id}. Will retry later.`);
+          logger(`⚠️ [CoinListItems] Rate limit hit for ${searchedCoin.id}. Will retry later.`, 'warn');
         } else if (isNetworkError) {
-          console.warn(`⚠️ [CoinListItems] Network/CORS issue for ${searchedCoin.id} (expected):`);
-          console.warn(`   └─ This is informational, not an error`);
-          console.warn(`   └─ Will retry later when network is available`);
+          logger(`⚠️ [CoinListItems] Network/CORS issue for ${searchedCoin.id} (expected):`, 'warn');
+          logger(`   └─ This is informational, not an error`, 'warn');
+          logger(`   └─ Will retry later when network is available`, 'warn');
         } else {
           // Real error - log it
-          console.error(`❌ [CoinListItems] Failed to fetch market data for ${searchedCoin.id}:`);
-          console.error(`   └─ Error: ${errorMessage}`);
+          logger(`❌ [CoinListItems] Failed to fetch market data for ${searchedCoin.id}:`, 'error');
+          logger(`   └─ Error: ${errorMessage}`, 'error');
         }
         // Remove from ref so we can retry later if needed (after rate limit expires or network recovers)
         fetchedCoinsRef.current.delete(coinId);
@@ -171,7 +172,7 @@ export function CoinListItems({
           next.delete(coinId);
           return next;
         });
-        console.log(`🏁 Fetch process finished for ${coinId}`);
+        logger(`🏁 Fetch process finished for ${coinId}`, 'log', 'debug');
       });
   }, [currency]);
 
@@ -181,20 +182,20 @@ export function CoinListItems({
       // Small delay to ensure any async saves have completed
       await new Promise(resolve => setTimeout(resolve, ASYNC_STORAGE_OPERATION_DELAY_MS));
       const loaded = await loadSearchedCoins();
-      console.log('📦 Loaded SearchedCoins:', Object.keys(loaded).length, 'coins');
+      logger(`📦 Loaded SearchedCoins: ${Object.keys(loaded).length} coins`, 'log', 'debug');
       
       // Log each coin's price change status with timestamp
       Object.entries(loaded).forEach(([coinId, coinData]) => {
         const lastUpdated = coinData._lastUpdated ? new Date(coinData._lastUpdated).toISOString() : '⚠️ NO TIMESTAMP';
-        console.log(`📦 [CoinListItems] SearchedCoin [${coinId}]:`);
-        console.log(`   └─ Name: ${coinData.name}`);
-        console.log(`   └─ Has price change: ${coinData.price_change_percentage_24h !== null && coinData.price_change_percentage_24h !== undefined}`);
-        console.log(`   └─ Price change: ${coinData.price_change_percentage_24h ?? 'null'}`);
-        console.log(`   └─ Last updated: ${lastUpdated}`);
+        logger(`📦 [CoinListItems] SearchedCoin [${coinId}]:`, 'log', 'debug');
+        logger(`   └─ Name: ${coinData.name}`, 'log', 'debug');
+        logger(`   └─ Has price change: ${coinData.price_change_percentage_24h !== null && coinData.price_change_percentage_24h !== undefined}`, 'log', 'debug');
+        logger(`   └─ Price change: ${coinData.price_change_percentage_24h ?? 'null'}`, 'log', 'debug');
+        logger(`   └─ Last updated: ${lastUpdated}`, 'log', 'debug');
         
         // Warn if timestamp is missing
         if (!coinData._lastUpdated) {
-          console.warn(`   └─ ⚠️ WARNING: Missing timestamp for ${coinId}!`);
+          logger(`   └─ ⚠️ WARNING: Missing timestamp for ${coinId}!`, 'warn');
         }
       });
       
@@ -217,16 +218,16 @@ export function CoinListItems({
             // Coin exists in SearchedCoins
             // If missing price data, fetch it (in background, don't block display)
             if (searchedCoin.price_change_percentage_24h === null) {
-              console.log(`🔄 Coin ${coin.coinId} needs full data, fetching in background...`);
+              logger(`🔄 Coin ${coin.coinId} needs full data, fetching in background...`, 'log', 'debug');
               fetchDataForCoin(normalizedCoinId, searchedCoin);
             } else {
-              console.log(`✅ Coin ${coin.coinId} already has price data in SearchedCoins:`, searchedCoin.price_change_percentage_24h);
+              logger(`✅ Coin ${coin.coinId} already has price data in SearchedCoins: ${searchedCoin.price_change_percentage_24h}`, 'log', 'debug');
             }
           } else {
             // Coin is NOT in main cache AND NOT in SearchedCoins
             // This could happen if SearchedCoins was deleted or coin was never searched
             // Create a minimal coin entry and fetch full data
-            console.log(`🔄 Coin ${coin.coinId} not found in main cache or SearchedCoins, fetching in background...`);
+            logger(`🔄 Coin ${coin.coinId} not found in main cache or SearchedCoins, fetching in background...`, 'log', 'debug');
             const minimalCoin: SearchedCoinWithTimestamp = {
               id: normalizedCoinId,
               symbol: coin.symbol || '',
@@ -261,7 +262,9 @@ export function CoinListItems({
       });
     };
     
-    reloadAndCheck().catch(console.error);
+    reloadAndCheck().catch((error) => {
+      logger(`❌ [CoinListItems] Error in reloadAndCheck:`, 'error', undefined, error);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coins.length, globalMarketSnapshot, fetchDataForCoin]); // Reload when coins are added/removed or snapshot changes
   const textColor = useThemeColor({}, "text");

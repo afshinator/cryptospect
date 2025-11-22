@@ -16,6 +16,7 @@ Functions:
 import { CoinGeckoMarketData } from '@/constants/coinGecko';
 import { SEARCHED_COINS_CACHE_KEY } from '@/constants/misc';
 import { getJSONObject, setJSONObject } from '@/utils/asyncStorage';
+import { logger } from '@/utils/logger';
 
 export interface SearchedCoinWithTimestamp extends CoinGeckoMarketData {
   _lastUpdated?: number; // Timestamp when this coin data was last updated
@@ -47,7 +48,7 @@ export async function loadSearchedCoins(): Promise<SearchedCoinsStorage> {
         // Add timestamp for coins missing it
         updated[coinId] = { ...coinData, _lastUpdated: now };
         needsSave = true;
-        console.log(`🔍 [SearchedCoins] Added missing timestamp for ${coinId}`);
+        logger(`🔍 [SearchedCoins] Added missing timestamp for ${coinId}`, 'log', 'debug');
       } else {
         updated[coinId] = coinData;
       }
@@ -56,12 +57,12 @@ export async function loadSearchedCoins(): Promise<SearchedCoinsStorage> {
     // Save if we added any missing timestamps
     if (needsSave) {
       await setJSONObject(SEARCHED_COINS_CACHE_KEY, updated);
-      console.log(`💾 [SearchedCoins] Saved updated coins with timestamps`);
+      logger(`💾 [SearchedCoins] Saved updated coins with timestamps`, 'log', 'debug');
     }
     
     return updated;
   } catch (e) {
-    console.error('❌🔍 [SearchedCoins] Error loading coins:', e);
+    logger('❌🔍 [SearchedCoins] Error loading coins:', 'error', undefined, e);
     return {};
   }
 }
@@ -129,7 +130,7 @@ function mergeCoinData(existing: SearchedCoinWithTimestamp, newData: CoinGeckoMa
   
   // Log if we protected any fields from null overwrites
   if (protectedFields.length > 0) {
-    console.log(`   └─ 🛡️ Protected ${protectedFields.length} fields from null overwrite: ${protectedFields.join(', ')}`);
+    logger(`   └─ 🛡️ Protected ${protectedFields.length} fields from null overwrite: ${protectedFields.join(', ')}`, 'log', 'debug');
   }
   
   // Update timestamp if we actually merged any new data
@@ -175,26 +176,26 @@ export async function saveSearchedCoin(coin: CoinGeckoMarketData): Promise<void>
       
       if (hasNewData) {
         const timestamp = merged._lastUpdated ? new Date(merged._lastUpdated).toISOString() : 'unknown';
-        console.log(`✅🔍 [SearchedCoins] Updated coin: ${coin.name} (${coin.symbol})`);
-        console.log(`   └─ New data merged at: ${timestamp}`);
-        console.log(`   └─ Preserved existing non-null fields`);
+        logger(`✅🔍 [SearchedCoins] Updated coin: ${coin.name} (${coin.symbol})`, 'log', 'debug');
+        logger(`   └─ New data merged at: ${timestamp}`, 'log', 'debug');
+        logger(`   └─ Preserved existing non-null fields`, 'log', 'debug');
       } else {
         const preservedTimestamp = existingCoin._lastUpdated ? new Date(existingCoin._lastUpdated).toISOString() : 'unknown';
-        console.log(`✅🔍 [SearchedCoins] Coin: ${coin.name} (${coin.symbol}) - no new data to merge`);
-        console.log(`   └─ Preserved existing data (timestamp: ${preservedTimestamp})`);
-        console.log(`   └─ Prevented overwriting with null values`);
+        logger(`✅🔍 [SearchedCoins] Coin: ${coin.name} (${coin.symbol}) - no new data to merge`, 'log', 'debug');
+        logger(`   └─ Preserved existing data (timestamp: ${preservedTimestamp})`, 'log', 'debug');
+        logger(`   └─ Prevented overwriting with null values`, 'log', 'debug');
       }
     } else {
       // New coin, save it with timestamp
       existing[normalizedId] = { ...coin, id: normalizedId, _lastUpdated: now };
-      console.log(`✅🔍 [SearchedCoins] Saved new coin: ${coin.name} (${coin.symbol})`);
-      console.log(`   └─ ID: ${normalizedId}`);
-      console.log(`   └─ Timestamp: ${new Date(now).toISOString()}`);
+      logger(`✅🔍 [SearchedCoins] Saved new coin: ${coin.name} (${coin.symbol})`, 'log', 'debug');
+      logger(`   └─ ID: ${normalizedId}`, 'log', 'debug');
+      logger(`   └─ Timestamp: ${new Date(now).toISOString()}`, 'log', 'debug');
     }
     
     await setJSONObject(SEARCHED_COINS_CACHE_KEY, existing);
   } catch (e) {
-    console.error('❌🔍 [SearchedCoins] Error saving coin:', e);
+    logger('❌🔍 [SearchedCoins] Error saving coin:', 'error', undefined, e);
     throw e;
   }
 }
@@ -210,7 +211,7 @@ export async function getSearchedCoin(coinId: string): Promise<SearchedCoinWithT
     const normalizedId = coinId.toLowerCase();
     return allCoins[normalizedId] || null;
   } catch (e) {
-    console.error('❌🔍 Error getting searched coin:', e);
+    logger('❌🔍 Error getting searched coin:', 'error', undefined, e);
     return null;
   }
 }
@@ -226,10 +227,10 @@ export async function removeSearchedCoin(coinId: string): Promise<void> {
     if (existing[coinId]) {
       delete existing[coinId];
       await setJSONObject(SEARCHED_COINS_CACHE_KEY, existing);
-      console.log(`✅🔍 Removed searched coin: ${coinId}`);
+      logger(`✅🔍 Removed searched coin: ${coinId}`, 'log', 'debug');
     }
   } catch (e) {
-    console.error('❌🔍 Error removing searched coin:', e);
+    logger('❌🔍 Error removing searched coin:', 'error', undefined, e);
     throw e;
   }
 }

@@ -2,6 +2,7 @@
 
 import { CryptoMarketSnapshot, CryptoOverviewSnapshot } from '@/constants/coinGecko';
 import { STABLECOIN_SYMBOLS } from '@/constants/coinTypes';
+import { logger } from './logger';
 import { extractAndSaveStablecoinData } from './stablecoinStorage';
 
 export interface DominanceData {
@@ -29,8 +30,8 @@ export function calculateDominance(
   const totalMarketCap = cryptoOverview.data.data.total_market_cap?.usd || 0;
 
   // 🔍 DEBUG: Log the raw data from CoinGecko
-  console.log('🔍 Raw dominance data from CoinGecko:', dominanceData);
-  console.log('🔍 Data timestamp:', new Date(cryptoOverview.timestamp).toLocaleString());
+  logger('🔍 Raw dominance data from CoinGecko:', 'log', 'debug', dominanceData);
+  logger(`🔍 Data timestamp: ${new Date(cryptoOverview.timestamp).toLocaleString()}`, 'log', 'debug');
 
   const btc = dominanceData.btc || 0;
   const eth = dominanceData.eth || 0;
@@ -63,8 +64,8 @@ export function calculateDominance(
       }
     }
 
-    console.log(`🔍💲 Using market data: Stablecoins found (${foundStablecoins.length}/${STABLECOIN_SYMBOLS.size}):`, foundStablecoins);
-    console.log(`🔍💲 Stablecoin market cap: $${stablecoinMarketCap.toLocaleString()}, Total: $${totalMarketCap.toLocaleString()}, Percentage: ${stablecoins.toFixed(2)}%`);
+    logger(`🔍💲 Using market data: Stablecoins found (${foundStablecoins.length}/${STABLECOIN_SYMBOLS.size}):`, 'log', 'debug', foundStablecoins);
+    logger(`🔍💲 Stablecoin market cap: $${stablecoinMarketCap.toLocaleString()}, Total: $${totalMarketCap.toLocaleString()}, Percentage: ${stablecoins.toFixed(2)}%`, 'log', 'debug');
 
     // Save stablecoin data for widget
     extractAndSaveStablecoinData(
@@ -75,7 +76,7 @@ export function calculateDominance(
       missingStablecoins,
       'market_data'
     ).catch(err => {
-      console.error('❌💲Failed to save stablecoin data:', err);
+      logger('❌💲Failed to save stablecoin data:', 'error', undefined, err);
     });
   } else {
     // Fallback to overview data (only top coins)
@@ -89,7 +90,7 @@ export function calculateDominance(
       }
     }
 
-    console.log(`🔍💲 Using overview data: Stablecoins found (${foundStablecoins.length}/${STABLECOIN_SYMBOLS.size}):`, foundStablecoins);
+    logger(`🔍💲 Using overview data: Stablecoins found (${foundStablecoins.length}/${STABLECOIN_SYMBOLS.size}):`, 'log', 'debug', foundStablecoins);
 
     // Save stablecoin data for widget (even with overview data)
     extractAndSaveStablecoinData(
@@ -100,12 +101,12 @@ export function calculateDominance(
       missingStablecoins,
       'overview_data'
     ).catch(err => {
-      console.error('❌💲Failed to save stablecoin data:', err);
+      logger('❌💲Failed to save stablecoin data:', 'error', undefined, err);
     });
   }
 
   if (missingStablecoins.length > 0) {
-    console.log(`🔍💲 Stablecoins not in data (${missingStablecoins.length}):`, missingStablecoins);
+    logger(`🔍💲 Stablecoins not in data (${missingStablecoins.length}):`, 'log', 'debug', missingStablecoins);
   }
 
   // Calculate others (everything else)

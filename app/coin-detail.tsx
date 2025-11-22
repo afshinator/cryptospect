@@ -20,6 +20,7 @@ import { useCoinLists } from "@/hooks/use-coin-lists";
 import { usePreferences } from "@/hooks/use-preference";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useStartupCoinFetch } from "@/hooks/use-startup-coin-fetch";
+import { logger } from "@/utils/logger";
 import { getSearchedCoin, loadSearchedCoins, SearchedCoinWithTimestamp } from "@/utils/searchedCoinsStorage";
 
 // Layout constants for alignment and spacing tweaks
@@ -61,13 +62,13 @@ export default function CoinDetailScreen() {
     if (!coin && id) {
       // Normalize ID to lowercase for lookup
       const normalizedId = id.toLowerCase();
-      console.log(`🔍 Looking up searched coin: ${normalizedId}`);
+      logger(`🔍 Looking up searched coin: ${normalizedId}`, 'log', 'debug');
       
       getSearchedCoin(normalizedId)
         .then((searched) => {
           if (searched) {
-            console.log(`✅ Found searched coin: ${searched.name} (${searched.id})`);
-            console.log(`📊 Market data available:`, {
+            logger(`✅ Found searched coin: ${searched.name} (${searched.id})`, 'log', 'debug');
+            logger(`📊 Market data available:`, 'log', 'debug', {
               hasPrice: searched.current_price !== null,
               hasMarketCap: searched.market_cap !== null,
               hasVolume: searched.total_volume !== null,
@@ -80,20 +81,22 @@ export default function CoinDetailScreen() {
             });
             setSearchedCoin(searched);
           } else {
-            console.log(`⚠️ Searched coin not found in storage: ${normalizedId}`);
+            logger(`⚠️ Searched coin not found in storage: ${normalizedId}`, 'warn');
             // Try loading all searched coins to see what's available
             loadSearchedCoins().then((all) => {
               const keys = Object.keys(all);
-              console.log(`📦 Total searched coins in storage: ${keys.length}`);
+              logger(`📦 Total searched coins in storage: ${keys.length}`, 'log', 'debug');
               if (keys.length > 0) {
-                console.log(`📋 Available coin IDs:`, keys.slice(0, 5));
+                logger(`📋 Available coin IDs:`, 'log', 'debug', keys.slice(0, 5));
               }
-            }).catch(console.error);
+            }).catch((error) => {
+              logger('❌ Error loading all searched coins:', 'error', undefined, error);
+            });
             setSearchedCoin(null);
           }
         })
         .catch((error) => {
-          console.error('❌ Error loading searched coin:', error);
+          logger('❌ Error loading searched coin:', 'error', undefined, error);
           setSearchedCoin(null);
         });
     } else {
@@ -107,7 +110,7 @@ export default function CoinDetailScreen() {
   // Debug: Log what data we have (must be before any conditional returns)
   useEffect(() => {
     if (displayCoin) {
-      console.log(`📱 Display coin data:`, {
+      logger(`📱 Display coin data:`, 'log', 'debug', {
         id: displayCoin.id,
         name: displayCoin.name,
         source: coin ? 'main cache' : 'searched coins',
