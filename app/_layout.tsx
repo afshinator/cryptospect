@@ -13,7 +13,7 @@ export const unstable_settings = {
 
 
 function getAppTheme(
-  lightDarkMode: 'system' | 'light' | 'dark', 
+  lightDarkMode: 'system' | 'light' | 'dark',
   systemColorScheme: 'light' | 'dark' | null | undefined
 ) {
   let schemeToUse = lightDarkMode;
@@ -21,12 +21,12 @@ function getAppTheme(
   if (schemeToUse === 'system') {
     schemeToUse = systemColorScheme ?? 'light'; // Default to 'light' if system is null
   }
-  
+
   return schemeToUse === 'dark' ? DarkTheme : DefaultTheme;
 }
 
 export default function RootLayout() {
-  const systemColorScheme = useDeviceColorScheme(); 
+  const systemColorScheme = useDeviceColorScheme();
   const { lightDarkMode, _hasHydrated } = usePrefsStore();
   const finalTheme = getAppTheme(lightDarkMode, systemColorScheme);
 
