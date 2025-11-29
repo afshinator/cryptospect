@@ -45,7 +45,7 @@ describe('ThemedTextDemoScreen', () => {
     expect(description).toBeTruthy();
   });
 
-  // Test Type Variants section
+  // 📐 Test Type Variants (Font Size & Weight) section
   it('renders Type Variants section header', () => {
     render(<ThemedTextDemoScreen />);
     const header = screen.getByText('Type Variants');
@@ -70,7 +70,7 @@ describe('ThemedTextDemoScreen', () => {
     expect(link).toBeTruthy();
   });
 
-  // Test Color Variants section
+  // 🎨 Test Color Variants (Predefined Theme Colors) section
   it('renders Color Variants section header', () => {
     render(<ThemedTextDemoScreen />);
     const header = screen.getByText('Color Variants');
@@ -95,7 +95,7 @@ describe('ThemedTextDemoScreen', () => {
     expect(error).toBeTruthy();
   });
 
-  // Test Custom Colors section
+  // 🌈 Test Custom Colors (lightColor/darkColor props) section
   it('renders Custom Colors section', () => {
     render(<ThemedTextDemoScreen />);
     const header = screen.getByText('Custom Colors');
@@ -107,8 +107,8 @@ describe('ThemedTextDemoScreen', () => {
     const custom = screen.getByText('Custom Light/Dark Colors');
     expect(custom).toBeTruthy();
   });
-  
-  // 📏 Extra Font Scaling Tests
+
+  // 📈 Extra Font Scaling (fontScaleExtra) Tests
   it('renders Extra Font Scaling section header', () => {
     render(<ThemedTextDemoScreen />);
     const header = screen.getByText('Extra Font Scaling (fontScaleExtra)');
@@ -132,9 +132,39 @@ describe('ThemedTextDemoScreen', () => {
     const text = screen.getByText('Scaled by 2.0x (Large Text)');
     expect(text).toBeTruthy();
   });
-  // 📏 Extra Font Scaling Tests
 
-  // Test Type + Color Combinations section
+  // 🔡 Font Family Overrides (style={{ fontFamily: ... }}) Tests
+  it('renders Font Family Overrides section header', () => {
+    render(<ThemedTextDemoScreen />);
+    const header = screen.getByText('Font Family Overrides');
+    expect(header).toBeTruthy();
+  });
+
+  it('renders Serif Font Family example', () => {
+    render(<ThemedTextDemoScreen />);
+    const text = screen.getByText('Serif Font Family');
+    expect(text).toBeTruthy();
+  });
+
+  it('renders Monospaced Font Family example', () => {
+    render(<ThemedTextDemoScreen />);
+    const text = screen.getByText('Monospaced Font Family');
+    expect(text).toBeTruthy();
+  });
+
+  it('renders Rounded Font Family example', () => {
+    render(<ThemedTextDemoScreen />);
+    const text = screen.getByText('Rounded Font Family');
+    expect(text).toBeTruthy();
+  });
+
+  it('renders Sans Font Family example', () => {
+    render(<ThemedTextDemoScreen />);
+    const text = screen.getByText('Sans Font Family (Link Color)');
+    expect(text).toBeTruthy();
+  });
+
+  // 🌟 Test Type + Color Combinations section
   it('renders Type + Color Combinations section', () => {
     render(<ThemedTextDemoScreen />);
     const header = screen.getByText('Type + Color Combinations');
@@ -147,7 +177,7 @@ describe('ThemedTextDemoScreen', () => {
     expect(combo).toBeTruthy();
   });
 
-  // Test Custom Styles section
+  // 📝 Test Custom Styles (style prop overrides) section
   it('renders Custom Styles section', () => {
     render(<ThemedTextDemoScreen />);
     const header = screen.getByText('Custom Styles');
@@ -160,7 +190,7 @@ describe('ThemedTextDemoScreen', () => {
     expect(centered).toBeTruthy();
   });
 
-  // Test Complex Examples section
+  // 🔗 Test Complex Examples (Nesting and Structure) section
   it('renders Complex Examples section', () => {
     render(<ThemedTextDemoScreen />);
     const header = screen.getByText('Complex Examples');
