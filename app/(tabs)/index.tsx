@@ -41,7 +41,7 @@ export default function HomeScreen() {
           <Link.Trigger>
             <ThemedText type="subtitle">Step 2: Explore</ThemedText>
           </Link.Trigger>
-          <Link.Preview />
+          {/* Link.Preview removed to fix aria-hidden accessibility warning on web */}
           <Link.Menu>
             <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
             <Link.MenuAction
@@ -72,6 +72,17 @@ export default function HomeScreen() {
           <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
           <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
           <ThemedText type="defaultSemiBold">app-example</ThemedText>.
+        </ThemedText>
+      </ThemedView>
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/tests">
+          <Link.Trigger>
+            <ThemedText type="subtitle" colorVariant="warning">Component Tests</ThemedText>
+          </Link.Trigger>
+        </Link>
+        <ThemedText>
+          View visual test pages for components like{' '}
+          <ThemedText type="defaultSemiBold">ThemedText</ThemedText> to see all prop combinations and styling options.
         </ThemedText>
       </ThemedView>
     </ParallaxScrollView>

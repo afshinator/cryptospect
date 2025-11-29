@@ -1,4 +1,6 @@
-import { View, type ViewProps } from 'react-native';
+// components/themed-view.tsx
+
+import { StyleSheet, View, type ViewProps } from 'react-native';
 
 import { useThemeColor } from '@/hooks/use-theme-color';
 
@@ -10,5 +12,15 @@ export type ThemedViewProps = ViewProps & {
 export function ThemedView({ style, lightColor, darkColor, ...otherProps }: ThemedViewProps) {
   const backgroundColor = useThemeColor({ light: lightColor, dark: darkColor }, 'background');
 
-  return <View style={[{ backgroundColor }, style]} {...otherProps} />;
+  // Combine internal style and external style prop into one array
+  const allStyles = [
+    { backgroundColor },
+    style,
+  ];
+
+  // FIXES: Use StyleSheet.flatten to guarantee a single style object.
+  // This resolves the "Indexed property setter is not supported" TypeError on Web.
+  const mergedStyle = StyleSheet.flatten(allStyles);
+
+  return <View style={mergedStyle} {...otherProps} />;
 }

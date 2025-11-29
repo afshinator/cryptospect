@@ -44,6 +44,7 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="tests" options={{ headerShown: false }} />
       </Stack>
       {/* Set StatusBar style based on the determined theme */}
       <StatusBar style={finalTheme.dark ? 'light' : 'dark'} />

@@ -72,6 +72,9 @@ const MAPPING = {
 
   // Close/Cancel: SF Symbol 'xmark.circle.fill' mapped to Material Icon 'cancel'
   "xmark.circle.fill": "cancel",
+
+  // Text/Format: SF Symbol 'textformat' mapped to Material Icon 'text-fields'
+  "textformat": "text-fields",
 } as IconMapping;
 
 /**
