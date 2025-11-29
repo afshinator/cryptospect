@@ -14,6 +14,7 @@ jest.mock('@/components/ScreenContainer', () => {
 
 jest.mock('@/components/themed-text', () => {
   const { Text } = require('react-native');
+  // NOTE: We mock ThemedText to just render a basic Text element for functional tests
   return {
     ThemedText: ({ children }) => <Text>{children}</Text>,
   };
@@ -94,19 +95,6 @@ describe('ThemedTextDemoScreen', () => {
     expect(error).toBeTruthy();
   });
 
-  // Test Type + Color Combinations section
-  it('renders Type + Color Combinations section', () => {
-    render(<ThemedTextDemoScreen />);
-    const header = screen.getByText('Type + Color Combinations');
-    expect(header).toBeTruthy();
-  });
-
-  it('renders title + textAlt combination', () => {
-    render(<ThemedTextDemoScreen />);
-    const combo = screen.getByText('title + textAlt');
-    expect(combo).toBeTruthy();
-  });
-
   // Test Custom Colors section
   it('renders Custom Colors section', () => {
     render(<ThemedTextDemoScreen />);
@@ -118,6 +106,45 @@ describe('ThemedTextDemoScreen', () => {
     render(<ThemedTextDemoScreen />);
     const custom = screen.getByText('Custom Light/Dark Colors');
     expect(custom).toBeTruthy();
+  });
+  
+  // 📏 Extra Font Scaling Tests
+  it('renders Extra Font Scaling section header', () => {
+    render(<ThemedTextDemoScreen />);
+    const header = screen.getByText('Extra Font Scaling (fontScaleExtra)');
+    expect(header).toBeTruthy();
+  });
+
+  it('renders 1.5x scaled text example', () => {
+    render(<ThemedTextDemoScreen />);
+    const text = screen.getByText('Scaled by 1.5x (Normal Font Size)');
+    expect(text).toBeTruthy();
+  });
+
+  it('renders 0.75x shrunk title example', () => {
+    render(<ThemedTextDemoScreen />);
+    const text = screen.getByText('Scaled by 0.75x (Shrunk Title)');
+    expect(text).toBeTruthy();
+  });
+
+  it('renders 2.0x large text example', () => {
+    render(<ThemedTextDemoScreen />);
+    const text = screen.getByText('Scaled by 2.0x (Large Text)');
+    expect(text).toBeTruthy();
+  });
+  // 📏 Extra Font Scaling Tests
+
+  // Test Type + Color Combinations section
+  it('renders Type + Color Combinations section', () => {
+    render(<ThemedTextDemoScreen />);
+    const header = screen.getByText('Type + Color Combinations');
+    expect(header).toBeTruthy();
+  });
+
+  it('renders title + textAlt combination', () => {
+    render(<ThemedTextDemoScreen />);
+    const combo = screen.getByText('title + textAlt');
+    expect(combo).toBeTruthy();
   });
 
   // Test Custom Styles section
