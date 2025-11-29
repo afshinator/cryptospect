@@ -1,3 +1,5 @@
+// app/tests/themed-text-demo.tsx
+
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';

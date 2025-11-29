@@ -7,7 +7,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/$1',
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testMatch: ['**/__tests__/**/*.test.{ts,tsx}'],
+  testMatch: ['**/__tests__/**/*.test.{js,jsx,ts,tsx}'],
   collectCoverageFrom: [
     'components/**/*.{ts,tsx}',
     '!components/**/*.d.ts',
